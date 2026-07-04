@@ -24,24 +24,31 @@
 
 Team-X is provider-agnostic. The default provider router ships with adapters for nine families. Each adapter is its own file under `packages/provider-router/src/adapters/`.
 
-| Provider | Privacy tier | Use case |
-|---|---|---|
-| **Ollama** | Local | Fully offline; nothing leaves the machine |
-| **OpenAI-compatible** | Local | Self-hosted vLLM, llama.cpp server, LM Studio, etc |
-| **Anthropic** (Claude) | Cloud | Claude Opus / Sonnet / Haiku via API key |
-| **OpenAI** | Cloud | GPT-4, GPT-3.5, GPT-4o |
-| **Google** (Gemini) | Cloud | Gemini 1.5 family |
-| **OpenRouter** | Cloud | Aggregator: 100+ models, one API key |
-| **Groq** | Cloud | Llama / Mixtral inference at very high throughput |
-| **Together** | Cloud | Open-weights inference |
-| **Fireworks** | Cloud | Open-weights inference plus custom fine-tunes |
+| Provider | Kind | Privacy tier | Use case |
+|---|---|---|---|
+| **Ollama** | `ollama` | `local` | Fully offline; nothing leaves the machine |
+| **Custom (OpenAI-compatible)** | `custom-openai` | `local` (typical) | Self-hosted vLLM, llama.cpp server, LM Studio, etc |
+| **Anthropic** (Claude) | `anthropic` | `proprietary-cloud` | Claude models via API key |
+| **OpenAI** | `openai` | `proprietary-cloud` | GPT model family |
+| **Google Gemini** | `google` | `proprietary-cloud` | Gemini family |
+| **OpenRouter** | `openrouter` | `proprietary-cloud` | Aggregator: 100+ models, one API key |
+| **Groq** | `groq` | `open-source-cloud` | Open-weights inference at very high throughput |
+| **Together AI** | `together` | `open-source-cloud` | Open-weights inference |
+| **Fireworks AI** | `fireworks` | `open-source-cloud` | Open-weights inference plus custom fine-tunes |
 
 ### Privacy tiers
 
-Every provider is tagged with a tier. The active workspace has a configurable `maxTier` setting. If a provider's tier exceeds the workspace ceiling, the provider is hidden from routing and from the model picker. The two tiers Team-X tracks today:
+Every provider is tagged with a tier (`PrivacyTier` in
+`packages/shared-types/src/providers.ts`). The active workspace has a
+configurable tier ceiling; a provider above the ceiling is hidden from routing
+and from the model picker. Team-X tracks **three** tiers:
 
-- **Local**: traffic never leaves the host. Ollama and OpenAI-compatible pointed at a localhost endpoint both qualify.
-- **Cloud**: traffic crosses the network to a remote endpoint. Every hosted provider qualifies.
+- **`local`**: traffic never leaves the host. Ollama and a custom
+  OpenAI-compatible provider pointed at a localhost endpoint both qualify.
+- **`open-source-cloud`**: hosted inference over open-weights models —
+  Groq, Together AI, Fireworks AI.
+- **`proprietary-cloud`**: hosted proprietary APIs — Anthropic, OpenAI,
+  Google Gemini, OpenRouter.
 
 Set the ceiling via `settings.setPrivacy`:
 
@@ -58,7 +65,7 @@ With `maxTier: 'local'`, Team-X refuses to add or use any cloud provider for the
 await invoke('providers.add', {
   name: 'Anthropic (Claude)',
   kind: 'anthropic',
-  privacyTier: 'cloud',
+  privacyTier: 'proprietary-cloud',
   apiKey: 'sk-ant-...',
 });
 
@@ -72,10 +79,10 @@ await invoke('providers.add', {
   }),
 });
 
-// OpenAI-compatible (vLLM, llama.cpp, LM Studio)
+// Custom OpenAI-compatible (vLLM, llama.cpp server, LM Studio)
 await invoke('providers.add', {
   name: 'Local vLLM',
-  kind: 'openai-compatible',
+  kind: 'custom-openai',
   privacyTier: 'local',
   configJson: JSON.stringify({
     baseUrl: 'http://localhost:8000/v1',

@@ -301,7 +301,7 @@ Mission Control is designed for **daily operations**, not configuration or gover
 
 Click **Dashboard** in the top navigation. Mission Control is the default view.
 
-**Keyboard shortcut:** Press `Ctrl+1` / `Cmd+1` to jump directly to Dashboard.
+**Keyboard shortcut:** Press `Cmd/Ctrl+K` to open the command palette, then run `/show dashboard` to jump directly to Mission Control.
 
 ---
 
@@ -395,15 +395,15 @@ Shows recent agentic loop executions with live status updates.
 
 #### Interpreting Run States
 
-**Running (Brand Pulse)**
+**Running (EXEC lamp)**
 - Normal: Steps incrementing, duration increasing gradually
 - Abnormal: Stuck on same step for >60 seconds → possible provider hang or malformed tool call
 
-**Completed (Green Check)**
+**Completed (GO lamp)**
 - Review cost and token count — if unusually high, check the thread for what happened
-- Failed runs show red badge with error reason
+- Failed runs light a steady NO-GO lamp with the error reason
 
-**Failed (Red X)**
+**Failed (NO-GO lamp)**
 - Common reasons:
   - `budget_exhausted`: Hit step/token/timeout ceiling → increase in Settings → Runtime → Agentic Loop
   - `timeout`: Wall-clock deadline exceeded → check provider latency or increase timeout
@@ -425,11 +425,11 @@ Shows durable backlog per employee layered with live activity status.
 
 #### What You See Per Employee
 
-| Element | Meaning | Color Code |
-|---------|---------|------------|
+| Element | Meaning | Lamp / Indicator |
+|---------|---------|------------------|
 | **Name + Title** | Employee identity | — |
-| **Status Badge** | Current activity state | Brand (Live) / Amber (Blocked) / Red (Error) / Gray (Idle) |
-| **Queue Bar** | Visual breakdown of ticket counts | Gray (Open) / Brand (InProgress) / Amber (Blocked) / Green (Done) |
+| **Status Lamp** | Current activity state | EXEC lamp (thinking) / HOLD lamp (blocked) / NO-GO lamp (error) / STBY lamp (idle) |
+| **Queue Bar** | Visual breakdown of ticket counts | Graphite (Open) / Scope teal (In-Progress) / Amber (Blocked) / Green (Done) |
 | **Quick Actions** | Chat bubble, ticket icon | Jump to conversation or ticket list |
 
 #### Reading the Queue Bar
@@ -438,7 +438,7 @@ The horizontal bar shows four segments, left-to-right:
 
 ```
 Open: ████████ (8)     InProgress: ███ (3)     Blocked: █ (1)     Done: ██████ (6)
-   Gray                  Blue                   Amber              Green
+   Graphite             Scope teal             Amber              Green
 ```
 
 **Healthy queue distribution:**
@@ -448,18 +448,20 @@ Open: ████████ (8)     InProgress: ███ (3)     Blocked: �
 - Done: 10-30% (completion flowing)
 
 **Warning signs:**
-- All gray (Open only) → Employee not picking up work → Check provider, status, or availability
+- All graphite (Open only) → Employee not picking up work → Check provider, status, or availability
 - All amber (Blocked only) → Employee or workspace stalled → Investigate blockage root cause
 - Long Done segment → Work completing but not being archived/reviewed → May need attention
 
-#### Status Badge Meanings
+#### Status Lamp Meanings
 
-| Badge | State | Typical Cause | Action |
-|-------|-------|---------------|--------|
-| **Brand pulse** | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
-| **Amber** | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
-| **Red** | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
-| **Gray** | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
+Each employee row carries a stencil word-lamp for live activity — the same lamp vocabulary used across the console. Read the lamp word, not a color dot:
+
+| Lamp | State | Typical Cause | Action |
+|------|-------|---------------|--------|
+| **EXEC** (teal) | Live/Active | Employee is thinking, streaming, or calling a tool | None — work in progress |
+| **HOLD** (amber) | Blocked | Ticket assigned to employee is blocked, or employee has no viable provider | Check ticket detail for block reason; verify provider configuration |
+| **NO-GO** (red) | Error | Run failed, provider disconnected, or runtime error | Click employee → review recent runs; check provider connection |
+| **STBY** (unlit) | Idle | No active work, provider available, queue may be empty or employee unassigned | Normal if queue empty; assign tickets if employee should be working |
 
 #### Quick Actions
 
@@ -582,7 +584,7 @@ Raw LLM output from all employees and runtimes. Shows:
 Grid layout showing employee activity as cards. Each employee card displays:
 
 - Avatar, name, title
-- Live status badge
+- Live status lamp (stencil word — EXEC / HOLD / NO-GO / STBY)
 - Current activity (what they're working on)
 - Quick actions (chat, assign ticket)
 
@@ -674,7 +676,7 @@ Symptom: Queue Pressure: 67, Live Runs: 0, Workforce Active: 0
 Diagnosis:
   1. Check provider enabled (Settings → Providers)
   2. Test connection (click Test button on provider card)
-  3. Check employee status badges (any red errors?)
+  3. Check employee status lamps (any NO-GO lamps?)
   4. Check for blocked tickets preventing flow
 Resolution:
   - Fix provider config OR reassign blocked work OR hire more employees
@@ -727,9 +729,8 @@ Resolution:
 
 ### 1. Use Keyboard Navigation
 
-- `Ctrl+1` / `Cmd+1`: Jump to Dashboard (Mission Control)
-- `Ctrl+2` / `Cmd+2`: Jump to Tickets
-- `Ctrl+3` / `Cmd+3`: Jump to Chat
+- `Cmd/Ctrl+K`: Open the command palette, then run `/show dashboard`, `/show tickets`, or `/show chat` to switch views
+- `Cmd/Ctrl+Shift+K`: Open Copilot
 - `Tab`: Navigate between panels
 - `Enter`: Open selected item (run card, employee row)
 - `Esc`: Close detail panels
@@ -747,10 +748,10 @@ Keep Mission Control open in a separate window for continuous monitoring:
 
 Train your eye to scan for **anomalies**, not details:
 
-- **Red anywhere** → needs immediate attention (error, critical insight, blocked)
-- **Amber** → investigate soon (blocked, warning, stagnation)
-- **Brand pulse** → normal activity
-- **Gray** → idle or no data (verify if expected)
+- **Red anywhere** (NO-GO lamp) → needs immediate attention (error, critical insight, blocked)
+- **Amber** (HOLD lamp) → investigate soon (blocked, warning, stagnation)
+- **Teal** (EXEC lamp) → normal activity
+- **Unlit / STBY lamp** → idle or no data (verify if expected)
 
 ### 4. Set Monitoring Intervals
 
@@ -1177,7 +1178,7 @@ When troubleshooting, use multiple subviews together:
 - Hard budgets (max steps, max tokens, timeout)
 - Persisted thread for later review
 
-**See also:** [Agentic Loop documentation](../../agentic-loop.md) for full technical details.
+**See also:** [Agentic Loop documentation](agentic-loop.md) for full technical details.
 
 ---
 
@@ -1232,7 +1233,7 @@ When troubleshooting, use multiple subviews together:
 **Write-side keywords detected:**
 - decompose / delegate / create tickets / assign owners / review / approve
 
-**See also:** [Task Planner documentation](../../task-planner.md) for write-side tool details.
+**See also:** [Task Planner documentation](task-planner.md) for write-side tool details.
 
 ---
 
@@ -1542,8 +1543,8 @@ All of these work the same:
 
 ## Related Sections
 
-- [Agentic Loop](../../agentic-loop.md) — Complex request technical details
-- [Task Planner](../../task-planner.md) — Write-side agentic decomposition
+- [Agentic Loop](agentic-loop.md) — Complex request technical details
+- [Task Planner](task-planner.md) — Write-side agentic decomposition
 - [Tickets & Work](#7-tickets--work-management) — Managing created tickets
 - [Mission Control Dashboard](#5-mission-control-dashboard) — Viewing command history
 
@@ -1591,14 +1592,14 @@ All of these work the same:
 ```
 ┌─────────┐     ┌──────────────┐     ┌──────────┐     ┌──────────┐
 │  Open   │────▶│ In Progress  │────▶│ Blocked  │────▶│   Done   │
-│ (Gray)  │     │   (Brand)    │     │ (Amber)  │     │ (Green)  │
+│ [HOLD]  │     │    [EXEC]    │     │ [NO-GO]  │     │   [GO]   │
 └─────────┘     └──────────────┘     └──────────┘     └──────────┘
      ▲                                   │                 │
-     │                                   │                 │
+     │      drag back when unblocked     │                 │
      └───────────────────────────────────┘                 │
-                   Reopen from Done                       │
-                                                          │
-                                                   Reopen (creates new entry)
+     ▲                                                     │
+     └─────────────────────────────────────────────────────┘
+          drag out of Done (or palette "reopen ticket…")
 ```
 
 | Status | Meaning | When to Use |
@@ -1608,7 +1609,7 @@ All of these work the same:
 | **Blocked** | Waiting on dependency or decision | External blockage, needs input, cannot proceed |
 | **Done** | Work completed | Verified deliverable, resolved issue, finished task |
 
-**Reopening:** Click "Reopen" on a Done ticket to return it to Open. The audit trail preserves the original completion; reopening creates a new work cycle.
+**Reopening:** Drag a Done card back into an active lane, or use the palette's reopen intent ("reopen ticket #17"). The audit trail preserves the original completion; reopening creates a new work cycle.
 
 ### Priority Levels
 
@@ -1678,7 +1679,7 @@ The Task Planner:
 4. Shows amber confirmation gate before creating tickets
 5. Writes all tickets to the queue with proper assignees
 
-See [Task Planner documentation](../../task-planner.md) for full details.
+See [Task Planner documentation](task-planner.md) for full details.
 
 ---
 
@@ -1722,67 +1723,52 @@ See [Task Planner documentation](../../task-planner.md) for full details.
 
 ---
 
-## Ticket Detail Panel
+## Ticket Detail Rail
 
-Click any ticket card to open the detail panel. The panel has three sections.
+Click any ticket card to open the detail rail beside the board (the queue
+stays visible). The rail reads top to bottom.
 
-### Header Section
+### Identity & Status
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Auth Implementation                          [High] [In Progress]   │
-│ Assignee: Sarah Chen   Project: Q2 Launch    Due: Mar 15           │
-│                                                        [Close][⋮]  │
-└─────────────────────────────────────────────────────────────────────┘
-```
+The header shows the ticket title with its short id, plus the **status** and
+**priority** as non-interactive stencil word-lamps (status: HOLD for open,
+EXEC for in-progress, NO-GO for blocked, GO for done; priority lights NO-GO
+for critical and HOLD for high — medium and low stay unlit). Status changes
+happen by dragging the card between board lanes or via the command palette —
+there is no status dropdown, no "⋮ More" menu, and no Reopen button in the
+rail. The only header action is the **×** that closes the rail.
 
-**Header actions:**
-- **Close/Reopen**: Change status to Done or Open
-- **⋮ (More)**: Delete ticket, copy link, view in audit log
+### Description & Ticket Memory
 
-### Thread Section
+The description sits under the header, followed by the **ticket memory card**
+— the digest and checkpoint trail behind long ticket threads, linking into
+Autonomy → Memory for the deep view.
 
-The heart of the ticket. Shows full conversation history.
+### Participants
 
-**What you see:**
-- **Human messages**: Your comments and instructions (left-aligned, white background)
-- **Employee responses**: Agent replies (right-aligned, brand-tinted background)
-- **Tool calls**: Blue chips showing function name and arguments
-- **Tool results**: Gray chips with return values
-- **Deliverables**: File attachments created by agents
+Lists every employee on the ticket thread; the assignee is tagged **Owner**.
+Add participants from the picker; remove them with the per-chip **✕**.
+Participants are who Team-X wakes when a human comments.
 
-**Thread behavior:**
-- **Streaming**: Employee responses appear token-by-token in real-time
-- **History**: Full conversation preserved from creation to close
-- **Searchable**: Use browser find (Ctrl+F) to locate specific messages
-- **Exportable**: Copy thread content for external documentation
+### Attachments
 
-### Activity Section
+Vault files linked to this ticket — source material in, agent-created
+deliverables out. Use **Attach from vault** to link files; every attachment
+is SHA256-integrity-checked and searchable.
 
-**Participants**
-- Lists all employees with access to this ticket thread
-- Assignee is automatically a participant
-- Add/remove participants anytime
+### Discussion Thread
 
-**Attachments**
-- Vault files linked to this ticket
-- Source material, requirements docs, reference designs
-- Agent-created deliverables appear here automatically
+The full conversation history. Your messages render with an armed-red tint
+and "You"; employee replies are plain cards; system notices are centered
+italics. Compose with `Enter` to send and `Shift+Enter` for a newline. Agent
+responses stream in as they generate.
 
-**Related Tickets**
-- Parent/child relationships
-- Duplicate or blocking relationships
-- Click to navigate between related work
+### Closing
 
-**Timeline**
-- Chronological list of ticket events:
-  - Created
-  - Status changes
-  - Assignee changes
-  - Participant additions
-  - Attachments
-  - Comments
-  - Closure
+One button — **Close Ticket** — moves the ticket to Done. To reopen, drag
+the card out of the Done lane or use the palette's reopen intent
+("reopen ticket #17"). Every status change, participant change, comment, and
+attachment lands in the append-only audit log.
 
 ---
 
@@ -1835,7 +1821,7 @@ All three receive the comment and can respond.
 |----------|---------------|
 | Only two participants: you and the employee | Multiple participants: assignee + added collaborators |
 | Comment wakes only the employee | Comment wakes all participants + historical authors |
-| No status tracking | Status workflow (Open → In Progress → Done) |
+| No status tracking | Status workflow (Open → In Progress → Blocked → Done) |
 | No audit trail | Full audit of changes and comments |
 | Temporary coordination | Durable work record |
 
@@ -1984,15 +1970,12 @@ Configure default memory behavior in **Settings → Memory**:
 
 ### Updating Status
 
-**Method 1: Drag and drop**
-- Drag ticket card between columns on Kanban board
-- Status updates automatically
+**Method 1: Drag and drop (primary)**
+- Drag the ticket card between columns on the Kanban board (Open / In Progress / Blocked / Done)
+- Status updates automatically, and the audit log records the change
+- The status lamp in the detail rail is display-only — there is no status dropdown
 
-**Method 2: Status badge**
-- Click status badge in ticket detail header
-- Select new status from dropdown
-
-**Method 3: Command Palette**
+**Method 2: Command Palette**
 ```
 Press Ctrl+K → "Close ticket #47"
 Press Ctrl+K → "Mark ticket #42 as blocked"
@@ -2040,17 +2023,16 @@ When an employee creates a deliverable (code, doc, design):
 ### Closing and Reopening
 
 **Closing:**
-1. Click **Close Ticket** in detail header
-2. Card animates to Done column
+1. Click **Close Ticket** at the bottom of the detail rail (or drag the card to Done)
+2. Card moves to the Done lane
 3. Assignee and participants notified
 4. Audit log records closure
 
 **Reopening:**
-1. Click **Reopen** on Done ticket
-2. Card returns to Open column
-3. Assignee retained (or change if needed)
-4. New comment prompts: "Why reopening?"
-5. Audit log shows original completion + reopening
+1. Drag the Done card back into an active lane, or use the palette ("reopen ticket #17")
+2. Assignee is retained (change it if needed)
+3. Add a comment explaining why it reopened — participants wake on your comment
+4. Audit log shows the original completion plus the reopening
 
 ---
 
@@ -2175,7 +2157,7 @@ See attached API spec for endpoint details.
 
 **Fix:**
 1. Refresh Tickets view (F5 or Cmd+R)
-2. If still wrong, click status badge in detail to reset
+2. If still wrong, drag the card to the correct column to re-sync its status
 3. Check Audit log to confirm status change was recorded
 
 ### "Can't find a ticket I created"
@@ -2195,7 +2177,7 @@ See attached API spec for endpoint details.
 ## Related Sections
 
 - [Command Palette](#6-command-palette) — Creating tickets via natural language
-- [Task Planner](../../task-planner.md) — AI-powered ticket decomposition and delegation
+- [Task Planner](task-planner.md) — AI-powered ticket decomposition and delegation
 - [Projects, Goals & Schedule](#8-projects--goals--schedule) — Linking tickets to initiatives
 - [Chat & Conversations](#9-chat--conversations) — Contrast with ticket threads
 - [Files & Deliverables](#11-files--deliverables) — Ticket attachments
@@ -3117,8 +3099,8 @@ Use both for complete awareness:
 - [Mission Control Dashboard](#5-mission-control-dashboard) — Real-time operations view
 - [Autonomy Control Plane](#13-autonomy-control-plane) — Agent improvement loop
 - [Telemetry & Costs](#16-telemetry--costs) — Detailed cost analysis
-- [Copilot Service](../../copilot-service.md) — Technical deep-dive on analyzer
-- [Copilot UI](../../copilot-ui.md) — User interface details
+- [Copilot Service](copilot-service.md) — Technical deep-dive on analyzer
+- [Copilot UI](copilot-ui.md) — User interface details
 
 ---
 
@@ -4925,19 +4907,21 @@ If issues persist:
 
 ### Navigation Shortcuts
 
-| Action | Windows/Linux | macOS |
-|--------|---------------|-------|
-| **Switch to Dashboard** | `Alt+D` | `Cmd+D` |
-| **Switch to Autonomy** | `Alt+A` | `Cmd+A` |
-| **Switch to Org** | `Alt+O` | `Cmd+O` |
-| **Switch to Projects** | `Alt+P` | `Cmd+P` |
-| **Switch to Tickets** | `Alt+T` | `Cmd+T` |
-| **Switch to Meetings** | `Alt+M` | `Cmd+M` |
-| **Switch to Chat** | `Alt+C` | `Cmd+C` |
-| **Switch to Files** | `Alt+F` | `Cmd+F` |
-| **Switch to Telemetry** | `Alt+G` | `Cmd+G` |
-| **Switch to Audit** | `Alt+L` | `Cmd+L` |
-| **Switch to Settings** | `Alt+S` | `Cmd+,` |
+There are no per-view navigation chords — view switching goes through the
+command palette (`Ctrl/Cmd+K`), either in plain language ("show telemetry")
+or with the deterministic slash commands:
+
+| Command | Destination |
+|---------|-------------|
+| `/show dashboard` | Mission Control dashboard |
+| `/show tickets` | Ticket board |
+| `/show projects` | Projects (Kanban / Goals / Schedule) |
+| `/show meetings` | Meetings |
+| `/show telemetry` | Telemetry |
+| `/show files` | File vault |
+| `/show audit` | Audit log |
+| `/show schedule` | Team schedule |
+| `/show settings` | Settings |
 
 ### Editing Shortcuts
 
@@ -5019,6 +5003,6 @@ If issues persist:
 ---
 
 **Version**: 1.0
-**Last Updated**: 2026-05-03
+**Last Updated**: 2026-07-03
 **Product Phase**: Phase 6
-**Release**: Team-X v1.1.0
+**Release**: Current as of v3.2.1+ (2026-07)

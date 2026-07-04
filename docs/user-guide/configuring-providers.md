@@ -1,6 +1,6 @@
 # Configuring Providers
 
-Team-X supports 10 LLM providers. This guide covers adding providers, setting privacy tiers, and choosing a runtime strategy.
+Team-X supports 9 LLM providers. This guide covers adding providers, setting privacy tiers, and choosing a runtime strategy.
 
 ## Supported Providers
 
@@ -60,6 +60,10 @@ In **Settings > Privacy**, set the maximum allowed tier:
 - **Proprietary Cloud** — agents can use any provider (default).
 
 The provider router enforces this filter at call time. If a role requests a proprietary provider but your privacy max is "local only," the router falls back per the role's `fallback_providers` list.
+
+## Native GGUF models (in development)
+
+The local-GGUF runtime foundation — GPU probing and placement, the `llama.cpp` process lifecycle, and the model-library backend — already ships in the Team-X codebase. The in-app model-library UI (browsing, importing, watch-folder discovery, and GPU placement controls) arrives in a future release. Until it lands, **Ollama is the supported path for running models locally today**: point Team-X at your Ollama daemon and it appears as the Local-tier provider above.
 
 ## Runtime Strategy
 

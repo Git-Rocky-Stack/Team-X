@@ -109,7 +109,7 @@ Description: Include requirements. 'Create a reusable button component with prop
 
 Assignee: Select Alex.
 
-Priority: Normal for this demo.
+Priority: Medium for this demo.
 
 Click 'Create Ticket.' Your ticket appears in the Tickets panel."
 
@@ -208,7 +208,7 @@ The key is to be specific. The more context you provide, the better the Command 
 **Audio:**
 "Press Ctrl+K or Cmd+K, then use the up and down arrow keys to navigate your command history. This is useful for repeating frequently-used commands.
 
-Press Ctrl+Up or Cmd+Up to go to previous commands, Ctrl+Down or Cmd+Down for next commands."
+Arrow Up browses your palette history to previous commands, and Arrow Down moves back toward the most recent."
 
 ---
 

@@ -96,8 +96,9 @@ Team-X's proactive intelligence analyzer. Copilot monitors system state, surface
 **Insight types:**
 - **Operational:** System health, failures, performance
 - **Cost:** Spend anomalies, budget alerts
+- **Org:** Team structure, staffing, and reporting lines
 - **Workflow:** Process improvements, blocked work
-- **Security:** Vulnerabilities, access issues
+- **Anomaly:** Unusual patterns and outliers worth a closer look
 
 **See also:** [Insight](#insight)
 
@@ -362,14 +363,14 @@ A work unit assigned to an employee. Tickets contain requirements, context, assi
 **Lifecycle:**
 1. **Open:** Created but not started
 2. **In Progress:** Agent actively working
-3. **Done:** Completed and approved
-4. **Cancelled:** Discontinued (work preserved)
+3. **Blocked:** Waiting on a dependency or unmet precondition
+4. **Done:** Completed and approved
 
 **Components:**
 - Title and description
 - Assignee (primary owner)
 - Participants (collaborators)
-- Priority (Low, Normal, High, Critical)
+- Priority (Low, Medium, High, Critical)
 - Dependencies (blocking relationships)
 - Status (current state)
 
@@ -454,21 +455,9 @@ A company container containing employees, tickets, budgets, routines, and delive
 
 ---
 
-## Keyboard Shortcuts Reference
+## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+K` / `Cmd+K` | Open Command Palette |
-| `Ctrl+D` / `Cmd+D` | Go to Mission Control Dashboard |
-| `Ctrl+T` / `Cmd+T` | Go to Tickets Panel |
-| `Ctrl+E` / `Cmd+E` | Go to Employees Panel |
-| `Ctrl+A` / `Cmd+A` | Go to Autonomy Control Plane |
-| `Ctrl+F` / `Cmd+F` | Go to Files Panel |
-| `Ctrl+C` / `Cmd+C` | Go to Chat Panel |
-| `Ctrl+,` / `Cmd+,` | Open Settings |
-| `Ctrl+?` / `Cmd+?` | Show keyboard shortcuts |
-| `Esc` | Close current panel/modal |
-| `Ctrl+N` / `Cmd+N` | Create new ticket |
+See [keyboard-shortcuts.md](./keyboard-shortcuts.md) for the complete, authoritative keyboard-shortcut reference. The two global shortcuts are `Ctrl+K` / `Cmd+K` (Command Palette) and `Ctrl+Shift+K` / `Cmd+Shift+K` (Copilot sidebar).
 
 ---
 
@@ -476,4 +465,4 @@ A company container containing employees, tickets, budgets, routines, and delive
 
 ---
 
-*Last updated: 2026-05-03*
+*Last updated: 2026-07-03*

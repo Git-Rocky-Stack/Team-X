@@ -387,7 +387,7 @@
 - Hard budgets (max steps, max tokens, timeout)
 - Persisted thread for later review
 
-**See also:** [Agentic Loop documentation](../../agentic-loop.md) for full technical details.
+**See also:** [Agentic Loop documentation](../agentic-loop.md) for full technical details.
 
 ---
 
@@ -442,7 +442,7 @@
 **Write-side keywords detected:**
 - decompose / delegate / create tickets / assign owners / review / approve
 
-**See also:** [Task Planner documentation](../../task-planner.md) for write-side tool details.
+**See also:** [Task Planner documentation](../task-planner.md) for write-side tool details.
 
 ---
 
@@ -752,10 +752,10 @@ All of these work the same:
 
 ## Related Sections
 
-- [Agentic Loop](../../agentic-loop.md) — Complex request technical details
-- [Task Planner](../../task-planner.md) — Write-side agentic decomposition
-- [Tickets & Work](#7-tickets--work-management) — Managing created tickets
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Viewing command history
+- [Agentic Loop](../agentic-loop.md) — Complex request technical details
+- [Task Planner](../task-planner.md) — Write-side agentic decomposition
+- [Tickets & Work](07-tickets-and-work.md#7-tickets--work-management) — Managing created tickets
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Viewing command history
 
 ---
 

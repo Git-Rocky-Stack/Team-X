@@ -62,7 +62,7 @@ As a [user type], I want [action] so that [benefit].
 
 **Assignee:** Full Stack Engineer / Backend Engineer / Frontend Engineer
 **Participants:** Tech Lead, Designer (if UI involved), QA Engineer
-**Priority:** Normal / High / Critical
+**Priority:** Low / Medium / High / Critical
 **Estimated Cost:** $5-50 (depending on complexity)
 **Dependencies:** Design mockups, API contracts, architecture decision
 
@@ -181,7 +181,7 @@ As a [user type], I want [action] so that [benefit].
 
 **Assignee:** Tech Lead / Senior Engineer
 **Participants:** PR Author (for clarification)
-**Priority:** Normal
+**Priority:** Medium
 **Estimated Cost:** $1-10
 **Dependencies:** PR must be created first
 
@@ -246,7 +246,7 @@ Create comprehensive documentation for [subject].
 
 **Assignee:** Technical Writer / Senior Engineer
 **Participants:** Subject matter expert(s)
-**Priority:** Normal
+**Priority:** Medium
 **Estimated Cost:** $3-15
 **Dependencies:** Feature must be complete and stable
 
@@ -362,7 +362,7 @@ Create comprehensive tests for [subject].
 
 **Assignee:** Tech Lead / Senior Engineer / Product Manager
 **Participants:** Stakeholders
-**Priority:** Normal
+**Priority:** Medium
 **Estimated Cost:** $5-25
 **Dependencies:** Clear research scope
 
@@ -597,7 +597,7 @@ Create comprehensive tests for [subject].
 
 **Assignee:** Senior Engineer / Tech Lead
 **Participants:** QA Engineer
-**Priority:** Normal
+**Priority:** Medium
 **Estimated Cost:** $5-30
 **Dependencies:** Comprehensive test coverage required first
 

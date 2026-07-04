@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Comprehensive documentation accuracy pass (2026-07-03).** Every public doc
+  re-verified against the shipped feature surface: README rebuilt (correct
+  test/spec/migration/IPC counts, 9-provider list, Command Console design-system
+  section with Night Ops + Day Shift hero screenshots, Autonomy control-plane
+  coverage, honest local-GGUF status); fabricated keyboard-shortcut
+  documentation removed repo-wide and `keyboard-shortcuts.md` rewritten to the
+  real two-shortcut surface; `integration-guide.md` corrected to the real
+  three-value `PrivacyTier` enum and `custom-openai` provider kind;
+  `enhanced/07` ticket-detail rewritten to the shipped detail rail; retired
+  status-badge vocabulary replaced with lamp-tile vocabulary; broken
+  `enhanced/*` cross-links repaired; `docs/user-guide/README.md` rebuilt as a
+  fully linked index; ARCHITECTURE / API_ENDPOINTS / DATABASE_SCHEMA updated
+  with the `@team-x/local-gguf-runtime` package, `localGguf.*` IPC families,
+  and `0036_local_gguf` tables; BUILD_GUIDE rewritten version-neutral; eleven
+  v2.0.x-era working-artifact files relocated from the repo root to
+  `docs/dev-history/`; in-app User Guide corrected (tickets board + detail
+  rail, provider tier mapping, Command Console orientation bullet);
+  `.node-version` aligned with `.nvmrc` (22.22.2).
+
 ### Fixed
 - **Silenced four classes of E2E dev-environment stderr noise (Codex Stage-3
   non-blockers) — verified 0 occurrences across the full 26-spec suite, down

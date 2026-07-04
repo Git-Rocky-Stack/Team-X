@@ -64,6 +64,8 @@ The agent's response is informed by its role specification. The CEO thinks strat
 
 ## The Interface
 
+Team-X wears a Command Console aesthetic — a brushed-black hardware chassis modeled on mission-control panels. A shift toggle in the top bar flips the chrome between **Night Ops** (dark) and **Day Shift** (silver); the LCD-style displays and readouts stay dark in both shifts, the way instrument screens do. Status throughout the app reads as stencil word-lamps — GO, HOLD, NO-GO, STBY, EXEC — rather than plain text labels, so operational posture is legible at a glance.
+
 ### Top Bar
 
 The top bar contains navigation tabs:

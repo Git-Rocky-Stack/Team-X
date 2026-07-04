@@ -44,6 +44,8 @@ Examples:
 
 ### Command Categories
 
+> **How these commands resolve.** The phrasings below are natural-language examples, not a fixed command grammar. Only the **14 structured intents** (hire, fire, promote, assign, create ticket / project / goal, close, reopen, call / end meeting, check status, show view, and search vault) plus the `/show` slash commands are the deterministic surface — they classify to a known intent and execute directly. Everything else here — `cancel agent run`, `start agent for ticket`, `list runtimes`, `approve all`, and similar operational phrasings — has no dedicated intent; it routes through the `complex_request` agentic fallback, which reasons over your org state and may ask a clarifying question instead of firing a fixed action.
+
 #### Workspace Commands
 
 ```
@@ -233,4 +235,4 @@ For automation beyond what the Command Palette offers, the right extension point
 
 ---
 
-*Last updated: 2026-05-11*
+*Last updated: 2026-07-03*

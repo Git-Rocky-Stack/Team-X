@@ -8,7 +8,7 @@
 
 **Name:** Team-X
 **Type:** AI-powered workforce desktop application
-**Version:** 1.0.0
+**Version:** 3.2.1
 **Status:** Production
 **Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **Documentation Root:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
@@ -718,7 +718,7 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 @software{teamx_2026,
   author = {Team-X},
   title = {Team-X: AI-Powered Workforce Desktop Application},
-  version = {3.1},
+  version = {3.2.1},
   year = {2026},
   url = {https://github.com/Git-Rocky-Stack/Team-X}
 }
@@ -727,6 +727,18 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 ---
 
 ## Version History
+
+**v3.2.1** (2026-05-12) — current release
+- Release-engineering patch: differential auto-update path validated
+- Canonical 14-asset release shape (installers, blockmaps, updater manifests, SHA256SUMS)
+
+**v3.2.0** (2026-05-12)
+- Copilot proactive analyst + sidebar UI, task planner write-side, telemetry run-kind filters
+- Cross-platform CI matrix (Ubuntu / macOS / Windows) + Electron E2E smoke
+
+**Unreleased on main**
+- v3.3.0 Local & Networked GGUF foundation (backend: GPU probe, llama.cpp lifecycle, model library, HF downloads)
+- v3.4.0 Command Console / Carbon Pro design system — dual-shift Night Ops + Day Shift
 
 **v1.0.0** (2026-05-03)
 - Initial public release
@@ -750,5 +762,5 @@ For complete documentation, see: https://github.com/Git-Rocky-Stack/Team-X/tree/
 ---
 
 *Generated: 2026-05-03*
-*Version: 1.0.0*
+*Version: 3.2.1*
 *Platform: Team-X Desktop Application*

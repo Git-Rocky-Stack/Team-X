@@ -593,11 +593,11 @@ Use both for complete awareness:
 
 ## Related Sections
 
-- [Mission Control Dashboard](#5-mission-control-dashboard) — Real-time operations view
-- [Autonomy Control Plane](#13-autonomy-control-plane) — Agent improvement loop
-- [Telemetry & Costs](#16-telemetry--costs) — Detailed cost analysis
-- [Copilot Service](../../copilot-service.md) — Technical deep-dive on analyzer
-- [Copilot UI](../../copilot-ui.md) — User interface details
+- [Mission Control Dashboard](05-mission-control.md#5-mission-control-dashboard) — Real-time operations view
+- [Autonomy Control Plane](13-autonomy-control-plane.md#13-autonomy-control-plane) — Agent improvement loop
+- [Telemetry & Costs](../comprehensive-user-guide.md#16-telemetry--costs) — Detailed cost analysis
+- [Copilot Service](../copilot-service.md) — Technical deep-dive on analyzer
+- [Copilot UI](../copilot-ui.md) — User interface details
 
 ---
 

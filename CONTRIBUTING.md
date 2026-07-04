@@ -25,7 +25,7 @@ Thank you for your interest in contributing to Team-X. This guide covers everyth
 
 ### Prerequisites
 
-- **Node.js** 20.11.0+ (see `.nvmrc`)
+- **Node.js** 22.13.0+ (repo pin: 22.22.2 — see `.nvmrc`)
 - **pnpm** 9.0.0+
 - **Git**
 - **Windows 11**, **macOS 13+**, or **Ubuntu 22.04+** (native module compilation)

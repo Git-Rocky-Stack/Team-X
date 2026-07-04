@@ -119,8 +119,8 @@ Employees are AI agents with curated roles. Each employee has specialized skills
 
 **From Mission Control Dashboard:**
 ```
-Click "Employees" in left sidebar
-→ Or press Ctrl+E (Windows) / Cmd+E (Mac)
+Click "Employees" in the left sidebar
+→ Or press Ctrl+K / Cmd+K and ask the Command Palette to take you there ("show employees")
 ```
 
 ### Hire Your First Employee
@@ -202,8 +202,8 @@ Tickets are how you assign work to employees. A ticket has a title, description,
 
 **From Mission Control Dashboard:**
 ```
-Click "Tickets" in left sidebar
-→ Or press Ctrl+T (Windows) / cmd+T (Mac)
+Click "Tickets" in the left sidebar
+→ Or press Ctrl+K / Cmd+K and type /show tickets
 ```
 
 ### Create a New Ticket
@@ -237,7 +237,7 @@ Click "Tickets" in left sidebar
 │  [Alex ▼] (Full Stack Engineer)                                     │
 │                                                                     │
 │  Priority:                                                          │
-│  ○ Low  ● Normal  ○ High  ○ Critical                               │
+│  ○ Low  ● Medium  ○ High  ○ Critical                               │
 │                                                                     │
 │  Participants (optional):                                           │
 │  [+ Add Participant]                                                │
@@ -265,7 +265,7 @@ Your ticket appears in the Tickets panel:
 │  │                                                             │   │
 │  │  Status: 📥 Open                                            │   │
 │  │  Assignee: Alex (Full Stack Engineer)                       │   │
-│  │  Priority: Normal                                           │   │
+│  │  Priority: Medium                                           │   │
 │  │  Created: Just now                                          │   │
 │  │                                                             │   │
 │  │  [View Ticket] [Start Agent] [Edit] [Delete]                 │   │
@@ -398,17 +398,19 @@ Now that you've completed your first ticket, explore the dashboard.
 
 ### Navigation
 
-Use the left sidebar to navigate:
+Use the left sidebar to navigate. You can also jump to most areas from the Command Palette — press `Ctrl+K` / `Cmd+K` and type a `/show` command, or simply say where you want to go:
 
-| Panel | Keyboard Shortcut | Purpose |
-|-------|-------------------|---------|
-| Mission Control | `Ctrl+D` / `Cmd+D` | Dashboard overview |
-| Tickets | `Ctrl+T` / `Cmd+T` | Ticket management |
-| Employees | `Ctrl+E` / `Cmd+E` | Employee roster |
-| Autonomy | `Ctrl+A` / `Cmd+A` | Runtimes, routines, budgets |
-| Files | `Ctrl+F` / `Cmd+F` | Deliverables and artifacts |
-| Chat | `Ctrl+C` / `Cmd+C` | Team communication |
-| Settings | `Ctrl+,` / `Cmd+,` | Configuration |
+| Panel | Command Palette | Purpose |
+|-------|-----------------|---------|
+| Mission Control | `/show dashboard` | Dashboard overview |
+| Tickets | `/show tickets` | Ticket management |
+| Employees | say "show employees" | Employee roster |
+| Autonomy | say "open autonomy" | Runtimes, routines, budgets |
+| Files | `/show files` | Deliverables and artifacts |
+| Chat | say "open chat" | Team communication |
+| Settings | `/show settings` | Configuration |
+
+The `/show` slash commands cover Dashboard, Tickets, Projects, Meetings, Telemetry, Files, Audit, and Settings; for anything else, natural-language navigation ("take me to…") works from the same palette.
 
 ---
 
@@ -486,7 +488,7 @@ Team-X is open-source and community-supported — there is no hosted support ema
 
 ### Keyboard Shortcuts
 
-Press `?` anywhere in Team-X to see all available keyboard shortcuts.
+See [keyboard-shortcuts.md](../keyboard-shortcuts.md) for the full list of keyboard shortcuts. The Command Palette (`Ctrl+K` / `Cmd+K`) is the fastest way to navigate and act on anything in Team-X.
 
 ---
 

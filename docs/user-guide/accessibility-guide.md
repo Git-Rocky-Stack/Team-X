@@ -32,14 +32,14 @@ Team-X is committed to accessibility. This guide covers the accessibility featur
 |---------|-------------|---------------|
 | **Keyboard Navigation** | Full keyboard control | Default (always on) |
 | **Screen Reader Support** | NVDA, JAWS, VoiceOver | Default (always on) |
-| **High Contrast Mode** | Enhanced contrast | `Ctrl+Alt+H` toggle |
-| **Text Scaling** | Zoom in/out | `Ctrl++` / `Ctrl+-` |
+| **Dual-shift themes** | Night Ops (dark) / Day Shift (silver), both WCAG AA | Top-bar shift toggle |
+| **UI Zoom** | Scale the whole interface | View menu — `Ctrl/Cmd + =`, `Ctrl/Cmd + -`, `Ctrl/Cmd + 0` reset |
 | **Focus Indicators** | Visible focus on controls | Default (always on) |
-| **Skip Links** | Jump to main content | `Tab` on load |
+| **Word-lamp status** | Status is a stencil word, never color alone | Default (always on) |
 | **ARIA Labels** | Contextual labels | Default (always on) |
 | **Error Announcements** | Screen reader error alerts | Default (always on) |
 | **Color Blind Safe** | WCAG AA compliant colors | Default (always on) |
-| **Reduced Motion** | Disable animations | Settings → Appearance |
+| **Reduced Motion** | All animation collapses to 0ms | Honors the OS `prefers-reduced-motion` setting |
 
 ### Platform-Specific
 
@@ -55,17 +55,18 @@ Team-X is committed to accessibility. This guide covers the accessibility featur
 
 ### Global Shortcuts
 
-All features are accessible via keyboard:
+Team-X keeps its global keyboard surface deliberately small. Two shortcuts work from anywhere; everything else is reached through the Command Palette or by standard focus navigation:
 
-| Action | Shortcut | Alternative |
-|--------|----------|-------------|
-| Open Command Palette | `Ctrl+K` / `Cmd+K` | — |
-| Navigate panels | `Ctrl+1-8` / `Cmd+1-8` | Tab through |
-| Navigate lists | `↑` / `↓` | `Page Up` / `Page Down` |
-| Select focused item | `Enter` | `Space` (for checkboxes) |
-| Go back | `Esc` | `Alt+←` / `Cmd+[` |
-| Context menu | `Shift+F10` | — |
-| Show shortcuts help | `Ctrl+?` / `Cmd+?` | `?` |
+| Action | Shortcut |
+|--------|----------|
+| Open the Command Palette | `Ctrl+K` / `Cmd+K` |
+| Open the Copilot sidebar | `Ctrl+Shift+K` / `Cmd+Shift+K` |
+| Move focus forward / back | `Tab` / `Shift+Tab` |
+| Navigate a list or menu | `↑` / `↓` |
+| Activate the focused control | `Enter` / `Space` |
+| Dismiss a palette, menu, or dialog | `Esc` |
+
+Inside the Command Palette, `↑` / `↓` browse your command history, `Tab` accepts the current suggestion, and `Esc` closes it. Anything you can do with the mouse is reachable by tabbing to the control and pressing `Enter`. For the complete, authoritative list, see [keyboard-shortcuts.md](./keyboard-shortcuts.md).
 
 ### Tab Order
 
@@ -91,16 +92,7 @@ All interactive elements show visible focus:
 
 ### Keyboard Shortcuts Reference
 
-See [keyboard-shortcuts.md](./keyboard-shortcuts.md) for complete reference.
-
-**Customizing shortcuts:**
-
-```
-Settings → Keyboard → Customize Shortcuts
-→ Select shortcut to remap
-→ Press new key combination
-→ Save
-```
+See [keyboard-shortcuts.md](./keyboard-shortcuts.md) for the complete, authoritative list. The global surface is intentionally minimal — the Command Palette (`Ctrl+K` / `Cmd+K`) is the primary keyboard entry point, so most actions are reached by typing a command or by tabbing to a control and pressing `Enter`.
 
 ---
 
@@ -185,25 +177,19 @@ Controls frequency of updates during agent runs:
 
 ## Visual Accessibility
 
-### High Contrast Mode
+### Contrast and themes
 
-**Enable:** `Ctrl+Alt+H` (toggle)
+There is no separate high-contrast toggle — the design system is built to WCAG
+AA contrast in **both** of its themes, switchable from the top bar:
 
-**Appearance:**
+- **Night Ops** (default): platinum text on carbon black; status lamps carry
+  their meaning as stencil words with LED tones.
+- **Day Shift**: engraved dark text on silver-anodized chassis; displays (LCD
+  readouts, meters, lamp caps) stay dark in both themes so phosphor values keep
+  identical contrast everywhere.
 
-```
-Standard Mode:
-- Background: #1a1a1a (dark gray)
-- Text: #e0e0e0 (light gray)
-- Accent: #FFAA2024 (Strategia red)
-- Borders: #333333
-
-High Contrast Mode:
-- Background: #000000 (black)
-- Text: #FFFFFF (white)
-- Accent: #FFFF00 (yellow)
-- Borders: #FFFFFF (white)
-```
+Critical text targets WCAG AAA (7:1); body text meets AA (4.5:1) minimum in
+both shifts.
 
 ### Color Blindness
 
@@ -217,48 +203,34 @@ High Contrast Mode:
 **Design principles:**
 
 - Never rely on color alone to convey meaning
-- Use icons + text for status indicators
+- Status is always a stencil word in a lamp tile (GO / HOLD / NO-GO / STBY / EXEC), never a bare color dot
 - Provide tooltips with text descriptions
 - Test with color blindness simulators
 
 ### Text Scaling
 
-**Zoom in/out:**
+The whole interface scales through the standard **View** menu zoom:
 
-```
-Zoom in: Ctrl++ / Cmd++ (up to 200%)
-Zoom out: Ctrl+- / Cmd+- (down to 80%)
-Reset: Ctrl+0 / Cmd+0 (100%)
-```
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + =` | Zoom in |
+| `Ctrl/Cmd + -` | Zoom out |
+| `Ctrl/Cmd + 0` | Reset to 100% |
 
-**Text size options:**
-
-```
-Settings → Appearance → Text Size
-
-Presets:
-- Small (14px base)
-- Medium (16px base) — default
-- Large (18px base)
-- Extra Large (20px base)
-
-Custom: 12px - 24px
-```
+Zoom applies uniformly to text, lamps, and readouts, so layouts and contrast
+relationships are preserved at every scale.
 
 ### Reduced Motion
 
-**For users sensitive to motion:**
+Team-X honors the operating-system **reduce motion** preference
+(`prefers-reduced-motion`). When it is enabled, every console animation —
+LED ignition ramps, VU meter ballistics, warning blinks, view transitions —
+collapses to 0ms, and all states remain fully legible by color and form alone.
+There is no separate in-app setting to manage; set it once at the OS level:
 
-```
-Settings → Appearance → Reduced Motion
-
-Effects disabled when enabled:
-- Panel transitions
-- Loading spinners
-- Hover animations
-- Scroll animations
-- Agent run stream animations
-```
+- **Windows:** Settings → Accessibility → Visual effects → Animation effects (off)
+- **macOS:** System Settings → Accessibility → Display → Reduce motion
+- **Linux:** depends on desktop environment (e.g. GNOME → Accessibility → Reduce animation)
 
 ---
 
@@ -329,14 +301,12 @@ Each panel has consistent layout:
 - **Voice control:** Dictate commands (Windows Speech Recognition, Dragon)
 - **Eye tracking:** Calibrate for dwell clicking
 
-**Voice commands (Windows Speech Recognition):**
+**Voice control (OS-level tools such as Windows Speech Recognition or Dragon):**
 
-```
-"Open Command Palette" → Ctrl+K
-"Create ticket" → Ctrl+N
-"Open Settings" → Ctrl+,
-"Go back" → Esc
-```
+Because the whole app is drivable from two shortcuts and the command palette,
+voice workflows reduce to pressing `Ctrl+K` (say "press control K") and then
+dictating the command itself — "create a ticket for the login bug",
+"show settings", "hire an engineer". Dialogs close with "press escape".
 
 ### Click Targets
 

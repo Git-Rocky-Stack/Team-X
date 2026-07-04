@@ -26,11 +26,11 @@ This scenario demonstrates using Team-X to manage a complete product development
 ## Table of Contents
 
 1. [Phase 0: Vision & Planning](#phase-0-vision--planning)
-2. [Phase 1: Requirements & Design](#phase-1-requirements--design)
-3. [Phase 2: Development](#phase-2-development)
-4. [Phase 3: Testing & QA](#phase-3-testing--qa)
-5. [Phase 4: Launch Preparation](#phase-4-launch-preparation)
-6. [Phase 5: Go-Live & Stabilization](#phase-5-go-live--stabilization)
+2. [Phase 1: Requirements & Design](#phase-1-requirements--design-week-1)
+3. [Phase 2: Development](#phase-2-development-weeks-2-4)
+4. [Phase 3: Testing & QA](#phase-3-testing--qa-week-5)
+5. [Phase 4: Launch Preparation](#phase-4-launch-preparation-week-6)
+6. [Phase 5: Go-Live & Stabilization](#phase-5-go-live--stabilization-launch-day)
 7. [Phase 6: Post-Launch Retrospective](#phase-6-post-launch-retrospective)
 8. [Key Takeaways](#key-takeaways)
 9. [Related Documentation](#related-documentation)
@@ -1221,7 +1221,7 @@ The post-launch retro identified wins, losses, and action items. Team-X employee
 
 ## Related Documentation
 
-- [Task Planner Documentation](../../task-planner.md) — Write-side decomposition
+- [Task Planner Documentation](../task-planner.md) — Write-side decomposition
 - [Mission Control Dashboard](../comprehensive-user-guide.md#5-mission-control-dashboard) — Monitoring project progress
 - [Copilot: Proactive Intelligence](../comprehensive-user-guide.md#12-copilot-proactive-intelligence) — Cost monitoring
 - [Autonomy Control Plane](../comprehensive-user-guide.md#13-autonomy-control-plane) — Governance and approvals

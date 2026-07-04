@@ -49,6 +49,8 @@ Team-X is an Electron app with three processes and four packages.
 │      ├── @team-x/shared-types (typed contracts, events)            │
 │      ├── @team-x/role-schema (role-pack loader + validator)        │
 │      ├── @team-x/telemetry-core (cost + usage tracking)            │
+│      ├── @team-x/local-gguf-runtime (local GGUF via llama.cpp:     │
+│      │     GPU probe, server pool, HF hub, folder watch)           │
 │      ├── SQLite (better-sqlite3 / sql.js, FTS5, sqlite-vec)        │
 │      ├── File vault (filesystem blobs, SHA256 integrity)           │
 │      └── MCP host (singleton, pooled, tools_allowed/denied)        │
@@ -65,6 +67,7 @@ Team-X is an Electron app with three processes and four packages.
 | Styling | Tailwind + shadcn/ui + Strategia-X design system |
 | Local storage | SQLite (WAL mode, FTS5 search, sqlite-vec embeddings) |
 | Provider layer | Vercel AI SDK adapters wrapped in privacy-tier filtering |
+| Local model runtime | `@team-x/local-gguf-runtime` — GPU probing (CUDA/ROCm/Vulkan/Metal/CPU), llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, Hugging Face hub client, network-share-resilient folder watching, and benchmark runner (v3.3.0 backend foundation; renderer UI ships in a future release) |
 | Agent runtime | In-house orchestrator with slot semaphore + pause/drain + append-only event bus |
 | Extension surface | MCP (tools/resources/prompts) and role packs (markdown + YAML frontmatter) |
 
@@ -275,6 +278,7 @@ Channel families (~290 channels across the four `tsconfig` projects):
 | `settings.*` / `providers.*` | runtime configuration |
 | `mcp.*` / `extensions.*` | MCP host and pack/skill management |
 | `telemetry.*` | usage analytics |
+| `localGguf.*` | local & networked GGUF backend — 35 channels across `runtime` / `pool` / `library` / `hf` / `endpoint` / `benchmark`; contracts in `packages/shared-types/src/local-gguf.ts`; v3.3.0 backend foundation (renderer UI ships in a future release) |
 
 If you are forking Team-X and need to add an IPC channel, see
 `apps/desktop/src/main/ipc/register.ts` for the registration pattern and
