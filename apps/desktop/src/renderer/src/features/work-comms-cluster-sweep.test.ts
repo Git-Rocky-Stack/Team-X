@@ -256,6 +256,88 @@ describe('chat-view', () => {
   });
 });
 
+describe('copilot-insight-card', () => {
+  it('LED severity + lamp/Tag badges + selectors preserved, no legacy', () => {
+    const src = read('copilot/copilot-insight-card.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<Tag');
+    expect(src).toContain('var(--led-nogo)');
+    expect(src).toContain('data-copilot-insight-id={insight.id}');
+    expect(src).toContain('data-copilot-severity={insight.severity}');
+    expect(src).toContain('Dismiss insight:');
+    expectNoLegacy(src, 'copilot-insight-card.tsx');
+  });
+});
+
+describe('copilot-dashboard-widget', () => {
+  it('faceplate section + SubviewState states + selectors preserved, no legacy', () => {
+    const src = read('copilot/copilot-dashboard-widget.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('data-copilot-widget=""');
+    expect(src).toContain('data-copilot-widget-count={total}');
+    expect(src).toContain('data-copilot-widget-empty=""');
+    expect(src).toContain('data-copilot-widget-list=""');
+    expect(src).toContain('data-copilot-widget-view-all=""');
+    expectNoLegacy(src, 'copilot-dashboard-widget.tsx');
+  });
+});
+
+describe('copilot-sidebar', () => {
+  it('console sheet + nav-tile filters + every pinned selector preserved, no legacy', () => {
+    const src = read('copilot/copilot-sidebar.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('nav-tile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('cap-armed');
+    for (const sel of [
+      'data-copilot-sidebar-root=""',
+      'data-copilot-active-count={activeCount}',
+      'data-copilot-export-controls=""',
+      'data-copilot-category-filter={category}',
+      'data-copilot-severity-filter={severity}',
+      'data-copilot-export-scope={scope}',
+      'data-copilot-export-format={format}',
+      'data-copilot-export-status=""',
+      'data-copilot-export-error=""',
+      'data-copilot-empty=""',
+      'data-copilot-feed=""',
+      'data-copilot-ask-input=""',
+      'data-copilot-ask-submit=""',
+      'data-copilot-ask-error=""',
+    ]) {
+      expect(src, `missing ${sel}`).toContain(sel);
+    }
+    expect(src).toContain('role="alert"');
+    expect(src).toContain('aria-pressed');
+    expect(src).toContain('function buildExportRequest(format: CopilotExportFormat)');
+    expectNoLegacy(src, 'copilot-sidebar.tsx');
+  });
+});
+
+describe('user-guide-view', () => {
+  it('console replaces all 10 Mission*, VU on the checklist ratio, selectors preserved, no legacy', () => {
+    const src = read('user-guide/user-guide-view.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<VuMeter');
+    expect(src).toContain('summary.total > 0 ? summary.completed / summary.total : 0');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('nav-tile');
+    expect(src).toContain('data-user-guide-role={role}');
+    expect(src).toContain('data-user-guide-search=""');
+    expect(src).toContain('data-user-guide-section-nav={section.id}');
+    expect(src).toContain('data-user-guide-content={selectedSection.id}');
+    expect(src).toContain('data-user-guide-task={task.id}');
+    expect(src).toContain('data-user-guide-action={action.id}');
+    expectNoLegacy(src, 'user-guide-view.tsx');
+  });
+});
+
 describe('chat-drawer', () => {
   it('console sheet + stripe headers + every pinned contract preserved, no legacy', () => {
     const src = read('chat/chat-drawer.tsx');
