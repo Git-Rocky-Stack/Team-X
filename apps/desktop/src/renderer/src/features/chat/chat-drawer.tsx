@@ -33,14 +33,9 @@ import {
   isCopilotThread as checkCopilotThread,
 } from './thread-list.js';
 
+import { LampTile, RecessedWell, StripeHeader, Tag } from '@/components/console/index.js';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
 import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
-import {
-  MissionIconButton,
-  MissionInsetSurface,
-  MissionPill,
-  MissionSheetHeader,
-} from '@/features/mission/mission-shell.js';
 import { TicketDetailPanel } from '@/features/tickets/ticket-detail.js';
 import { useAgentStepStream } from '@/hooks/use-agent-step-stream.js';
 import { useChatMessages, useSendMessage, useStopChat, useThreadList } from '@/hooks/use-chat.js';
@@ -52,13 +47,13 @@ import { useAppStore } from '@/store/app-store.js';
 function statusColor(status: string): string {
   switch (status) {
     case 'thinking':
-      return 'bg-brand animate-pulse-slow';
+      return 'bg-[var(--armed-lit)] animate-pulse-slow';
     case 'blocked':
-      return 'bg-amber-500';
+      return 'bg-[var(--led-hold)]';
     case 'error':
-      return 'bg-red-500';
+      return 'bg-[var(--led-warn)]';
     default:
-      return 'bg-zinc-500';
+      return 'bg-[var(--graphite)]';
   }
 }
 
@@ -84,8 +79,8 @@ function TicketThreadPreviewPanel({ ticketId, employees, onClose }: TicketThread
   return (
     <div
       className={cn(
-        'absolute inset-0 z-20 flex flex-col overflow-hidden border-l border-white/10 bg-background/95 shadow-2xl shadow-black/70 backdrop-blur-xl',
-        'xl:fixed xl:inset-y-4 xl:left-auto xl:right-[calc(820px+1rem)] xl:w-[48rem] xl:max-w-[calc(100vw-860px)] xl:rounded-[24px] xl:border',
+        'absolute inset-0 z-20 flex flex-col overflow-hidden border-l border-[var(--hairline)] bg-background shadow-2xl',
+        'xl:fixed xl:inset-y-4 xl:left-auto xl:right-[calc(820px+1rem)] xl:w-[48rem] xl:max-w-[calc(100vw-860px)] xl:rounded-overlay xl:border',
         '2xl:right-[calc(900px+1rem)] 2xl:w-[54rem] 2xl:max-w-[calc(100vw-920px)]',
       )}
       data-thread-ticket-preview=""
@@ -423,24 +418,22 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
       <SheetContent
         side="right"
         className={cn(
-          'mission-shell flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 border-l border-white/10 bg-background/95 p-0 sm:w-[720px] sm:max-w-[calc(100vw-2rem)] xl:w-[820px] 2xl:w-[900px]',
+          'flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 border-l border-[var(--hairline)] bg-background p-0 sm:w-[720px] sm:max-w-[calc(100vw-2rem)] xl:w-[820px] 2xl:w-[900px]',
           threadTicketPreviewThreadId ? 'overflow-visible' : 'overflow-hidden',
         )}
       >
         {/*
           Single stable accessible description for the drawer. The four
           views below (thread list, copilot, agent transcript, direct
-          message) each render their own visible MissionSheetHeader
-          subtitle, but those are plain text — not a Radix
-          `Description` — so Radix would warn "Missing `Description` …
-          for {DialogContent}". This sr-only element supplies the
-          `aria-describedby` target for every view without altering the
-          visual composition of this (unswept) legacy screen.
+          message) each render their own visible header subtitle, but
+          those are plain text — not a Radix `Description` — so Radix
+          would warn "Missing `Description` … for {DialogContent}".
+          This sr-only element supplies the `aria-describedby` target
+          for every view.
         */}
         <SheetDescription className="sr-only">
           Conversation threads, agent transcripts, and direct messages for the active workspace.
         </SheetDescription>
-        <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex h-full flex-col">
           {threadListView ? (
             <>
@@ -451,17 +444,16 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   onClose={() => setThreadTicketPreviewThreadId(null)}
                 />
               ) : null}
-              <MissionSheetHeader
-                eyebrow="Communication index"
-                icon={List}
-                title={<SheetTitle className="text-h3">Threads</SheetTitle>}
-                badge={
-                  <MissionPill className="text-eyebrow-sm" mono>
-                    {threads.length} threads
-                  </MissionPill>
-                }
-                description="Open direct messages, agent transcripts, and copilot sessions from one communication roster."
-              />
+              <div className="border-b border-[var(--hairline)] px-5 py-4">
+                <StripeHeader kicker="Communication Index" className="mb-3">
+                  <Tag mono>{threads.length} threads</Tag>
+                </StripeHeader>
+                <SheetTitle className="text-h3">Threads</SheetTitle>
+                <p className="mt-1 text-caption text-silver-mute">
+                  Open direct messages, agent transcripts, and copilot sessions from one
+                  communication roster.
+                </p>
+              </div>
               <ThreadList
                 threads={threads}
                 employees={employees}
@@ -471,37 +463,36 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
             </>
           ) : viewingCopilotThread && effectiveThreadId ? (
             <>
-              <MissionSheetHeader
-                eyebrow="Copilot transcript"
-                icon={Sparkles}
-                title={
-                  <SheetTitle className="flex items-center gap-2 text-h3">
+              <div className="border-b border-[var(--hairline)] px-5 py-4">
+                <StripeHeader kicker="Copilot Transcript" className="mb-3" />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="cap p-2"
+                    onClick={() => setThreadListView(true)}
+                    aria-label="Back to threads"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <SheetTitle className="flex min-w-0 items-center gap-2 text-h3">
                     <span className="truncate">
                       {activeThread?.subject ?? 'Copilot conversation'}
                     </span>
                     <SystemAgentBadge size="sm" />
                   </SheetTitle>
-                }
-                description={
-                  copilotRunning
+                </div>
+                <p className="mt-1 text-caption text-silver-mute">
+                  {copilotRunning
                     ? `Thinking — ${copilotSteps.length} step${copilotSteps.length === 1 ? '' : 's'} live in the transcript.`
                     : copilotResult?.kind === 'completed'
                       ? `Completed in ${copilotResult.payload.totalSteps} step${copilotResult.payload.totalSteps === 1 ? '' : 's'}.`
                       : copilotResult?.kind === 'failed'
                         ? `Failed — ${copilotResult.payload.reason}`
-                        : 'Ready for transcript review.'
-                }
-                leadingAction={
-                  <MissionIconButton
-                    onClick={() => setThreadListView(true)}
-                    aria-label="Back to threads"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </MissionIconButton>
-                }
-              />
+                        : 'Ready for transcript review.'}
+                </p>
+              </div>
 
-              <div className="border-b border-white/10 px-5 py-3">
+              <div className="border-b border-[var(--hairline)] px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}
@@ -520,55 +511,60 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 employees={employees}
               />
 
-              <div className="border-t border-white/10 bg-black/20 px-4 py-3">
-                <MissionInsetSurface className="flex items-center gap-2 px-3 py-3">
+              <div className="border-t border-[var(--hairline)] px-4 py-3">
+                <RecessedWell className="flex items-center gap-2 px-3 py-3">
                   {copilotRunning ? (
                     <>
                       <Loader2
-                        className="h-4 w-4 shrink-0 animate-spin text-brand"
+                        className="h-4 w-4 shrink-0 animate-spin text-[var(--armed-lit)]"
                         aria-hidden="true"
                       />
-                      <span className="text-caption text-muted-foreground">
+                      <span className="text-caption text-silver-mute">
                         Copilot is reasoning. The persisted transcript refreshes as each step lands.
                       </span>
                     </>
                   ) : copilotResult?.kind === 'failed' ? (
                     <>
-                      <Sparkles className="h-4 w-4 shrink-0 text-red-300" aria-hidden="true" />
-                      <span className="text-caption text-red-300">
+                      <Sparkles className="h-4 w-4 shrink-0 text-led-nogo" aria-hidden="true" />
+                      <span className="text-caption text-led-nogo">
                         {copilotResult.payload.message}
                       </span>
                     </>
                   ) : (
                     <>
-                      <Eye className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                      <span className="text-caption text-muted-foreground">
+                      <Eye className="h-4 w-4 shrink-0 text-silver-mute" aria-hidden="true" />
+                      <span className="text-caption text-silver-mute">
                         Copilot transcript is read only in the drawer.
                       </span>
                     </>
                   )}
-                </MissionInsetSurface>
+                </RecessedWell>
               </div>
             </>
           ) : viewingAgentThread && effectiveThreadId ? (
             <>
-              <MissionSheetHeader
-                eyebrow="Autonomous exchange"
-                icon={Bot}
-                iconClassName="border-amber-500/20 bg-amber-500/10 text-amber-300"
-                title={<SheetTitle className="text-h3">{agentThreadNames}</SheetTitle>}
-                description="Observe the employee-to-employee thread without interrupting the active exchange."
-                leadingAction={
-                  <MissionIconButton
+              <div className="border-b border-[var(--hairline)] px-5 py-4">
+                <StripeHeader kicker="Autonomous Exchange" className="mb-3" />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="cap p-2"
                     onClick={() => setThreadListView(true)}
                     aria-label="Back to threads"
                   >
                     <ArrowLeft className="h-4 w-4" />
-                  </MissionIconButton>
-                }
-              />
+                  </button>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] text-led-hold">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <SheetTitle className="min-w-0 truncate text-h3">{agentThreadNames}</SheetTitle>
+                </div>
+                <p className="mt-1 text-caption text-silver-mute">
+                  Observe the employee-to-employee thread without interrupting the active exchange.
+                </p>
+              </div>
 
-              <div className="border-b border-white/10 px-5 py-3">
+              <div className="border-b border-[var(--hairline)] px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}
@@ -587,59 +583,60 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 employees={employees}
               />
 
-              <div className="border-t border-white/10 bg-black/20 px-4 py-3">
-                <MissionInsetSurface className="flex items-center gap-2 px-3 py-3">
-                  <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="text-caption text-muted-foreground">
+              <div className="border-t border-[var(--hairline)] px-4 py-3">
+                <RecessedWell className="flex items-center gap-2 px-3 py-3">
+                  <Eye className="h-4 w-4 shrink-0 text-silver-mute" />
+                  <span className="text-caption text-silver-mute">
                     Observing agent conversation. This transcript is read only.
                   </span>
-                </MissionInsetSurface>
+                </RecessedWell>
               </div>
             </>
           ) : employee ? (
             <>
-              <MissionSheetHeader
-                eyebrow="Direct line"
-                title={
-                  <SheetTitle className="flex items-center gap-2 text-h3">
-                    {employee.name}
-                    <span
-                      className={cn(
-                        'h-2.5 w-2.5 shrink-0 rounded-full',
-                        statusColor(displayStatus),
-                      )}
+              <div className="border-b border-[var(--hairline)] px-5 py-4">
+                <StripeHeader kicker="Direct Line" className="mb-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <LampTile
+                      small
+                      interactive={false}
+                      label={displayStatus}
+                      tone={
+                        displayStatus === 'thinking'
+                          ? 'exec'
+                          : displayStatus === 'blocked'
+                            ? 'hold'
+                            : displayStatus === 'error'
+                              ? 'warn'
+                              : 'off'
+                      }
                     />
-                  </SheetTitle>
-                }
-                description={<span className="truncate">{employee.title}</span>}
-                leadingAction={
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-black/20 text-caption font-semibold text-foreground/80">
+                    {queuedCount > 0 ? <Tag mono>{queuedCount} queued</Tag> : null}
+                  </div>
+                </StripeHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] bg-surface-200 text-caption font-semibold text-foreground/80">
                     {initials(employee.name)}
                   </div>
-                }
-                trailingAction={
-                  <MissionIconButton
+                  <SheetTitle className="flex min-w-0 flex-1 items-center gap-2 text-h3">
+                    <span className="truncate">{employee.name}</span>
+                    <span
+                      className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', statusColor(displayStatus))}
+                    />
+                  </SheetTitle>
+                  <button
+                    type="button"
+                    className="cap p-2"
                     onClick={() => setThreadListView(true)}
                     aria-label="View all threads"
                   >
                     <List className="h-4 w-4" />
-                  </MissionIconButton>
-                }
-                badge={
-                  <div className="flex flex-wrap gap-2">
-                    <MissionPill className="px-2.5 py-1 text-eyebrow-sm" mono>
-                      {displayStatus}
-                    </MissionPill>
-                    {queuedCount > 0 ? (
-                      <MissionPill className="px-2.5 py-1 text-eyebrow-sm" mono>
-                        {queuedCount} queued
-                      </MissionPill>
-                    ) : null}
-                  </div>
-                }
-              />
+                  </button>
+                </div>
+                <p className="mt-1 truncate text-caption text-silver-mute">{employee.title}</p>
+              </div>
 
-              <div className="border-b border-white/10 px-5 py-3">
+              <div className="border-b border-[var(--hairline)] px-5 py-3">
                 <ThreadMemoryCard
                   companyId={companyId}
                   threadId={effectiveThreadId}

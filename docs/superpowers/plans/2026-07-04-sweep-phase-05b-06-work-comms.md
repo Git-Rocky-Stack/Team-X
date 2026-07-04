@@ -595,7 +595,7 @@ describe('message-list', () => {
 ```ts
 describe('thread-memory-card', () => {
   it('wells + lamps via LAMP_TONE bridge + MetricTiles + selectors preserved, no legacy', () => {
-    const src = read('../memory/thread-memory-card.tsx');
+    const src = read('memory/thread-memory-card.tsx');
     expect(src).toContain("from '@/components/console");
     expect(src).toContain('<RecessedWell');
     expect(src).toContain('<LampTile');
@@ -903,7 +903,7 @@ describe('whole 5b/6 work-comms cluster is legacy-free', () => {
     'hire/hire-dialog.tsx',
     'chat/system-agent-badge.tsx', 'chat/composer.tsx', 'chat/message-list.tsx',
     'chat/thread-list.tsx', 'chat/chat-view.tsx', 'chat/chat-drawer.tsx',
-    '../memory/thread-memory-card.tsx',
+    'memory/thread-memory-card.tsx',
     'copilot/copilot-insight-card.tsx', 'copilot/copilot-dashboard-widget.tsx', 'copilot/copilot-sidebar.tsx',
     'user-guide/user-guide-view.tsx',
   ];

@@ -2,6 +2,7 @@ import type { ChatMessage, Employee } from '@team-x/shared-types';
 import { Bot } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
+import { SubviewState, Tag } from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 
 /** Naive code-fence detector: lines wrapped in triple backticks. */
@@ -41,7 +42,7 @@ function renderContent(content: string) {
       <pre
         // biome-ignore lint/suspicious/noArrayIndexKey: stable content list
         key={i}
-        className="my-1 overflow-x-auto rounded-md bg-background/80 px-3 py-2 text-code-sm leading-relaxed"
+        className="my-1 overflow-x-auto whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]"
       >
         {part.value}
       </pre>
@@ -70,21 +71,19 @@ function MessageBubble({ message, showSenderName, senderName }: MessageBubblePro
       <div className={cn('min-w-0', isUser ? 'max-w-[88%]' : 'max-w-[96%]')}>
         {showSenderName && senderName && (
           <div className="mb-1 flex items-center gap-1.5 px-1">
-            <span className="text-eyebrow-sm text-muted-foreground">{senderName}</span>
+            <span className="text-eyebrow-sm text-silver-mute">{senderName}</span>
             {message.isAgentInitiated && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-eyebrow-sm text-amber-500">
+              <Tag className="gap-0.5">
                 <Bot className="h-2.5 w-2.5" />
                 AI
-              </span>
+              </Tag>
             )}
           </div>
         )}
         <div
           className={cn(
-            'mission-chrome-panel rounded-[20px] border px-4 py-3 text-body leading-7 shadow-none break-words',
-            isUser
-              ? 'border-brand/20 bg-brand/10 text-foreground'
-              : 'border-white/10 bg-black/20 text-foreground',
+            'well px-4 py-3 text-body leading-7 text-[var(--display-fg)] break-words',
+            isUser && 'border-[var(--armed-edge)]',
           )}
         >
           {renderContent(message.content)}
@@ -102,19 +101,21 @@ interface StreamingBubbleProps {
 function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
   return (
     <div className="flex justify-start">
-      <div className="mission-chrome-panel max-w-[96%] rounded-[20px] border border-white/10 bg-black/20 px-4 py-3 text-body leading-7 text-foreground break-words">
+      <div className="well max-w-[96%] px-4 py-3 text-body leading-7 text-[var(--display-fg)] break-words">
         {text.length > 0 ? (
           <>
-            <div className="mb-2 flex items-center gap-2 text-eyebrow-sm text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
+            <div className="mb-2 flex items-center gap-2 text-eyebrow-sm text-silver-mute">
+              <span className="h-2 w-2 rounded-sm bg-[var(--armed-lit)]" />
               Live stream
             </div>
-            {renderContent(text)}
-            <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-brand align-text-bottom" />
+            <div className="whitespace-pre-wrap rounded-inset bg-[var(--void)] px-3 py-2 text-code-sm leading-relaxed text-[var(--display-fg)]">
+              {renderContent(text)}
+              <span className="ml-0.5 inline-block h-4 w-1 animate-pulse bg-[var(--armed-lit)] align-text-bottom" />
+            </div>
           </>
         ) : (
-          <span className="flex items-center gap-1.5 text-caption text-muted-foreground">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+          <span className="flex items-center gap-1.5 text-caption text-silver-mute">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse-slow rounded-sm bg-[var(--armed-lit)]" />
             {employeeName} is thinking...
           </span>
         )}
@@ -157,16 +158,16 @@ export function MessageList({
     <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-thin">
       <div className="flex flex-col gap-4">
         {visibleMessages.length === 0 && !isStreaming && (
-          <div className="mission-state-block rounded-[24px] border border-dashed border-white/10 px-6 py-10 text-center">
-            <p className="text-body-strong text-foreground">
-              {isAgentThread
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
+            title={
+              isAgentThread
                 ? 'No messages in this conversation yet.'
-                : `Start a conversation with ${employeeName}.`}
-            </p>
-            <p className="mt-2 text-body text-muted-foreground">
-              New messages will appear here in the live transcript as soon as the thread updates.
-            </p>
-          </div>
+                : `Start a conversation with ${employeeName}.`
+            }
+            description="New messages will appear here in the live transcript as soon as the thread updates."
+          />
         )}
 
         {visibleMessages.map((msg) => (

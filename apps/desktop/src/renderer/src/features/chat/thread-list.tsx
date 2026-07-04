@@ -21,7 +21,7 @@ import { Bot, MessageSquare, Sparkles, TicketCheck } from 'lucide-react';
 
 import { SystemAgentBadge } from './system-agent-badge.js';
 
-import { MissionPill } from '@/features/mission/mission-shell.js';
+import { Tag } from '@/components/console/index.js';
 import { cn } from '@/lib/utils.js';
 
 /** True when every member in the thread is an employee (no human user). */
@@ -76,12 +76,12 @@ interface ThreadRowProps {
 function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps) {
   const iconBg =
     kind === 'copilot'
-      ? 'bg-brand/15 text-brand'
+      ? 'bg-[var(--armed-soft)] text-[var(--armed-lit)]'
       : kind === 'ticket'
-        ? 'bg-brand/15 text-brand'
+        ? 'bg-[var(--armed-soft)] text-[var(--armed-lit)]'
         : kind === 'agent'
-          ? 'bg-amber-500/15 text-amber-500'
-          : 'bg-white/10 text-foreground';
+          ? 'text-led-hold'
+          : 'text-[var(--display-fg)]';
 
   const Icon =
     kind === 'copilot'
@@ -98,13 +98,13 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
       type="button"
       onClick={() => onSelect(thread.id)}
       className={cn(
-        'mission-chrome-panel flex w-full items-start gap-3 rounded-[20px] border border-white/10 px-4 py-4 text-left transition-all hover:border-white/15 hover:bg-black/20',
-        active && 'border-brand/30 bg-brand/10',
+        'well flex w-full items-start gap-3 px-4 py-4 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--hairline-strong)]',
+        active && 'border-[var(--armed-edge)] bg-[var(--armed-soft)]',
       )}
     >
       <div
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-white/10',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)]',
           iconBg,
         )}
       >
@@ -116,25 +116,25 @@ function ThreadRow({ thread, employees, active, kind, onSelect }: ThreadRowProps
           <span className="truncate text-body-strong text-foreground">
             {threadDisplayName(thread, employees)}
           </span>
-          <MissionPill className="shrink-0 px-2 py-1 text-eyebrow-sm" mono>
+          <Tag mono className="shrink-0">
             {formatTimestamp(thread.lastMessageAt)}
-          </MissionPill>
+          </Tag>
         </div>
         {kind === 'copilot' && <SystemAgentBadge size="sm" className="mt-2" />}
         {kind === 'agent' && (
-          <MissionPill tone="warning" className="mt-2 px-2 py-1 text-eyebrow-sm">
+          <Tag className="mt-2 gap-1">
             <Bot className="h-2.5 w-2.5" />
             Agent conversation
-          </MissionPill>
+          </Tag>
         )}
         {kind === 'ticket' && (
-          <MissionPill tone="accent" className="mt-2 px-2 py-1 text-eyebrow-sm">
+          <Tag className="mt-2 gap-1">
             <TicketCheck className="h-2.5 w-2.5" />
             Ticket thread
-          </MissionPill>
+          </Tag>
         )}
         {kind === 'regular' && (
-          <p className="mt-2 text-caption text-muted-foreground">
+          <p className="mt-2 text-caption text-silver-mute">
             Direct thread ready to open in the communication drawer.
           </p>
         )}
@@ -151,10 +151,10 @@ interface SectionHeaderProps {
 function SectionHeader({ title, count }: SectionHeaderProps) {
   return (
     <div className="flex items-center gap-2 px-1 pb-1">
-      <h4 className="flex-1 text-eyebrow-sm text-muted-foreground">{title}</h4>
-      <MissionPill className="px-2 py-1 text-eyebrow-sm tabular-nums" mono>
+      <h4 className="flex-1 text-eyebrow-sm text-silver-mute">{title}</h4>
+      <Tag mono className="tabular-nums">
         {count}
-      </MissionPill>
+      </Tag>
     </div>
   );
 }

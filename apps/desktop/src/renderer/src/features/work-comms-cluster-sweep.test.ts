@@ -170,3 +170,110 @@ describe('hire-dialog', () => {
     expectNoLegacy(src, 'hire-dialog.tsx');
   });
 });
+
+describe('system-agent-badge', () => {
+  it('console pill shape + aria preserved, no legacy', () => {
+    const src = read('chat/system-agent-badge.tsx');
+    expect(src).toContain('rounded-pill');
+    expect(src).toContain('aria-label="Copilot conversation"');
+    expectNoLegacy(src, 'system-agent-badge.tsx');
+  });
+});
+
+describe('composer', () => {
+  it('well panel + mode lamp + queue contract preserved, no legacy', () => {
+    const src = read('chat/composer.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('cap-armed');
+    expect(src).toContain('onQueue');
+    expect(src).toContain('onStop');
+    expect(src).toContain('queuedCount');
+    expect(src).not.toContain('disabled={disabled}');
+    expectNoLegacy(src, 'composer.tsx');
+  });
+});
+
+describe('message-list', () => {
+  it('display wells + stream recipe + steady live LED, no legacy', () => {
+    const src = read('chat/message-list.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('var(--display-fg)');
+    expect(src).toContain('var(--void)');
+    expect(src).toContain('text-code-sm');
+    expect(src).toContain('Live stream');
+    expectNoLegacy(src, 'message-list.tsx');
+  });
+});
+
+describe('thread-memory-card', () => {
+  it('wells + lamps via LAMP_TONE bridge + MetricTiles + selectors preserved, no legacy', () => {
+    const src = read('memory/thread-memory-card.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('LAMP_TONE');
+    expect(src).toContain('data-thread-memory-card=""');
+    expect(src).toContain('data-thread-memory-open=""');
+    expect(src).toContain('data-thread-memory-facts=""');
+    expectNoLegacy(src, 'thread-memory-card.tsx');
+  });
+});
+
+describe('thread-list', () => {
+  it('well rows + Tag chips + pinned kinds preserved, no legacy', () => {
+    const src = read('chat/thread-list.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<Tag');
+    expect(src).toContain("type ThreadKind = 'copilot' | 'agent' | 'ticket' | 'regular'");
+    expect(src).toContain('TicketCheck');
+    expect(src).toContain('Ticket thread');
+    expect(src).toContain('Agent conversation');
+    expect(src).toContain('aria-label="Copilot Conversations"');
+    expectNoLegacy(src, 'thread-list.tsx');
+  });
+});
+
+describe('chat-view', () => {
+  it('console replaces all 8 Mission*, selectors + wiring preserved, no legacy', () => {
+    const src = read('chat/chat-view.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toMatch(/<Faceplate|<StripeHeader/);
+    expect(src).toContain('data-chat-view=""');
+    for (const s of ['no-company', 'loading', 'error', 'empty']) {
+      expect(src, `missing state ${s}`).toContain(`data-chat-view-state="${s}"`);
+    }
+    expect(src).toContain('data-chat-view-retry=""');
+    expect(src).toContain('useThreadList(companyId)');
+    expect(src).toContain('onSelectThread={handleSelectThread}');
+    expectNoLegacy(src, 'chat-view.tsx');
+  });
+});
+
+describe('chat-drawer', () => {
+  it('console sheet + stripe headers + every pinned contract preserved, no legacy', () => {
+    const src = read('chat/chat-drawer.tsx');
+    expect(src).toContain("from '@/components/console");
+    expect(src).toContain('<StripeHeader');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('const effectiveThreadId = activeThreadId;');
+    expect(src).toContain('function TicketThreadPreviewPanel');
+    expect(src).toContain('data-thread-ticket-preview=""');
+    expect(src).toContain('sm:w-[720px]');
+    expect(src).toContain('xl:w-[820px]');
+    expect(src).toContain('2xl:w-[900px]');
+    for (const t of ['Copilot memory', 'Autonomous memory', 'Conversation memory']) {
+      expect(src, `missing memory title ${t}`).toContain(t);
+    }
+    expect(src).toContain('aria-label="Back to threads"');
+    expect(src).toContain('aria-label="View all threads"');
+    expectNoLegacy(src, 'chat-drawer.tsx');
+  });
+});
