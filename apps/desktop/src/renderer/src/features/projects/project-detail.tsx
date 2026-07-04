@@ -112,7 +112,7 @@ function DetailField({
         <Icon className="h-3.5 w-3.5" />
         {label}
       </span>
-      <span className={`text-caption ${muted ? 'text-silver-mute' : 'text-foreground'}`}>
+      <span className={`text-caption ${muted ? 'text-silver-mute' : 'text-[var(--display-fg)]'}`}>
         {value}
       </span>
     </RecessedWell>

@@ -35,7 +35,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
     <button type="button" onClick={onClick} className="w-full text-left">
       <RecessedWell className="group cursor-pointer space-y-3 p-3 transition-transform hover:-translate-y-0.5">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="line-clamp-2 text-body-strong leading-snug text-foreground">
+          <h4 className="line-clamp-2 text-body-strong leading-snug text-[var(--display-fg)]">
             {project.title}
           </h4>
           <LampTile
@@ -54,7 +54,7 @@ export function ProjectCard({ project, employees, onClick }: ProjectCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           {lead ? (
             <div className="flex items-center gap-1.5">
-              <div className="flex h-5 w-5 items-center justify-center rounded-card border border-[var(--hairline)] text-[10px] font-bold text-foreground">
+              <div className="flex h-5 w-5 items-center justify-center rounded-card border border-[var(--hairline)] text-[10px] font-bold text-[var(--display-fg)]">
                 {lead.name.charAt(0).toUpperCase()}
               </div>
               <Tag>{lead.name}</Tag>

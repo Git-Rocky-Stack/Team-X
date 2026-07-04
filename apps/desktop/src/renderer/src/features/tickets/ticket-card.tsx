@@ -48,7 +48,7 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
     >
       <RecessedWell className="group cursor-pointer space-y-3 p-3.5 transition-transform hover:-translate-y-0.5">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="line-clamp-2 text-body-strong leading-snug text-foreground">
+          <h4 className="line-clamp-2 text-body-strong leading-snug text-[var(--display-fg)]">
             {ticket.title}
           </h4>
           <LampTile
@@ -68,7 +68,7 @@ export function TicketCard({ ticket, employees, onClick }: TicketCardProps) {
           <div className="flex min-w-0 items-center gap-2">
             {assignee ? (
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] text-[10px] font-semibold text-foreground">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] text-[10px] font-semibold text-[var(--display-fg)]">
                   {assignee.name.charAt(0).toUpperCase()}
                 </div>
                 <span className="truncate text-caption text-silver-mute">{assignee.name}</span>

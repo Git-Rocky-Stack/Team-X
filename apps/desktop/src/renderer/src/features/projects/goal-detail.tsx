@@ -133,7 +133,7 @@ export function GoalDetailPanel({ goalId, employees }: GoalDetailPanelProps) {
                         interactive={false}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-caption font-medium text-foreground">
+                        <p className="truncate text-caption font-medium text-[var(--display-fg)]">
                           {project.title}
                         </p>
                         {lead ? (
