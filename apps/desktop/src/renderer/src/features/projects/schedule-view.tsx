@@ -154,7 +154,9 @@ function statusClass(item: ScheduleItem): string {
   if (item.status === 'completed') return 'text-led-go';
   if (item.status === 'cancelled') return 'text-silver-mute line-through';
   if (item.startsAt < Date.now()) return 'text-led-nogo';
-  return 'text-foreground';
+  // Card rides a RecessedWell (display surface, dark both shifts) — the
+  // title must use the display-locked ink, not shift-flipping foreground.
+  return 'text-[var(--display-fg)]';
 }
 
 function linkedLabel(
@@ -209,8 +211,11 @@ function ScheduleCard({
   const linked = linkedLabel(item, ticketsById, projectsById, goalsById);
   return (
     <RecessedWell className={`min-w-0 border-l-4 p-3 ${priorityBorderClass(item.priority)}`}>
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <div className="min-w-0">
+      {/* Compact (week-grid) cells are ~90px of content width: stacking the
+          action caps under the title keeps the title from being squeezed to
+          one character per line by the shrink-0 cap cluster. */}
+      <div className={`flex min-w-0 gap-2 ${compact ? 'flex-col' : 'items-start justify-between'}`}>
+        <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             <Icon className="h-3.5 w-3.5 shrink-0 text-silver-mute" />
             <Tag>{sourceLabel(item)}</Tag>
@@ -228,7 +233,7 @@ function ScheduleCard({
           </p>
         </div>
         {isManualItem(item) && (
-          <div className="flex shrink-0 items-center gap-1">
+          <div className={`flex shrink-0 items-center gap-1 ${compact ? 'self-end' : ''}`}>
             {item.status === 'scheduled' && (
               <button
                 type="button"
