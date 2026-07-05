@@ -296,7 +296,7 @@ export function CopilotSidebar() {
                               exportMutation.isPending || (exportScope === 'company' && !companyId)
                             }
                             data-copilot-export-format={format}
-                            className="cap"
+                            className="cap px-3 py-1.5 text-button-sm"
                           >
                             {format === 'csv' ? 'CSV' : 'JSON'}
                           </button>
@@ -336,7 +336,7 @@ export function CopilotSidebar() {
                         onClick={applyFeedbackSuggestion}
                         disabled={!companyId || setCopilotWeights.isPending}
                         data-copilot-feedback-apply=""
-                        className="cap"
+                        className="cap px-3 py-1.5 text-button-sm"
                       >
                         Apply
                       </button>
@@ -344,7 +344,7 @@ export function CopilotSidebar() {
                         type="button"
                         onClick={keepCurrentWeight}
                         disabled={setCopilotWeights.isPending}
-                        className="cap"
+                        className="cap px-3 py-1.5 text-button-sm"
                       >
                         Keep current
                       </button>
@@ -368,7 +368,11 @@ export function CopilotSidebar() {
                     title="Could not load insights"
                     description="The main-process IPC returned an error."
                     action={
-                      <button type="button" className="cap" onClick={() => refetch()}>
+                      <button
+                        type="button"
+                        className="cap px-3 py-1.5 text-button-sm"
+                        onClick={() => refetch()}
+                      >
                         Retry
                       </button>
                     }

@@ -57,24 +57,33 @@ const CATEGORY_META: Record<
   anomaly: { label: 'Anomaly', icon: AlertTriangle },
 };
 
-/** Severity → console LED mapping. */
+/** Severity → console LED mapping. `lamp` is the 2–6 char stencil word the
+ * LampTile contract requires; `label` is the full word kept for screen readers. */
 const SEVERITY_META: Record<
   CopilotSeverity,
-  { label: string; tone: LampTone; stripe: string; chip: string }
+  { label: string; lamp: string; tone: LampTone; stripe: string; chip: string }
 > = {
   critical: {
     label: 'Critical',
+    lamp: 'CRIT',
     tone: 'nogo',
     stripe: 'bg-[var(--led-nogo)]',
     chip: 'text-led-nogo',
   },
   warning: {
     label: 'Warning',
+    lamp: 'WARN',
     tone: 'hold',
     stripe: 'bg-[var(--led-hold)]',
     chip: 'text-led-hold',
   },
-  info: { label: 'Info', tone: 'off', stripe: 'bg-[var(--led-scope)]', chip: 'text-led-scope' },
+  info: {
+    label: 'Info',
+    lamp: 'INFO',
+    tone: 'off',
+    stripe: 'bg-[var(--led-scope)]',
+    chip: 'text-led-scope',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -183,9 +192,10 @@ export function CopilotInsightCard({
             <LampTile
               small
               interactive={false}
-              label={severityMeta.label}
+              label={severityMeta.lamp}
               tone={severityMeta.tone}
             />
+            <span className="sr-only">{severityMeta.label} severity</span>
             <Tag>{categoryMeta.label}</Tag>
           </div>
 

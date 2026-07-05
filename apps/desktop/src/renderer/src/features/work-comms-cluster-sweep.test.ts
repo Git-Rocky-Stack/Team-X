@@ -313,6 +313,12 @@ describe('copilot-insight-card', () => {
     expect(src).toContain('<LampTile');
     expect(src).toContain('<Tag');
     expect(src).toContain('var(--led-nogo)');
+    // Stage-3 Codex [P2]: severity lamps speak stencil (2–6 chars), with the
+    // full severity word preserved for screen readers.
+    expect(src).toContain("lamp: 'CRIT'");
+    expect(src).toContain("lamp: 'WARN'");
+    expect(src).toContain('label={severityMeta.lamp}');
+    expect(src).toContain('sr-only');
     expect(src).toContain('data-copilot-insight-id={insight.id}');
     expect(src).toContain('data-copilot-severity={insight.severity}');
     expect(src).toContain('Dismiss insight:');
@@ -367,6 +373,10 @@ describe('copilot-sidebar', () => {
     expect(src).toContain('role="alert"');
     expect(src).toContain('aria-pressed');
     expect(src).toContain('function buildExportRequest(format: CopilotExportFormat)');
+    // Stage-3 Codex [P2]: .cap is a visual recipe with no padding — a bare
+    // className="cap" collapses to a text-sized hit target. Callers size it.
+    expect(src).toContain('cap px-3 py-1.5 text-button-sm');
+    expect(src).not.toMatch(/className="cap"/);
     expectNoLegacy(src, 'copilot-sidebar.tsx');
   });
 });
