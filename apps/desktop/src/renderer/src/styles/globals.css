@@ -854,6 +854,21 @@
     outline-offset: 2px;
   }
 
+  /* Disabled caps: raw <button class="cap*"> conversions must not render
+     fully-armed when the native disabled attribute blocks clicks. Matches
+     the Button primitive's disabled:opacity-40 baseline; filter/transform
+     reset stops the hover brightness and press travel from firing on a
+     dead control. */
+  .cap:disabled,
+  .cap-armed:disabled,
+  .cap-warn:disabled,
+  .cap-chrome:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: none;
+    transform: none;
+  }
+
   /* Armed cap — consequential commands only (identical both shifts) */
   .cap-armed {
     border-radius: var(--r-control);

@@ -27,4 +27,22 @@ describe('SubviewState (console)', () => {
     render(<SubviewState testId="probe" lampLabel="NO-GO" lampTone="nogo" title="Fault" />);
     expect(screen.getByTestId('probe')).toBeInTheDocument();
   });
+
+  it('merges a compact className override, dropping the default floor', () => {
+    render(
+      <SubviewState
+        testId="probe"
+        lampLabel="STBY"
+        lampTone="off"
+        title="Compact"
+        className="min-h-0 p-4"
+      />,
+    );
+    const well = screen.getByTestId('probe');
+    expect(well.className).toContain('min-h-0');
+    expect(well.className).toContain('p-4');
+    // twMerge must retire the defaults, not stack conflicting utilities.
+    expect(well.className).not.toContain('min-h-[12rem]');
+    expect(well.className).not.toContain('p-8');
+  });
 });

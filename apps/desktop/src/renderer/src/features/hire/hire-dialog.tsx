@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { UserPlus } from 'lucide-react';
 import { useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -136,17 +136,15 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                   if (name.length === 0) setName(role.name);
                 }}
                 className={cn(
-                  'flex flex-col gap-2 rounded-lg border p-4 text-left transition-all',
+                  'flex flex-col gap-2 rounded-card border p-4 text-left transition-all',
                   isSelected
-                    ? 'border-brand/40 bg-brand/5 shadow-sm'
-                    : 'border-border bg-surface-50 hover:border-border/80 hover:bg-surface-100',
+                    ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                    : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
                 )}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-body-strong text-foreground">{role.name}</span>
-                  <Badge variant="secondary" className="text-[10px] uppercase">
-                    {role.levelLabel}
-                  </Badge>
+                  <Tag>{role.levelLabel}</Tag>
                 </div>
                 <ul className="space-y-1">
                   {role.responsibilities.map((r) => (
@@ -186,7 +184,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                 id="hire-manager"
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="well-input flex h-10 w-full px-3 py-2"
                 data-hire-manager-select=""
               >
                 <option value="">No manager</option>
@@ -211,7 +209,6 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
             disabled={
               !selectedRole || name.trim().length === 0 || hireMutation.isPending || isSubmitting
             }
-            className="bg-brand text-white hover:bg-brand/90"
           >
             {hireMutation.isPending || isSubmitting ? 'Hiring...' : 'Confirm Hire'}
           </Button>

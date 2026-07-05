@@ -57,13 +57,13 @@ export function FireDialog({ employee, open, onOpenChange, onFire, error }: Fire
           </label>
           <input
             id="fire-confirm-name"
-            className="w-full rounded-md border border-border bg-surface-100 px-3 py-2 text-body text-foreground outline-none focus:ring-2 focus:ring-brand"
+            className="well-input w-full px-3 py-2"
             value={confirmName}
             onChange={(event) => setConfirmName(event.target.value)}
             data-fire-confirm-name=""
           />
 
-          {error ? <p className="text-body text-red-400">{error}</p> : null}
+          {error ? <p className="text-body text-led-nogo">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

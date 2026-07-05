@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { LampTile, type LampTone } from './lamp-tile';
 import { RecessedWell } from './recessed-well';
 
+import { cn } from '@/lib/utils';
+
 interface SubviewStateProps {
   /** Stencil word-lamp carrying the state: STBY (empty/idle) / NO-GO (fault). */
   lampLabel: string;
@@ -15,6 +17,11 @@ interface SubviewStateProps {
   children?: ReactNode;
   /** E2E selector passthrough. */
   testId?: string;
+  /**
+   * Layout override merged onto the well via cn() — compact hosts (e.g. the
+   * dashboard copilot widget) pass `min-h-0 p-4` to retire the 12rem floor.
+   */
+  className?: string;
 }
 
 /**
@@ -32,11 +39,15 @@ export function SubviewState({
   action,
   children,
   testId,
+  className,
 }: SubviewStateProps) {
   return (
     <RecessedWell
       data-testid={testId}
-      className="flex h-full min-h-[12rem] flex-1 flex-col items-center justify-center gap-3 p-8 text-center"
+      className={cn(
+        'flex h-full min-h-[12rem] flex-1 flex-col items-center justify-center gap-3 p-8 text-center',
+        className,
+      )}
     >
       <LampTile label={lampLabel} tone={lampTone} small interactive={false} />
       <div className="space-y-1">

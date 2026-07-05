@@ -37,24 +37,19 @@ import {
   type CopilotFeedbackSuggestion,
   type CopilotSeverity,
 } from '@team-x/shared-types';
-import { Loader2, Send, Sparkles } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { formatFeedbackSuggestionPrompt, sortBySeverity } from './copilot-helpers.js';
 import { CopilotInsightCard } from './copilot-insight-card.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { RecessedWell, StripeHeader, SubviewState, Tag } from '@/components/console/index.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
 import { Textarea } from '@/components/ui/textarea.js';
-import {
-  MissionInsetSurface,
-  MissionSegmentedButton,
-  MissionSheetHeader,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
 import { useAskCopilot, useCopilotExport, useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useSetCopilotWeights } from '@/hooks/use-settings.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 // ---------------------------------------------------------------------------
@@ -207,110 +202,109 @@ export function CopilotSidebar() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent
         side="right"
-        className="mission-shell flex w-full flex-col overflow-hidden border-l border-white/10 bg-background/95 p-0 sm:max-w-md"
+        className="flex w-full flex-col overflow-hidden border-l border-[var(--hairline)] bg-background p-0 sm:max-w-md"
         data-copilot-sidebar-root=""
       >
-        <div className="mission-grid pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex h-full flex-col">
-          <MissionSheetHeader
-            eyebrow="Copilot command"
-            icon={Sparkles}
-            title={<SheetTitle className="text-h3">Copilot</SheetTitle>}
-            badge={
-              <Badge
-                variant="outline"
-                className="border-white/10 bg-black/20 px-2 py-1 font-mono text-eyebrow-sm text-muted-foreground"
-                data-copilot-active-count={activeCount}
-              >
+          <div className="border-b border-[var(--hairline)] px-5 py-4">
+            <StripeHeader kicker="Copilot Command" className="mb-3">
+              <Tag mono data-copilot-active-count={activeCount}>
                 {activeCount} active
-              </Badge>
-            }
-            description={
-              <SheetDescription className="m-0 text-body">
-                Review proactive insights, export the current queue, or route a free-form request
-                into the existing chat transcript flow.
-              </SheetDescription>
-            }
-          />
+              </Tag>
+            </StripeHeader>
+            <SheetTitle className="text-h3">Copilot</SheetTitle>
+            <SheetDescription className="m-0 mt-1 text-caption text-silver-mute">
+              Review proactive insights, export the current queue, or route a free-form request into
+              the existing chat transcript flow.
+            </SheetDescription>
+          </div>
 
           <div className="min-h-0 flex-1">
             <ScrollArea className="h-full">
               <div className="space-y-4 px-4 py-4">
                 <div
-                  className="mission-chrome-panel rounded-[24px] border border-white/10 p-4"
+                  className="rounded-card border border-[var(--hairline)] p-4"
                   data-copilot-export-controls=""
                 >
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Category</p>
+                      <p className="mb-2 text-eyebrow-sm text-silver-mute">Category</p>
                       <div className="flex flex-wrap gap-2">
                         {CATEGORY_FILTERS.map((category) => (
-                          <MissionSegmentedButton
+                          <button
                             key={category}
+                            type="button"
                             onClick={() => setCategoryFilter(category)}
                             aria-pressed={categoryFilter === category}
                             data-copilot-category-filter={category}
-                            active={categoryFilter === category}
-                            compact
+                            className={cn(
+                              'nav-tile px-3 py-1.5 text-button-sm',
+                              categoryFilter === category && 'nav-tile-active',
+                            )}
                           >
                             {formatCategoryLabel(category)}
-                          </MissionSegmentedButton>
+                          </button>
                         ))}
                       </div>
                     </div>
 
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Severity</p>
+                      <p className="mb-2 text-eyebrow-sm text-silver-mute">Severity</p>
                       <div className="flex flex-wrap gap-2">
                         {SEVERITY_FILTERS.map((severity) => (
-                          <MissionSegmentedButton
+                          <button
                             key={severity}
+                            type="button"
                             onClick={() => setSeverityFilter(severity)}
                             aria-pressed={severityFilter === severity}
                             data-copilot-severity-filter={severity}
-                            active={severityFilter === severity}
-                            compact
+                            className={cn(
+                              'nav-tile px-3 py-1.5 text-button-sm',
+                              severityFilter === severity && 'nav-tile-active',
+                            )}
                           >
                             {formatSeverityLabel(severity)}
-                          </MissionSegmentedButton>
+                          </button>
                         ))}
                       </div>
                     </div>
 
                     <div>
-                      <p className="mb-2 text-eyebrow-sm text-muted-foreground">Export</p>
+                      <p className="mb-2 text-eyebrow-sm text-silver-mute">Export</p>
                       <div className="flex flex-wrap gap-2">
                         {COPILOT_EXPORT_SCOPES.map((scope) => (
-                          <MissionSegmentedButton
+                          <button
                             key={scope}
+                            type="button"
                             onClick={() => setExportScope(scope)}
                             aria-pressed={exportScope === scope}
                             data-copilot-export-scope={scope}
-                            active={exportScope === scope}
-                            compact
+                            className={cn(
+                              'nav-tile px-3 py-1.5 text-button-sm',
+                              exportScope === scope && 'nav-tile-active',
+                            )}
                           >
                             {formatScopeLabel(scope)}
-                          </MissionSegmentedButton>
+                          </button>
                         ))}
                         {COPILOT_EXPORT_FORMATS.map((format) => (
-                          <MissionSegmentedButton
+                          <button
                             key={format}
+                            type="button"
                             onClick={() => submitExport(format)}
                             disabled={
                               exportMutation.isPending || (exportScope === 'company' && !companyId)
                             }
                             data-copilot-export-format={format}
-                            active
-                            compact
-                            className="border-brand/25"
+                            className="cap px-3 py-1.5 text-button-sm"
                           >
                             {format === 'csv' ? 'CSV' : 'JSON'}
-                          </MissionSegmentedButton>
+                          </button>
                         ))}
                       </div>
                       {exportMutation.isSuccess && (
                         <p
-                          className="mt-3 text-caption text-muted-foreground"
+                          className="mt-3 text-caption text-silver-mute"
                           data-copilot-export-status=""
                         >
                           Exported {exportMutation.data.rowCount} insight
@@ -332,66 +326,68 @@ export function CopilotSidebar() {
                 </div>
 
                 {feedbackSuggestion && !isLoading && !isError && (
-                  <MissionInsetSurface className="p-4" data-copilot-feedback-suggestion="">
-                    <p className="text-caption text-foreground">
+                  <RecessedWell className="p-4" data-copilot-feedback-suggestion="">
+                    <p className="text-caption text-[var(--display-fg)]">
                       {formatFeedbackSuggestionPrompt(feedbackSuggestion)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <MissionSegmentedButton
+                      <button
                         type="button"
                         onClick={applyFeedbackSuggestion}
                         disabled={!companyId || setCopilotWeights.isPending}
                         data-copilot-feedback-apply=""
-                        active
-                        compact
+                        className="cap px-3 py-1.5 text-button-sm"
                       >
                         Apply
-                      </MissionSegmentedButton>
-                      <MissionSegmentedButton
+                      </button>
+                      <button
                         type="button"
                         onClick={keepCurrentWeight}
                         disabled={setCopilotWeights.isPending}
-                        compact
+                        className="cap px-3 py-1.5 text-button-sm"
                       >
                         Keep current
-                      </MissionSegmentedButton>
+                      </button>
                     </div>
-                  </MissionInsetSurface>
+                  </RecessedWell>
                 )}
 
                 {isLoading && (
-                  <MissionInsetSurface className="px-4 py-10">
-                    <MissionStateBlock
-                      title="Loading copilot insights"
-                      description="The proactive insight queue is syncing for the active workspace."
-                      icon={Loader2}
-                    />
-                  </MissionInsetSurface>
+                  <SubviewState
+                    lampLabel="STBY"
+                    lampTone="hold"
+                    title="Loading copilot insights"
+                    description="The proactive insight queue is syncing for the active workspace."
+                  />
                 )}
 
                 {isError && (
-                  <MissionInsetSurface className="px-5 py-6">
-                    <MissionStateBlock
-                      title="Could not load insights"
-                      description="The main-process IPC returned an error."
-                      tone="danger"
-                      action={
-                        <MissionSegmentedButton type="button" onClick={() => refetch()} compact>
-                          Retry
-                        </MissionSegmentedButton>
-                      }
-                    />
-                  </MissionInsetSurface>
+                  <SubviewState
+                    lampLabel="NO-GO"
+                    lampTone="nogo"
+                    title="Could not load insights"
+                    description="The main-process IPC returned an error."
+                    action={
+                      <button
+                        type="button"
+                        className="cap px-3 py-1.5 text-button-sm"
+                        onClick={() => refetch()}
+                      >
+                        Retry
+                      </button>
+                    }
+                  />
                 )}
 
                 {!isLoading && !isError && sorted.length === 0 && (
-                  <MissionInsetSurface className="px-5 py-6" data-copilot-empty="">
-                    <MissionStateBlock
+                  <div data-copilot-empty="">
+                    <SubviewState
+                      lampLabel="STBY"
+                      lampTone="off"
                       title="All clear"
                       description="No active insights. The copilot re-analyzes the company on its configured interval."
-                      icon={Sparkles}
                     />
-                  </MissionInsetSurface>
+                  </div>
                 )}
 
                 {!isLoading && !isError && sorted.length > 0 && (
@@ -410,9 +406,9 @@ export function CopilotSidebar() {
             </ScrollArea>
           </div>
 
-          <div className="shrink-0 border-t border-white/10 bg-black/20 px-4 py-4">
-            <MissionInsetSurface className="p-4">
-              <label htmlFor="copilot-ask-input" className="text-eyebrow-sm text-muted-foreground">
+          <div className="shrink-0 border-t border-[var(--hairline)] px-4 py-4">
+            <RecessedWell className="p-4">
+              <label htmlFor="copilot-ask-input" className="text-eyebrow-sm text-silver-mute">
                 Ask the copilot
               </label>
               <div className="mt-2 flex items-start gap-3">
@@ -426,7 +422,7 @@ export function CopilotSidebar() {
                   }}
                   onKeyDown={onAskKeyDown}
                   placeholder="Why is the frontend team behind?"
-                  className="flex-1 resize-none border-white/10 bg-black/20 text-body"
+                  className="flex-1 resize-none text-body"
                   data-copilot-ask-input=""
                   disabled={!companyId || askMutation.isPending}
                 />
@@ -435,7 +431,7 @@ export function CopilotSidebar() {
                   onClick={() => void submitAsk()}
                   disabled={!companyId || askMutation.isPending || askText.trim().length === 0}
                   aria-label="Ask the copilot"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-white/10 bg-black/20 text-muted-foreground transition-colors hover:bg-black/30 hover:text-foreground disabled:opacity-40 disabled:hover:bg-black/20"
+                  className="cap-armed flex h-11 w-11 shrink-0 items-center justify-center"
                   data-copilot-ask-submit=""
                 >
                   {askMutation.isPending ? (
@@ -447,15 +443,15 @@ export function CopilotSidebar() {
               </div>
               {askErrorMessage && (
                 <p
-                  className="mt-2 text-caption text-destructive"
+                  className="mt-2 text-caption text-led-nogo"
                   role="alert"
                   data-copilot-ask-error=""
                 >
                   {askErrorMessage}
                 </p>
               )}
-              <p className="mt-2 text-caption text-muted-foreground">Cmd/Ctrl+Enter to submit.</p>
-            </MissionInsetSurface>
+              <p className="mt-2 text-caption text-silver-mute">Cmd/Ctrl+Enter to submit.</p>
+            </RecessedWell>
           </div>
         </div>
       </SheetContent>

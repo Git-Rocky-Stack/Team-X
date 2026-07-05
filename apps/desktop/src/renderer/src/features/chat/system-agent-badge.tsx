@@ -33,7 +33,7 @@ export function SystemAgentBadge({ size = 'sm', className }: SystemAgentBadgePro
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-brand/15 font-medium text-brand',
+        'inline-flex items-center gap-1 rounded-pill border border-[var(--armed-edge)] bg-[var(--armed-soft)] font-medium text-[var(--armed-lit)]',
         size === 'sm' ? 'px-1.5 py-0.5 text-eyebrow-sm' : 'px-2 py-1 text-caption',
         className,
       )}

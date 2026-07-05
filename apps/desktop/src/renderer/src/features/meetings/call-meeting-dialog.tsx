@@ -1,6 +1,8 @@
 import type { Employee } from '@team-x/shared-types';
 import { useState } from 'react';
 
+import { Faceplate, RecessedWell } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { useCallMeeting } from '@/hooks/use-meetings.js';
 
 interface CallMeetingDialogProps {
@@ -52,8 +54,8 @@ export function CallMeetingDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(0_0%_0%/0.55)]">
+      <Faceplate className="w-full max-w-md" bodyClassName="p-6">
         <h2 className="text-h3 text-foreground">Call Meeting</h2>
         <p className="mt-1 text-caption text-muted-foreground">
           Select attendees, a chair, and set the agenda.
@@ -66,7 +68,7 @@ export function CallMeetingDialog({
           </label>
           <textarea
             id="meeting-agenda"
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand"
+            className="well-input mt-1 w-full px-3 py-2"
             rows={3}
             placeholder="What should be discussed?"
             value={agenda}
@@ -81,7 +83,7 @@ export function CallMeetingDialog({
           </label>
           <select
             id="meeting-chair"
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-body text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+            className="well-input mt-1 w-full px-3 py-2"
             value={chairId}
             onChange={(e) => setChairId(e.target.value)}
           >
@@ -96,11 +98,11 @@ export function CallMeetingDialog({
         {/* Attendee checkboxes */}
         <fieldset className="mt-3 border-none p-0 m-0">
           <legend className="block text-label text-muted-foreground">Attendees</legend>
-          <div className="mt-1 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border bg-background p-2">
+          <RecessedWell className="mt-1 max-h-40 space-y-1 overflow-y-auto p-2">
             {employees.map((emp) => (
               <label
                 key={emp.id}
-                className="flex items-center gap-2 rounded px-2 py-1 text-body hover:bg-muted/30"
+                className="flex items-center gap-2 rounded px-2 py-1 text-body hover:bg-[hsl(0_0%_100%/0.06)]"
               >
                 <input
                   type="checkbox"
@@ -108,32 +110,27 @@ export function CallMeetingDialog({
                   onChange={() => toggleAttendee(emp.id)}
                   className="h-3.5 w-3.5 rounded border-border accent-brand"
                 />
-                <span className="text-foreground">{emp.name}</span>
-                <span className="text-caption text-muted-foreground">({emp.title})</span>
+                <span className="text-[var(--display-fg)]">{emp.name}</span>
+                <span className="text-caption text-silver-mute">({emp.title})</span>
               </label>
             ))}
-          </div>
+          </RecessedWell>
         </fieldset>
 
         {/* Actions */}
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border px-4 py-1.5 text-button-sm text-muted-foreground transition-colors hover:bg-muted/30"
-          >
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleCall}
             disabled={selectedIds.size === 0 || callMeeting.isPending}
-            className="rounded-lg bg-brand px-4 py-1.5 text-button-sm text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
           >
             {callMeeting.isPending ? 'Starting...' : 'Start Meeting'}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Faceplate>
     </div>
   );
 }

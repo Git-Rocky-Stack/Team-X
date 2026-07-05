@@ -6,7 +6,7 @@
  *
  * Visual contract (from design doc §8.5):
  *   - Category icon (colored stripe on the left edge).
- *   - Severity badge (critical=red, warning=amber, info=blue).
+ *   - Severity lamp (word-lamp, LED tone).
  *   - Title (single line, `font-medium`).
  *   - Detail text (2-line clamp on dashboard widget, full on sidebar).
  *   - Optional action button dispatching `actionIntent` via
@@ -36,7 +36,7 @@ import type { ComponentType } from 'react';
 
 import { parseActionEntities } from './copilot-helpers.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { LampTile, type LampTone, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useCommandExecute } from '@/hooks/use-command.js';
 import { useDismissCopilotInsight } from '@/hooks/use-copilot.js';
@@ -57,32 +57,32 @@ const CATEGORY_META: Record<
   anomaly: { label: 'Anomaly', icon: AlertTriangle },
 };
 
-/**
- * Severity color tokens. Background is used for the severity badge;
- * `stripe` for the left-edge accent. Intentionally WCAG AA compliant
- * (verified against the dark-theme surface).
- */
+/** Severity → console LED mapping. `lamp` is the 2–6 char stencil word the
+ * LampTile contract requires; `label` is the full word kept for screen readers. */
 const SEVERITY_META: Record<
   CopilotSeverity,
-  { label: string; badgeBg: string; badgeText: string; stripe: string }
+  { label: string; lamp: string; tone: LampTone; stripe: string; chip: string }
 > = {
   critical: {
     label: 'Critical',
-    badgeBg: 'bg-red-950/60',
-    badgeText: 'text-red-300',
-    stripe: 'bg-red-500',
+    lamp: 'CRIT',
+    tone: 'nogo',
+    stripe: 'bg-[var(--led-nogo)]',
+    chip: 'text-led-nogo',
   },
   warning: {
     label: 'Warning',
-    badgeBg: 'bg-amber-950/60',
-    badgeText: 'text-amber-300',
-    stripe: 'bg-amber-500',
+    lamp: 'WARN',
+    tone: 'hold',
+    stripe: 'bg-[var(--led-hold)]',
+    chip: 'text-led-hold',
   },
   info: {
     label: 'Info',
-    badgeBg: 'bg-sky-950/60',
-    badgeText: 'text-sky-300',
-    stripe: 'bg-sky-500',
+    lamp: 'INFO',
+    tone: 'off',
+    stripe: 'bg-[var(--led-scope)]',
+    chip: 'text-led-scope',
   },
 };
 
@@ -166,7 +166,7 @@ export function CopilotInsightCard({
       data-copilot-category={insight.category}
       data-copilot-severity={insight.severity}
       className={cn(
-        'mission-chrome-panel relative overflow-hidden rounded-[24px] border border-white/10 transition-colors hover:border-white/15',
+        'well relative overflow-hidden transition-colors hover:border-[var(--hairline-strong)]',
         isDashboard ? 'p-3' : 'p-4',
       )}
     >
@@ -179,47 +179,31 @@ export function CopilotInsightCard({
       <div className={cn('flex items-start gap-3', isDashboard ? 'pl-2' : 'pl-3')}>
         <div
           className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] border border-white/10',
-            severityMeta.badgeBg,
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)]',
+            severityMeta.chip,
           )}
           aria-label={`${categoryMeta.label} insight`}
         >
-          <Icon className={cn('h-4 w-4', severityMeta.badgeText)} />
+          <Icon className="h-4 w-4" />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={cn(
-                'h-6 rounded-full px-2 text-eyebrow-sm font-mono',
-                severityMeta.badgeBg,
-                severityMeta.badgeText,
-                'border-transparent',
-              )}
-            >
-              {severityMeta.label}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="h-6 rounded-full border-white/10 bg-black/20 px-2 text-eyebrow-sm font-mono text-muted-foreground"
-            >
-              {categoryMeta.label}
-            </Badge>
+            <LampTile
+              small
+              interactive={false}
+              label={severityMeta.lamp}
+              tone={severityMeta.tone}
+            />
+            <span className="sr-only">{severityMeta.label} severity</span>
+            <Tag>{categoryMeta.label}</Tag>
           </div>
 
-          <h3
-            className={cn(
-              'mt-1.5 leading-snug text-foreground',
-              isDashboard ? 'text-body-strong' : 'text-body-strong',
-            )}
-          >
+          <h3 className="mt-1.5 text-body-strong leading-snug text-[var(--display-fg)]">
             {insight.title}
           </h3>
 
-          <p
-            className={cn('mt-1 text-caption text-muted-foreground', isDashboard && 'line-clamp-2')}
-          >
+          <p className={cn('mt-1 text-caption text-silver-mute', isDashboard && 'line-clamp-2')}>
             {insight.detail}
           </p>
 
@@ -231,7 +215,7 @@ export function CopilotInsightCard({
                 variant="outline"
                 disabled={executeMutation.isPending}
                 onClick={onActionClick}
-                className="h-8 rounded-[16px] border-white/10 bg-black/10 text-button-sm text-foreground hover:bg-black/20"
+                className="h-8 text-button-sm"
               >
                 {insight.actionSuggestion}
               </Button>
@@ -244,12 +228,7 @@ export function CopilotInsightCard({
           onClick={onDismissClick}
           disabled={dismissMutation.isPending}
           aria-label={`Dismiss insight: ${insight.title}`}
-          className={cn(
-            'shrink-0 rounded-[14px] p-1.5 text-muted-foreground transition-colors',
-            'hover:bg-black/20 hover:text-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-            'disabled:opacity-50',
-          )}
+          className={cn('cap shrink-0 p-1.5', 'disabled:opacity-50')}
         >
           <X className="h-3.5 w-3.5" />
         </button>

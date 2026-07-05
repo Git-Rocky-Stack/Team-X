@@ -1,7 +1,5 @@
 import { BrainCircuit, Clock3, ShieldCheck } from 'lucide-react';
 
-import { MissionInsetSurface, MissionPill } from '../mission/mission-shell.js';
-
 import {
   checkpointLabel,
   checkpointTone,
@@ -11,10 +9,25 @@ import {
   resumeOriginLabel,
 } from './memory-formatters.js';
 
+import {
+  LampTile,
+  type LampTone,
+  MetricTile,
+  RecessedWell,
+  Tag,
+} from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useRunCheckpoints, useThreadDigest } from '@/hooks/use-memory.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
+
+// memory-formatters returns legacy pill-era tone strings; bridge to LampTone.
+const LAMP_TONE: Record<'default' | 'accent' | 'warning' | 'danger', LampTone> = {
+  default: 'off',
+  accent: 'go',
+  warning: 'hold',
+  danger: 'nogo',
+};
 
 interface ThreadMemoryCardProps {
   companyId: string | null;
@@ -53,24 +66,27 @@ export function ThreadMemoryCard({
 
   if (compact) {
     return (
-      <MissionInsetSurface
-        className={cn('space-y-2 rounded-[18px] p-3', className)}
-        data-thread-memory-card=""
-      >
+      <RecessedWell className={cn('space-y-2 p-3', className)} data-thread-memory-card="">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-body-strong text-foreground">{title}</span>
-              <MissionPill tone={freshnessTone(digest?.freshness)}>
-                {digest?.freshness ?? 'no digest'}
-              </MissionPill>
+              <span className="text-body-strong text-[var(--display-fg)]">{title}</span>
+              <LampTile
+                small
+                interactive={false}
+                label={digest?.freshness ?? 'no digest'}
+                tone={LAMP_TONE[freshnessTone(digest?.freshness)]}
+              />
               {latestCheckpoint ? (
-                <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
-                  {checkpointLabel(latestCheckpoint.checkpointKind)}
-                </MissionPill>
+                <LampTile
+                  small
+                  interactive={false}
+                  label={checkpointLabel(latestCheckpoint.checkpointKind)}
+                  tone={LAMP_TONE[checkpointTone(latestCheckpoint.checkpointKind)]}
+                />
               ) : null}
             </div>
-            <p className="line-clamp-2 text-caption text-muted-foreground">
+            <p className="line-clamp-2 text-caption text-silver-mute">
               {digestQuery.isLoading || checkpointsQuery.isLoading
                 ? 'Loading condensed memory for this thread...'
                 : digestQuery.isError || checkpointsQuery.isError
@@ -83,7 +99,7 @@ export function ThreadMemoryCard({
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 shrink-0 border-white/10 bg-black/10 px-3 text-button-sm hover:bg-black/20"
+            className="h-8 shrink-0 px-3 text-button-sm"
             onClick={() => openAutonomyMemory(threadId)}
             data-thread-memory-open=""
           >
@@ -93,41 +109,44 @@ export function ThreadMemoryCard({
 
         {!digestQuery.isLoading && !checkpointsQuery.isLoading ? (
           <div className="flex flex-wrap items-center gap-2">
-            <MissionPill mono>
-              {digest ? `${digest.estimatedTokens} tokens` : 'digest pending'}
-            </MissionPill>
-            <MissionPill mono>{checkpoints.length} checkpoints</MissionPill>
-            <MissionPill>{latestCheckpoint?.nextAction ?? 'Open full memory view'}</MissionPill>
+            <Tag mono>{digest ? `${digest.estimatedTokens} tokens` : 'digest pending'}</Tag>
+            <Tag mono>{checkpoints.length} checkpoints</Tag>
+            <Tag>{latestCheckpoint?.nextAction ?? 'Open full memory view'}</Tag>
           </div>
         ) : null}
-      </MissionInsetSurface>
+      </RecessedWell>
     );
   }
 
   return (
-    <MissionInsetSurface className={cn('space-y-3 p-4', className)} data-thread-memory-card="">
+    <RecessedWell className={cn('space-y-3 p-4', className)} data-thread-memory-card="">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-body-strong text-foreground">{title}</span>
-            <MissionPill tone={freshnessTone(digest?.freshness)}>
-              {digest?.freshness ?? 'no digest'}
-            </MissionPill>
+            <span className="text-body-strong text-[var(--display-fg)]">{title}</span>
+            <LampTile
+              small
+              interactive={false}
+              label={digest?.freshness ?? 'no digest'}
+              tone={LAMP_TONE[freshnessTone(digest?.freshness)]}
+            />
             {latestCheckpoint ? (
-              <MissionPill tone={checkpointTone(latestCheckpoint.checkpointKind)}>
-                {checkpointLabel(latestCheckpoint.checkpointKind)}
-              </MissionPill>
+              <LampTile
+                small
+                interactive={false}
+                label={checkpointLabel(latestCheckpoint.checkpointKind)}
+                tone={LAMP_TONE[checkpointTone(latestCheckpoint.checkpointKind)]}
+              />
             ) : null}
-            {latestResumeLabel ? <MissionPill>{latestResumeLabel}</MissionPill> : null}
+            {latestResumeLabel ? <Tag>{latestResumeLabel}</Tag> : null}
           </div>
-          <p className="text-caption text-muted-foreground">{description}</p>
+          <p className="text-caption text-silver-mute">{description}</p>
         </div>
 
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="border-white/10 bg-black/10 hover:bg-black/20"
           onClick={() => openAutonomyMemory(threadId)}
           data-thread-memory-open=""
         >
@@ -136,72 +155,58 @@ export function ThreadMemoryCard({
       </div>
 
       {digestQuery.isLoading || checkpointsQuery.isLoading ? (
-        <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-caption text-muted-foreground">
+        <RecessedWell className="px-4 py-3 text-caption text-silver-mute">
           Loading condensed memory for this thread...
-        </div>
+        </RecessedWell>
       ) : digestQuery.isError || checkpointsQuery.isError ? (
-        <div className="rounded-[18px] border border-red-500/20 bg-red-500/8 px-4 py-3 text-caption text-red-200">
+        <RecessedWell className="border-[var(--led-nogo-edge)] px-4 py-3 text-caption text-led-nogo">
           Team-X could not read the latest digest or checkpoint trail for this thread.
-        </div>
+        </RecessedWell>
       ) : (
         <>
-          <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3 text-body text-foreground/90">
+          <RecessedWell className="px-4 py-3 text-body text-[var(--display-fg)]">
             {previewSummary}
-          </div>
+          </RecessedWell>
 
           {latestResumeHint ? (
-            <div className="rounded-[16px] border border-white/8 bg-black/15 px-4 py-2.5 text-eyebrow text-muted-foreground">
+            <RecessedWell className="px-4 py-2.5 text-eyebrow text-silver-mute">
               {latestResumeHint}
-            </div>
+            </RecessedWell>
           ) : null}
 
           <div className="grid gap-2 md:grid-cols-3">
-            <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
-                <BrainCircuit className="h-3.5 w-3.5 text-brand" />
-                Digest
-              </div>
-              <div className="mt-2 text-body-strong text-foreground">
-                {digest ? `${digest.estimatedTokens} est. tokens` : 'Pending'}
-              </div>
-              <div className="mt-1 text-caption text-muted-foreground">
-                {formatMemoryTimestamp(digest?.updatedAt ?? null)}
-              </div>
-            </div>
-
-            <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5 text-brand" />
-                Checkpoints
-              </div>
-              <div className="mt-2 text-body-strong text-foreground">{checkpoints.length}</div>
-              <div className="mt-1 text-caption text-muted-foreground">
-                {latestCheckpoint
+            <MetricTile
+              icon={BrainCircuit}
+              label="Digest"
+              value={digest ? `${digest.estimatedTokens} est. tokens` : 'Pending'}
+              hint={formatMemoryTimestamp(digest?.updatedAt ?? null)}
+            />
+            <MetricTile
+              icon={ShieldCheck}
+              label="Checkpoints"
+              value={String(checkpoints.length)}
+              hint={
+                latestCheckpoint
                   ? formatMemoryTimestamp(latestCheckpoint.createdAt)
-                  : 'No resumable state yet'}
-              </div>
-            </div>
-
-            <div className="rounded-[16px] border border-white/8 bg-black/15 px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-eyebrow-sm text-muted-foreground">
-                <Clock3 className="h-3.5 w-3.5 text-brand" />
-                Next action
-              </div>
-              <div className="mt-2 text-body-strong text-foreground">
-                {latestCheckpoint?.nextAction ?? 'Open full memory view'}
-              </div>
-            </div>
+                  : 'No resumable state yet'
+              }
+            />
+            <MetricTile
+              icon={Clock3}
+              label="Next action"
+              value={latestCheckpoint?.nextAction ?? 'Open full memory view'}
+            />
           </div>
 
           {digest?.pinnedFacts.length ? (
             <div className="flex flex-wrap items-center gap-2" data-thread-memory-facts="">
               {digest.pinnedFacts.slice(0, compact ? 2 : 3).map((fact) => (
-                <MissionPill key={fact.id}>{fact.fact}</MissionPill>
+                <Tag key={fact.id}>{fact.fact}</Tag>
               ))}
             </div>
           ) : null}
         </>
       )}
-    </MissionInsetSurface>
+    </RecessedWell>
   );
 }

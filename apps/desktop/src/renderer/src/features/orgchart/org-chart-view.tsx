@@ -1,5 +1,4 @@
 import type { Employee } from '@team-x/shared-types';
-import { AlertCircle, GitBranch, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { EmployeeProfileDialog, type EmployeeProfileSaveInput } from './employee-profile-dialog.js';
@@ -7,6 +6,7 @@ import { FireDialog } from './fire-dialog.js';
 import { OrgChartTree } from './org-chart-tree.js';
 import { PromoteDialog } from './promote-dialog.js';
 
+import { Faceplate, SubviewState } from '@/components/console/index.js';
 import { useFireEmployee } from '@/hooks/use-fire-employee.js';
 import { useOrgChart, useOrgChartEventSync } from '@/hooks/use-org-chart.js';
 import { usePromoteEmployee } from '@/hooks/use-promote-employee.js';
@@ -118,15 +118,16 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   if (companyId === null) {
     return (
       <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        className="flex h-full flex-col justify-center px-6"
         data-org-chart-view=""
         data-org-chart-state="no-company"
       >
-        <GitBranch className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-h3 text-foreground">No workspace selected</h2>
-        <p className="mt-2 max-w-sm text-body text-muted-foreground">
-          Choose or create a workspace to view its reporting structure.
-        </p>
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No workspace selected"
+          description="Choose or create a workspace to view its reporting structure."
+        />
       </section>
     );
   }
@@ -134,12 +135,11 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   if (isLoading) {
     return (
       <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        className="flex h-full flex-col justify-center px-6"
         data-org-chart-view=""
         data-org-chart-state="loading"
       >
-        <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden="true" />
-        <p className="mt-3 text-body text-muted-foreground">Loading org chart...</p>
+        <SubviewState lampLabel="STBY" lampTone="hold" title="Loading org chart..." />
       </section>
     );
   }
@@ -147,20 +147,25 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   if (isError || !orgChart) {
     return (
       <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        className="flex h-full flex-col justify-center px-6"
         data-org-chart-view=""
         data-org-chart-state="error"
       >
-        <AlertCircle className="h-8 w-8 text-red-400" aria-hidden="true" />
-        <h2 className="mt-4 text-h3 text-foreground">Org chart could not load</h2>
-        <button
-          type="button"
-          className="mt-4 rounded-md border border-border px-3 py-1.5 text-button text-foreground transition-colors hover:bg-surface-100"
-          data-org-chart-retry=""
-          onClick={() => refetch()}
-        >
-          Retry
-        </button>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Org chart could not load"
+          action={
+            <button
+              type="button"
+              className="cap px-3 py-1.5 text-button"
+              data-org-chart-retry=""
+              onClick={() => refetch()}
+            >
+              Retry
+            </button>
+          }
+        />
       </section>
     );
   }
@@ -168,34 +173,30 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
   if (orgChart.employees.length === 0) {
     return (
       <section
-        className="flex h-full flex-col items-center justify-center px-6 text-center"
+        className="flex h-full flex-col justify-center px-6"
         data-org-chart-view=""
         data-org-chart-state="empty"
       >
-        <GitBranch className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-        <h2 className="mt-4 text-h3 text-foreground">No employees yet</h2>
-        <p className="mt-2 max-w-sm text-body text-muted-foreground">
-          Hire your first role to build the org chart.
-        </p>
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="No employees yet"
+          description="Hire your first role to build the org chart."
+        />
       </section>
     );
   }
 
   return (
     <section className="flex h-full flex-col" data-org-chart-view="">
-      <header className="border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
-            <GitBranch className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-h1 text-foreground">Org chart</h1>
-            <p className="text-caption text-muted-foreground">
-              Reporting lines are shown from company roots down.
-            </p>
-          </div>
-        </div>
-      </header>
+      <div className="p-4 pb-0 lg:p-6 lg:pb-0">
+        <Faceplate kicker="Org Chart" serial="REPORTING LINES">
+          <h1 className="text-h1 text-foreground">Org chart</h1>
+          <p className="text-caption text-silver-mute">
+            Reporting lines are shown from company roots down.
+          </p>
+        </Faceplate>
+      </div>
 
       <OrgChartTree
         employees={orgChart.employees}
@@ -219,7 +220,7 @@ export function OrgChartView({ companyId }: OrgChartViewProps) {
 
       {toast ? (
         <output
-          className="fixed bottom-4 right-4 z-50 max-w-md rounded-md border border-border bg-surface-100 px-4 py-3 text-body text-foreground shadow-lg"
+          className="plate fixed bottom-4 right-4 z-50 max-w-md border border-[var(--hairline)] px-4 py-3 text-body text-foreground"
           data-org-chart-toast=""
         >
           {toast}

@@ -15,13 +15,14 @@
  *   - Empty / loading / error states are first-class.
  */
 
-import { Loader2, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { pickDashboardTopN, sortBySeverity } from './copilot-helpers.js';
 import { CopilotInsightCard } from './copilot-insight-card.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { SubviewState, Tag } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { useCopilotInsights } from '@/hooks/use-copilot.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -35,48 +36,51 @@ export function CopilotDashboardWidget() {
 
   const { topN: topThree, hasMore, total } = pickDashboardTopN(sorted);
 
+  // Surface-neutral root: the only render site (mission-control-dashboard
+  // secondary rail) hosts this inside its own Faceplate → RecessedWell and
+  // neutralizes borders/padding via [&_[data-copilot-widget]] selectors — a
+  // recipe root here would nest depth layers the host can't fully clear.
   return (
-    <section
-      aria-label="Copilot insights"
-      data-copilot-widget=""
-      className="rounded-lg border border-border bg-surface-50 p-4"
-    >
+    <section aria-label="Copilot insights" data-copilot-widget="" className="p-4">
       <header className="mb-3 flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
         <h2 className="text-h4 text-foreground">Copilot insights</h2>
-        <Badge
-          variant="outline"
-          className="ml-auto font-mono text-eyebrow-sm px-1.5"
-          data-copilot-widget-count={total}
-        >
+        <Tag mono className="ml-auto" data-copilot-widget-count={total}>
           {total} active
-        </Badge>
+        </Tag>
       </header>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-6 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-label="Loading insights" />
-        </div>
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="hold"
+          title="Loading insights"
+          className="min-h-0 p-4"
+        />
       )}
 
       {isError && (
-        <div className="py-4 text-center">
-          <p className="text-caption text-muted-foreground">Could not load insights.</p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-2 rounded-md border border-border px-2.5 py-1 text-button-sm text-foreground hover:bg-surface-100"
-          >
-            Retry
-          </button>
-        </div>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Could not load insights."
+          className="min-h-0 p-4"
+          action={
+            <Button type="button" size="sm" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+          }
+        />
       )}
 
       {!isLoading && !isError && total === 0 && (
-        <div className="py-6 text-center" data-copilot-widget-empty="">
-          <p className="text-caption text-muted-foreground">
-            No active insights — the copilot is monitoring in the background.
-          </p>
+        <div className="py-2" data-copilot-widget-empty="">
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
+            title="No active insights — the copilot is monitoring in the background."
+            className="min-h-0 p-4"
+          />
         </div>
       )}
 
@@ -91,7 +95,7 @@ export function CopilotDashboardWidget() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="mt-3 w-full rounded-md border border-dashed border-border px-3 py-2 text-button-sm text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
+            className="nav-tile mt-3 w-full border-dashed border-[var(--hairline)] px-3 py-1.5 text-center text-button-sm"
             data-copilot-widget-view-all=""
           >
             {hasMore ? `View all (${total})` : 'Open sidebar'}
