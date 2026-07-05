@@ -393,13 +393,13 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
                   return (
                     <RecessedWell
                       key={task.id}
-                      className={cn('px-4 py-4', completed && 'border-[var(--armed-edge)]')}
+                      className={cn('px-4 py-4', completed && 'border-[var(--led-go-edge)]')}
                       data-user-guide-task={task.id}
                     >
                       <div className="flex items-start gap-3">
                         <div className="pt-0.5">
                           {completed ? (
-                            <CheckCircle2 className="h-4 w-4 text-[var(--armed-lit)]" />
+                            <CheckCircle2 className="h-4 w-4 text-led-go" />
                           ) : (
                             <Circle className="h-4 w-4 text-silver-mute" />
                           )}

@@ -93,11 +93,13 @@ export function Composer({
               ? 'Queue mode active while the current reply completes.'
               : 'Send with Ctrl/Cmd+Enter.'}
           </p>
+          {/* Dual-form rule: steady armed red = a reply actually streaming.
+              An idle composer stands by unlit; a queued backlog holds amber. */}
           <LampTile
             small
             interactive={false}
-            label={queueMode ? 'Queue' : 'Live'}
-            tone={queueMode ? 'hold' : 'armed'}
+            label={isBusy ? 'LIVE' : queueMode ? 'QUEUE' : 'STBY'}
+            tone={isBusy ? 'armed' : queueMode ? 'hold' : 'off'}
           />
         </div>
       </RecessedWell>

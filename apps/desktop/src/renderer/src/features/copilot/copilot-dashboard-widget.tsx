@@ -50,13 +50,21 @@ export function CopilotDashboardWidget() {
         </Tag>
       </header>
 
-      {isLoading && <SubviewState lampLabel="STBY" lampTone="hold" title="Loading insights" />}
+      {isLoading && (
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="hold"
+          title="Loading insights"
+          className="min-h-0 p-4"
+        />
+      )}
 
       {isError && (
         <SubviewState
           lampLabel="NO-GO"
           lampTone="nogo"
           title="Could not load insights."
+          className="min-h-0 p-4"
           action={
             <Button type="button" size="sm" variant="outline" onClick={() => refetch()}>
               Retry
@@ -71,6 +79,7 @@ export function CopilotDashboardWidget() {
             lampLabel="STBY"
             lampTone="off"
             title="No active insights — the copilot is monitoring in the background."
+            className="min-h-0 p-4"
           />
         </div>
       )}

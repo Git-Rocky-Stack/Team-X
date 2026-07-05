@@ -37,7 +37,13 @@ import {
   isCopilotThread as checkCopilotThread,
 } from './thread-list.js';
 
-import { LampTile, RecessedWell, StripeHeader, Tag } from '@/components/console/index.js';
+import {
+  LampTile,
+  type LampTone,
+  RecessedWell,
+  StripeHeader,
+  Tag,
+} from '@/components/console/index.js';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet.js';
 import { ThreadMemoryCard } from '@/features/memory/thread-memory-card.js';
 import { TicketDetailPanel } from '@/features/tickets/ticket-detail.js';
@@ -48,16 +54,19 @@ import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
-function statusColor(status: string): string {
+/** Live status → stencil word-lamp — floor-view/employee-card's canon mapping. */
+function statusLamp(status: string): { label: string; tone: LampTone } {
   switch (status) {
     case 'thinking':
-      return 'bg-[var(--armed-lit)] animate-pulse-slow';
+      return { label: 'EXEC', tone: 'exec' };
+    case 'meeting':
+      return { label: 'MTG', tone: 'go' };
     case 'blocked':
-      return 'bg-[var(--led-hold)]';
+      return { label: 'HOLD', tone: 'hold' };
     case 'error':
-      return 'bg-[var(--led-nogo)]';
+      return { label: 'NO-GO', tone: 'nogo' };
     default:
-      return 'bg-[var(--graphite)]';
+      return { label: 'STBY', tone: 'off' };
   }
 }
 
@@ -604,16 +613,8 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                     <LampTile
                       small
                       interactive={false}
-                      label={displayStatus}
-                      tone={
-                        displayStatus === 'thinking'
-                          ? 'exec'
-                          : displayStatus === 'blocked'
-                            ? 'hold'
-                            : displayStatus === 'error'
-                              ? 'nogo'
-                              : 'off'
-                      }
+                      label={statusLamp(displayStatus).label}
+                      tone={statusLamp(displayStatus).tone}
                     />
                     {queuedCount > 0 ? <Tag mono>{queuedCount} queued</Tag> : null}
                   </div>
@@ -622,11 +623,8 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-[var(--hairline)] bg-[var(--carbon-800)] text-caption font-semibold">
                     {initials(employee.name)}
                   </div>
-                  <SheetTitle className="flex min-w-0 flex-1 items-center gap-2 text-h3">
-                    <span className="truncate">{employee.name}</span>
-                    <span
-                      className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', statusColor(displayStatus))}
-                    />
+                  <SheetTitle className="min-w-0 flex-1 truncate text-h3">
+                    {employee.name}
                   </SheetTitle>
                   <button
                     type="button"

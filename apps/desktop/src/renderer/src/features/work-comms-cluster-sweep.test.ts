@@ -233,6 +233,10 @@ describe('composer', () => {
     expect(src).toContain('<RecessedWell');
     expect(src).toContain('<LampTile');
     expect(src).toContain('cap-armed');
+    // Dual-form rule: steady armed red is reserved for a reply actually
+    // streaming — an idle composer stands by unlit (Stage-2 review D2).
+    expect(src).toContain("label={isBusy ? 'LIVE' : queueMode ? 'QUEUE' : 'STBY'}");
+    expect(src).toContain("tone={isBusy ? 'armed' : queueMode ? 'hold' : 'off'}");
     expect(src).toContain('onQueue');
     expect(src).toContain('onStop');
     expect(src).toContain('queuedCount');
@@ -322,6 +326,9 @@ describe('copilot-dashboard-widget', () => {
     expect(src).toContain("from '@/components/console");
     expect(src).toContain('data-copilot-widget="" className="p-4"');
     expect(src).toContain('<SubviewState');
+    // Widget states are one-liners — the 12rem SubviewState floor is
+    // overridden compact so the dashboard rail doesn't inflate (D4).
+    expect(src).toContain('min-h-0');
     expect(src).toContain('data-copilot-widget=""');
     expect(src).toContain('data-copilot-widget-count={total}');
     expect(src).toContain('data-copilot-widget-empty=""');
@@ -374,6 +381,10 @@ describe('user-guide-view', () => {
     expect(src).toContain('<LampTile');
     expect(src).toContain('<SubviewState');
     expect(src).toContain('nav-tile');
+    // Completed = achieved → GO green, never armed red (Stage-2 review D3;
+    // goal-row/schedule-view canon: done maps to the go family).
+    expect(src).toContain('var(--led-go-edge)');
+    expect(src).toContain('text-led-go');
     expect(src).toContain('data-user-guide-role={role}');
     expect(src).toContain('data-user-guide-search=""');
     expect(src).toContain('data-user-guide-section-nav={section.id}');
@@ -391,6 +402,12 @@ describe('chat-drawer', () => {
     expect(src).toContain('<StripeHeader');
     expect(src).toContain('<LampTile');
     expect(src).toContain('<RecessedWell');
+    // Raw status words break the 2–6 char stencil contract — the drawer
+    // shares floor-view/employee-card's canon mapping, and the redundant
+    // bare status dot is gone (Stage-2 review D1).
+    expect(src).toContain("{ label: 'EXEC', tone: 'exec' }");
+    expect(src).toContain("{ label: 'NO-GO', tone: 'nogo' }");
+    expect(src).not.toContain('statusColor');
     expect(src).toContain('const effectiveThreadId = activeThreadId;');
     expect(src).toContain('function TicketThreadPreviewPanel');
     expect(src).toContain('data-thread-ticket-preview=""');
