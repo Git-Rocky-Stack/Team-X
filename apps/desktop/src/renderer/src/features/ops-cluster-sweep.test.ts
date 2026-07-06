@@ -213,3 +213,42 @@ describe('vault-view sweep', () => {
     expect(src).toContain('Open Location');
   });
 });
+
+describe('ops cluster cross-file legacy absence', () => {
+  const files = [
+    'telemetry/telemetry-view.tsx',
+    'telemetry/company-telemetry.tsx',
+    'telemetry/employee-telemetry.tsx',
+    'telemetry/cost-breakdown.tsx',
+    'audit/audit-view.tsx',
+    'audit/audit-event-chip.tsx',
+    'audit/audit-event-chip-helpers.ts',
+    'vault/vault-view.tsx',
+  ];
+
+  it('keeps the swept ops files free of every legacy composition family', () => {
+    for (const file of files) {
+      const src = readSrc(file);
+      expect(src, file).not.toContain('mission-shell');
+      expect(src, file).not.toMatch(/Mission[A-Z]/);
+      expect(src, file).not.toContain('brand-selected');
+      expect(src, file).not.toContain('amoled-menu-surface');
+      expect(src, file).not.toContain('border-white/');
+      expect(src, file).not.toMatch(/\bbg-black\b/);
+      expect(src, file).not.toMatch(
+        /\b(bg|text|border)-(zinc|slate|emerald|rose|sky|violet|indigo|teal|cyan|purple|orange|amber|fuchsia|lime|pink|gray|green|red|blue|yellow)-[0-9]/,
+      );
+      expect(src, file).not.toMatch(
+        /#(c53439|22c55e|d97706|3b82f6|ef4444|a855f7|ec4899|14b8a6|f97316|6366f1|84cc16|06b6d4|f43f5e|8b5cf6|eab308)/i,
+      );
+    }
+  });
+
+  it('confirms zero mission-shell importers remain among the swept ops files', () => {
+    // Telemetry was the renderer's last mission-shell consumer cluster;
+    // this pin locks the Phase-8 purge gate open.
+    for (const file of files) {
+      expect(readSrc(file)).not.toContain("from '@/features/mission/mission-shell.js'");
+    }
+  });
+});
