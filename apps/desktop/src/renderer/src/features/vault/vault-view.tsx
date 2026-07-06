@@ -307,7 +307,7 @@ export function VaultView({ companyId }: VaultViewProps) {
                     />
                     <span
                       className={`text-caption ${
-                        verifyMutation.data.ok ? 'text-led-go' : 'text-led-nogo'
+                        verifyMutation.data.ok ? 'text-[var(--tag-go)]' : 'text-[var(--tag-warn)]'
                       }`}
                     >
                       {verifyMutation.data.ok ? 'Integrity verified' : 'Hash mismatch'}

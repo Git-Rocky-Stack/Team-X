@@ -306,7 +306,7 @@ export function AuditView({ companyId, employees }: AuditViewProps) {
             JSON
           </Button>
           {exportMutation.isSuccess && (
-            <span className="text-caption text-led-go">
+            <span className="text-caption text-[var(--tag-go)]">
               Exported to {exportMutation.data.filePath.split(/[\\/]/).pop()}
             </span>
           )}

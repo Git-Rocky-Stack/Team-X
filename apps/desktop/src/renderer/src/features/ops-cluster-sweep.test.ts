@@ -182,6 +182,13 @@ describe('audit-view sweep', () => {
     expect(src).toContain('setPage((p) => Math.max(0, p - 1))');
     expect(src).toContain('setPage((p) => p + 1)');
   });
+
+  it('tones chassis-context status text with the shift-aware tag family', () => {
+    // The export-success note sits on the chassis faceplate, not a display
+    // well — Night LED green goes low-contrast on Day silver (5a defect class).
+    expect(src).toContain('text-[var(--tag-go)]');
+    expect(src).not.toContain('text-led-go');
+  });
 });
 
 describe('vault-view sweep', () => {
@@ -211,6 +218,14 @@ describe('vault-view sweep', () => {
     expect(src).toContain('handleVerify(selectedFile.id)');
     expect(src).toContain('handleDelete(selectedFile.id)');
     expect(src).toContain('Open Location');
+  });
+
+  it('tones the chassis-context verify caption with the shift-aware tag family', () => {
+    // The verify result sits on the chassis detail panel, not a display well.
+    expect(src).toContain('text-[var(--tag-go)]');
+    expect(src).toContain('text-[var(--tag-warn)]');
+    expect(src).not.toContain('text-led-go');
+    expect(src).not.toContain('text-led-nogo');
   });
 });
 
