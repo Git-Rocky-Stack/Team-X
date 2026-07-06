@@ -261,7 +261,7 @@ function Th({
     <th className={`px-4 py-3 text-label ${right ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
-        className={`inline-flex items-center text-[var(--display-fg)] opacity-60 transition-opacity hover:opacity-100 ${
+        className={`inline-flex items-center rounded text-[var(--display-fg)] opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           right ? 'justify-end' : 'justify-start'
         }`}
         onClick={() => onClick(col)}

@@ -108,7 +108,7 @@ function EventTypeChips({
         <button
           type="button"
           onClick={onClear}
-          className="flex items-center gap-1 rounded-[var(--r-pill)] border border-[var(--hairline)] px-2 py-0.5 text-button-sm text-muted-foreground transition-colors hover:border-[var(--hairline-strong)]"
+          className="flex items-center gap-1 rounded-[var(--r-pill)] border border-[var(--hairline)] px-2 py-0.5 text-button-sm text-muted-foreground transition-colors hover:border-[var(--hairline-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Clear <X className="h-3 w-3" />
         </button>
@@ -121,7 +121,7 @@ function EventTypeChips({
             type="button"
             onClick={() => onToggle(eventType)}
             aria-pressed={active}
-            className={`rounded-[var(--r-pill)] border px-2.5 py-0.5 text-button-sm ${
+            className={`rounded-[var(--r-pill)] border px-2.5 py-0.5 text-button-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               active
                 ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
                 : 'border-[var(--hairline)] text-muted-foreground transition-colors hover:border-[var(--hairline-strong)]'
@@ -154,7 +154,7 @@ function EventRow({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         {isExpanded ? (
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--display-fg)] opacity-50" />

@@ -199,7 +199,7 @@ export function VaultView({ companyId }: VaultViewProps) {
                     type="button"
                     key={file.id}
                     onClick={() => setSelectedFile(file)}
-                    className={`flex w-full items-center gap-3 rounded-card border px-4 py-3 text-left transition-all ${
+                    className={`flex w-full items-center gap-3 rounded-card border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       isSelected
                         ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
                         : 'border-transparent hover:border-[var(--hairline-strong)]'
