@@ -4,11 +4,12 @@
  * Summary cards: total runs, total tokens, total cost, avg latency, tool calls.
  * Daily charts: tokens (AreaChart) and cost (AreaChart) over a 30-day window.
  *
- * Phase 3 — M17.
+ * Phase 3 — M17. Recomposed onto the Command Console primitives (Phase 7a);
+ * charts read the console-token theme and mount inside display wells.
  */
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
-import { Activity, BarChart3, DollarSign, Gauge, Radar, Rows3 } from 'lucide-react';
+import { Activity, DollarSign, Gauge, Radar, Rows3 } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   Area,
@@ -20,12 +21,10 @@ import {
   YAxis,
 } from 'recharts';
 
+import { CHART_GRID_STROKE, CHART_SERIES, CHART_TICK, CHART_TOOLTIP_STYLE } from './chart-theme.js';
+
+import { Faceplate, MetricTile, RecessedWell, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  MissionMetricTile,
-  MissionSectionCard,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
 import { telemetryRequestKind, useCompanyStats, useDailyUsage } from '@/hooks/use-telemetry.js';
 
 const DAY_MS = 86_400_000;
@@ -63,49 +62,49 @@ export function CompanyTelemetry({ companyId, kindFilter }: Props) {
 
   if (statsQuery.isLoading || dailyQuery.isLoading) {
     return (
-      <MissionSectionCard
-        title="Company overview"
-        description="Loading aggregate performance and daily telemetry trends."
-      >
-        <MissionStateBlock
-          title="Loading company telemetry"
-          description="Run volume, usage, and cost analytics are syncing for this workspace."
-          icon={Radar}
-          data-telemetry-company-state="loading"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Company overview" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          Loading aggregate performance and daily telemetry trends.
+        </p>
+        <div data-telemetry-company-state="loading">
+          <SubviewState
+            lampLabel="SYNC"
+            lampTone="hold"
+            title="Loading company telemetry"
+            description="Run volume, usage, and cost analytics are syncing for this workspace."
+          />
+        </div>
+      </Faceplate>
     );
   }
 
   if (statsQuery.isError || dailyQuery.isError) {
     return (
-      <MissionSectionCard
-        title="Company overview"
-        description="The analytics shell is ready, but the company telemetry queries failed."
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-              onClick={() => {
-                statsQuery.refetch();
-                dailyQuery.refetch();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
-        }
-      >
-        <MissionStateBlock
-          title="Company telemetry could not load"
-          description="Retry the company summary and daily usage queries to restore the analytics surface."
-          icon={BarChart3}
-          tone="danger"
-          data-telemetry-company-state="error"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Company overview" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          The analytics shell is ready, but the company telemetry queries failed.
+        </p>
+        <div data-telemetry-company-state="error">
+          <SubviewState
+            lampLabel="NO-GO"
+            lampTone="nogo"
+            title="Company telemetry could not load"
+            description="Retry the company summary and daily usage queries to restore the analytics surface."
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  statsQuery.refetch();
+                  dailyQuery.refetch();
+                }}
+              >
+                Retry
+              </Button>
+            }
+          />
+        </div>
+      </Faceplate>
     );
   }
 
@@ -127,144 +126,134 @@ export function CompanyTelemetry({ companyId, kindFilter }: Props) {
 
   return (
     <div className="grid gap-6">
-      <MissionSectionCard
-        title="Company overview"
-        description="Aggregate run volume, token usage, and performance across the current telemetry filter."
-      >
+      <Faceplate kicker="Company overview" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          Aggregate run volume, token usage, and performance across the current telemetry filter.
+        </p>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <MissionMetricTile
+          <MetricTile
             label="Runs"
             value={stats.totalRuns.toLocaleString()}
             hint="Completed executions captured in telemetry."
             icon={Rows3}
             data-telemetry-stat="total-runs"
           />
-          <MissionMetricTile
+          <MetricTile
             label="Tokens"
             value={formatTokens(stats.totalTokens)}
             hint="Prompt and completion volume combined."
             icon={Activity}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Cost"
             value={formatCost(stats.totalCostUsd)}
             hint="Tracked provider spend for this filter."
             icon={DollarSign}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Latency"
             value={`${stats.avgLatencyMs}ms`}
             hint="Average completion latency."
             icon={Gauge}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Tool calls"
             value={stats.totalToolCalls.toLocaleString()}
             hint="Tool executions recorded in run history."
             icon={Radar}
           />
         </div>
-      </MissionSectionCard>
+      </Faceplate>
 
       {isEmpty ? (
-        <MissionSectionCard
-          title="Daily trends"
-          description="There is no completed run history for the current filter yet."
-        >
-          <MissionStateBlock
-            title="No telemetry activity yet"
-            description="Start chatting with employees or running agentic work to populate company analytics."
-            icon={BarChart3}
-            data-telemetry-company-state="empty"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Daily trends" bodyClassName="space-y-3">
+          <p className="text-caption text-silver-mute">
+            There is no completed run history for the current filter yet.
+          </p>
+          <div data-telemetry-company-state="empty">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="No telemetry activity yet"
+              description="Start chatting with employees or running agentic work to populate company analytics."
+            />
+          </div>
+        </Faceplate>
       ) : (
         <div className="grid gap-6 xl:grid-cols-2">
-          <MissionSectionCard
-            title="Daily token usage"
-            description="Thirty-day token volume trend across the current run kind."
-          >
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="telemetryTokenGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#c53439" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#c53439" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  tickFormatter={(value: string) => value.slice(5)}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  tickFormatter={(value: number) => formatTokens(value)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                  formatter={(value: unknown) => [Number(value ?? 0).toLocaleString(), 'Tokens']}
-                  labelFormatter={(label: unknown) => `Date: ${String(label)}`}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="tokens"
-                  stroke="#c53439"
-                  fill="url(#telemetryTokenGrad)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </MissionSectionCard>
+          <Faceplate kicker="Daily token usage" bodyClassName="space-y-3">
+            <p className="text-caption text-silver-mute">
+              Thirty-day token volume trend across the current run kind.
+            </p>
+            <RecessedWell className="p-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="telemetryTokenGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={CHART_SERIES.tokens} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={CHART_SERIES.tokens} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                  <XAxis
+                    dataKey="day"
+                    tick={CHART_TICK}
+                    tickFormatter={(value: string) => value.slice(5)}
+                  />
+                  <YAxis tick={CHART_TICK} tickFormatter={(value: number) => formatTokens(value)} />
+                  <Tooltip
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                    formatter={(value: unknown) => [Number(value ?? 0).toLocaleString(), 'Tokens']}
+                    labelFormatter={(label: unknown) => `Date: ${String(label)}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="tokens"
+                    stroke={CHART_SERIES.tokens}
+                    fill="url(#telemetryTokenGrad)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </RecessedWell>
+          </Faceplate>
 
-          <MissionSectionCard
-            title="Daily cost"
-            description="Thirty-day cost trend for paid providers in the current telemetry slice."
-          >
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="telemetryCostGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  tickFormatter={(value: string) => value.slice(5)}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  tickFormatter={(value: number) => formatCost(value)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                  formatter={(value: unknown) => [formatCost(Number(value ?? 0)), 'Cost']}
-                  labelFormatter={(label: unknown) => `Date: ${String(label)}`}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cost"
-                  stroke="#22c55e"
-                  fill="url(#telemetryCostGrad)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </MissionSectionCard>
+          <Faceplate kicker="Daily cost" bodyClassName="space-y-3">
+            <p className="text-caption text-silver-mute">
+              Thirty-day cost trend for paid providers in the current telemetry slice.
+            </p>
+            <RecessedWell className="p-3">
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="telemetryCostGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={CHART_SERIES.cost} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={CHART_SERIES.cost} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                  <XAxis
+                    dataKey="day"
+                    tick={CHART_TICK}
+                    tickFormatter={(value: string) => value.slice(5)}
+                  />
+                  <YAxis tick={CHART_TICK} tickFormatter={(value: number) => formatCost(value)} />
+                  <Tooltip
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                    formatter={(value: unknown) => [formatCost(Number(value ?? 0)), 'Cost']}
+                    labelFormatter={(label: unknown) => `Date: ${String(label)}`}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cost"
+                    stroke={CHART_SERIES.cost}
+                    fill="url(#telemetryCostGrad)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </RecessedWell>
+          </Faceplate>
         </div>
       )}
     </div>

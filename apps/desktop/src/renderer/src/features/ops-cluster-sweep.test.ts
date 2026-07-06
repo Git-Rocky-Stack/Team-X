@@ -47,3 +47,32 @@ describe('telemetry-view sweep', () => {
     }
   });
 });
+
+describe('company-telemetry sweep', () => {
+  const src = readSrc('telemetry/company-telemetry.tsx');
+
+  it('composes from console primitives with themed charts', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('CHART_SERIES.tokens');
+    expect(src).toContain('CHART_SERIES.cost');
+    expect(src).toContain('CHART_TOOLTIP_STYLE');
+    expect(src).toContain('stroke={CHART_GRID_STROKE}');
+  });
+
+  it('carries zero mission-family legacy or hardcoded chart hex', () => {
+    expect(src).not.toContain('mission-shell');
+    expect(src).not.toMatch(/Mission[A-Z]/);
+    expect(src).not.toMatch(/#[0-9a-fA-F]{6}/);
+    expect(src).not.toContain('border-white/');
+    expect(src).not.toContain('hsl(var(--card))');
+  });
+
+  it('preserves the three per-state selectors', () => {
+    expect(src).toContain('data-telemetry-company-state="loading"');
+    expect(src).toContain('data-telemetry-company-state="error"');
+    expect(src).toContain('data-telemetry-company-state="empty"');
+  });
+});
