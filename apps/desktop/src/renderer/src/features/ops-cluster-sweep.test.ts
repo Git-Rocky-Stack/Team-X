@@ -152,3 +152,34 @@ describe('audit-event-chip sweep', () => {
     expect(chipSrc).not.toContain('text-xs');
   });
 });
+
+describe('audit-view sweep', () => {
+  const src = readSrc('audit/audit-view.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('bg-[var(--void)]');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero legacy chrome', () => {
+    expect(src).not.toContain('amoled-menu-surface');
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('bg-black');
+    expect(src).not.toMatch(/\b(bg|text|border)-zinc-/);
+    expect(src).not.toContain('rounded-full');
+    expect(src).not.toContain('animate-spin');
+  });
+
+  it('preserves the heading, export, and pagination contracts', () => {
+    expect(src).toContain('Audit Log');
+    expect(src).toContain("handleExport('csv')");
+    expect(src).toContain("handleExport('json')");
+    expect(src).toContain('<AuditEventChip eventType={event.eventType} />');
+    expect(src).toContain('setPage((p) => Math.max(0, p - 1))');
+    expect(src).toContain('setPage((p) => p + 1)');
+  });
+});
