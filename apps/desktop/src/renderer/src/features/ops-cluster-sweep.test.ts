@@ -132,3 +132,23 @@ describe('cost-breakdown sweep', () => {
     expect(src).toContain('onClick={() => setRange(option.value)}');
   });
 });
+
+describe('audit-event-chip sweep', () => {
+  const helpersSrc = readSrc('audit/audit-event-chip-helpers.ts');
+  const chipSrc = readSrc('audit/audit-event-chip.tsx');
+
+  it('tones every event type from the LED display family', () => {
+    expect(helpersSrc).toContain('var(--led-go-edge)');
+    expect(helpersSrc).toContain('var(--led-nogo-edge)');
+    expect(helpersSrc).toContain('var(--led-scope-edge)');
+    expect(helpersSrc).not.toMatch(
+      /bg-(green|red|blue|cyan|yellow|sky|rose|emerald|purple|orange|amber|slate|indigo|teal|violet|zinc|gray)-600/,
+    );
+  });
+
+  it('keeps the chip shell contract', () => {
+    expect(chipSrc).toContain('aria-label={ariaLabel}');
+    expect(chipSrc).toContain('data-event-type={eventType}');
+    expect(chipSrc).not.toContain('text-xs');
+  });
+});

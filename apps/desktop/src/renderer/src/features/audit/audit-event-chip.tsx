@@ -71,8 +71,8 @@ export function AuditEventChip({ eventType, className }: AuditEventChipProps): R
   const ariaLabel = getEventTypeAriaLabel(eventType);
 
   const mergedClassName = className
-    ? `shrink-0 text-xs ${colorClass} ${className}`
-    : `shrink-0 text-xs ${colorClass}`;
+    ? `shrink-0 text-caption ${colorClass} ${className}`
+    : `shrink-0 text-caption ${colorClass}`;
 
   return (
     <Badge

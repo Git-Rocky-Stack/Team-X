@@ -43,8 +43,12 @@ import {
 
 describe('audit-event-chip: rag.index.indexed', () => {
   it('maps to the blue info color class', () => {
-    expect(getEventTypeColor('rag.index.indexed')).toBe('bg-blue-600/20 text-blue-400');
-    expect(EVENT_TYPE_COLORS['rag.index.indexed']).toBe('bg-blue-600/20 text-blue-400');
+    expect(getEventTypeColor('rag.index.indexed')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
+    expect(EVENT_TYPE_COLORS['rag.index.indexed']).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
   });
 
   it('exposes a hand-tuned display label ("RAG Indexed")', () => {
@@ -94,7 +98,9 @@ describe('audit-event-chip: rag.index.indexed', () => {
 
 describe('audit-event-chip: agent.step', () => {
   it('maps to the sky step-progress color class', () => {
-    expect(getEventTypeColor('agent.step')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeColor('agent.step')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
   });
 
   it('exposes a hand-tuned display label ("Agent Step")', () => {
@@ -158,7 +164,9 @@ describe('audit-event-chip: agent.step', () => {
 
 describe('audit-event-chip: copilot.analyzed', () => {
   it('maps to the blue analyzer color class', () => {
-    expect(getEventTypeColor('copilot.analyzed')).toBe('bg-blue-600/20 text-blue-400');
+    expect(getEventTypeColor('copilot.analyzed')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
   });
 
   it('exposes a hand-tuned display label ("Copilot Analyzed")', () => {
@@ -230,11 +238,17 @@ describe('audit-event-chip: copilot.analyzed', () => {
 
 describe('audit-event-chip: extension install/remove + authority.violation', () => {
   it('maps the extension lifecycle and authority violation events to stable labels and colors', () => {
-    expect(getEventTypeColor('extension.installed')).toBe('bg-emerald-600/20 text-emerald-400');
+    expect(getEventTypeColor('extension.installed')).toBe(
+      'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]',
+    );
     expect(getEventTypeLabel('extension.installed')).toBe('Extension Installed');
-    expect(getEventTypeColor('extension.removed')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeColor('extension.removed')).toBe(
+      'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]',
+    );
     expect(getEventTypeLabel('extension.removed')).toBe('Extension Removed');
-    expect(getEventTypeColor('authority.violation')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeColor('authority.violation')).toBe(
+      'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]',
+    );
     expect(getEventTypeLabel('authority.violation')).toBe('Authority Violation');
   });
 
@@ -277,11 +291,17 @@ describe('audit-event-chip: extension install/remove + authority.violation', () 
 
 describe('audit-event-chip: portability events', () => {
   it('maps workspace export, import, and template install events to stable labels and colors', () => {
-    expect(getEventTypeColor('company.packageExported')).toBe('bg-indigo-600/20 text-indigo-400');
+    expect(getEventTypeColor('company.packageExported')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('company.packageExported')).toBe('Workspace Export');
-    expect(getEventTypeColor('company.packageImported')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeColor('company.packageImported')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('company.packageImported')).toBe('Workspace Import');
-    expect(getEventTypeColor('company.templateInstalled')).toBe('bg-violet-600/20 text-violet-400');
+    expect(getEventTypeColor('company.templateInstalled')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('company.templateInstalled')).toBe('Template Installed');
   });
 
@@ -323,15 +343,21 @@ describe('audit-event-chip: portability events', () => {
 
 describe('audit-event-chip: runtime audit normalization events', () => {
   it('maps runtime lifecycle, checkout, output, and recovery events to stable labels and colors', () => {
-    expect(getEventTypeColor('runtime.session.started')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeColor('runtime.session.started')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('runtime.session.started')).toBe('Runtime Started');
-    expect(getEventTypeColor('runtime.checkout.conflict')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeColor('runtime.checkout.conflict')).toBe(
+      'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]',
+    );
     expect(getEventTypeLabel('runtime.checkout.conflict')).toBe('Runtime Conflict');
     expect(getEventTypeColor('runtime.artifact.created')).toBe(
-      'bg-emerald-600/20 text-emerald-400',
+      'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]',
     );
     expect(getEventTypeLabel('runtime.artifact.created')).toBe('Runtime Artifact');
-    expect(getEventTypeColor('runtime.session.recovered')).toBe('bg-teal-600/20 text-teal-400');
+    expect(getEventTypeColor('runtime.session.recovered')).toBe(
+      'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]',
+    );
     expect(getEventTypeLabel('runtime.session.recovered')).toBe('Runtime Recovered');
   });
 
@@ -374,15 +400,25 @@ describe('audit-event-chip: runtime audit normalization events', () => {
 
 describe('audit-event-chip: shared cloud link events', () => {
   it('maps link lifecycle events to stable labels and colors', () => {
-    expect(getEventTypeColor('company.linkStarted')).toBe('bg-blue-600/20 text-blue-400');
+    expect(getEventTypeColor('company.linkStarted')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('company.linkStarted')).toBe('Link Started');
-    expect(getEventTypeColor('company.linked')).toBe('bg-emerald-600/20 text-emerald-400');
+    expect(getEventTypeColor('company.linked')).toBe(
+      'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]',
+    );
     expect(getEventTypeLabel('company.linked')).toBe('Workspace Linked');
-    expect(getEventTypeColor('company.linkFailed')).toBe('bg-rose-600/20 text-rose-400');
+    expect(getEventTypeColor('company.linkFailed')).toBe(
+      'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]',
+    );
     expect(getEventTypeLabel('company.linkFailed')).toBe('Link Failed');
-    expect(getEventTypeColor('company.unlinked')).toBe('bg-zinc-600/20 text-zinc-400');
+    expect(getEventTypeColor('company.unlinked')).toBe(
+      'border-[var(--display-border)] bg-transparent text-[var(--display-fg)]',
+    );
     expect(getEventTypeLabel('company.unlinked')).toBe('Workspace Unlinked');
-    expect(getEventTypeColor('company.reconnected')).toBe('bg-sky-600/20 text-sky-400');
+    expect(getEventTypeColor('company.reconnected')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('company.reconnected')).toBe('Workspace Reconnected');
   });
 
@@ -446,7 +482,9 @@ describe('audit-event-chip: shared cloud link events', () => {
 
 describe('audit-event-chip: M32 T6 regression guard', () => {
   it('preserves the violet color class + display label for plan.proposed', () => {
-    expect(getEventTypeColor('plan.proposed')).toBe('bg-violet-600/20 text-violet-400');
+    expect(getEventTypeColor('plan.proposed')).toBe(
+      'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]',
+    );
     expect(getEventTypeLabel('plan.proposed')).toBe('Plan Proposed');
   });
 
