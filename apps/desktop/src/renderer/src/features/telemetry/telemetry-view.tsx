@@ -3,7 +3,7 @@
  * Company (aggregate stats + daily charts), Employees (per-employee table),
  * Cost (by provider/model breakdown with date range filter).
  *
- * Phase 3 — M17.
+ * Phase 3 — M17. Recomposed onto the Command Console primitives (Phase 7a).
  */
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
@@ -14,22 +14,13 @@ import { CompanyTelemetry } from './company-telemetry.js';
 import { CostBreakdown } from './cost-breakdown.js';
 import { EmployeeTelemetry } from './employee-telemetry.js';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, MetricTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  MissionControlRow,
-  MissionHero,
-  MissionMetricTile,
-  MissionPageShell,
-  MissionPill,
-  MissionSectionCard,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
 import { useBudgetOverview } from '@/hooks/use-budgets.js';
 import { useOperators } from '@/hooks/use-operators.js';
 import { telemetryRequestKind, useCompanyStats } from '@/hooks/use-telemetry.js';
+import { cn } from '@/lib/utils.js';
 import { type TelemetrySubview, useAppStore } from '@/store/app-store.js';
 
 interface SubtabDef {
@@ -97,16 +88,21 @@ function TelemetrySubtabs() {
         const isActive = tab.view === subview;
         const Icon = tab.icon;
         return (
-          <MissionSegmentedButton
+          <button
             key={tab.view}
+            type="button"
             data-telemetry-subtab={tab.view}
+            aria-pressed={isActive}
             onClick={() => setSubview(tab.view)}
-            active={isActive}
-            className="flex items-center gap-2"
+            className={cn(
+              'nav-tile px-3 py-1.5 text-button-sm',
+              'flex items-center gap-2',
+              isActive && 'nav-tile-active',
+            )}
           >
             <Icon className="h-3.5 w-3.5" />
             {tab.label}
-          </MissionSegmentedButton>
+          </button>
         );
       })}
     </div>
@@ -125,15 +121,19 @@ export function TelemetryKindFilterChips({
   return (
     <div className="flex flex-wrap items-center gap-2" data-telemetry-kind-filter-row="">
       {KIND_FILTERS.map((filter) => (
-        <MissionSegmentedButton
+        <button
           key={filter}
+          type="button"
           data-telemetry-kind-filter={filter}
           aria-pressed={filter === active}
           onClick={() => onChange(filter)}
-          active={filter === active}
+          className={cn(
+            'nav-tile px-3 py-1.5 text-button-sm',
+            filter === active && 'nav-tile-active',
+          )}
         >
           {KIND_FILTER_LABELS[filter]}
-        </MissionSegmentedButton>
+        </button>
       ))}
     </div>
   );
@@ -175,25 +175,27 @@ export function TelemetryView() {
 
   if (!companyId) {
     return (
-      <MissionPageShell data-telemetry-view="">
-        <MissionHero
-          eyebrow="Analytics command"
-          title="Telemetry"
-          description="Open a workspace to inspect company usage, employee output, and provider spend."
-          icon={BarChart3}
-        />
-        <MissionSectionCard
-          title="Telemetry scope"
-          description="A workspace is required before analytics can load."
-        >
-          <MissionStateBlock
-            title="No workspace loaded"
-            description="Choose or create a workspace to unlock the telemetry dashboard and analytics breakdowns."
-            icon={Radar}
-            data-telemetry-view-state="no-company"
-          />
-        </MissionSectionCard>
-      </MissionPageShell>
+      <div className="flex flex-col gap-6 p-4 lg:p-6" data-telemetry-view="">
+        <Faceplate kicker="Analytics command" serial="TELEMETRY" bodyClassName="space-y-1">
+          <h1 className="text-h1 text-foreground">Telemetry</h1>
+          <p className="max-w-2xl text-caption text-silver-mute">
+            Open a workspace to inspect company usage, employee output, and provider spend.
+          </p>
+        </Faceplate>
+        <Faceplate kicker="Telemetry scope" bodyClassName="space-y-3">
+          <p className="text-caption text-silver-mute">
+            A workspace is required before analytics can load.
+          </p>
+          <div data-telemetry-view-state="no-company">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="No workspace loaded"
+              description="Choose or create a workspace to unlock the telemetry dashboard and analytics breakdowns."
+            />
+          </div>
+        </Faceplate>
+      </div>
     );
   }
 
@@ -212,85 +214,85 @@ export function TelemetryView() {
   })();
 
   return (
-    <MissionPageShell data-telemetry-view="">
-      <MissionHero
-        eyebrow="Analytics command"
-        title="Telemetry"
-        description={activeSubviewCopy.description}
-        icon={BarChart3}
-        badge={
-          <Badge
-            variant="outline"
-            className="border-white/10 bg-black/20 text-code-sm text-muted-foreground"
-          >
-            {activeSubviewCopy.title}
-          </Badge>
-        }
-        meta={
-          <MissionControlRow density="compact" className="gap-2 px-3 py-2">
-            <MissionPill uppercase>{summaryBadges.subview}</MissionPill>
-            <MissionPill mono>{summaryBadges.kind}</MissionPill>
-            <MissionPill tone={summaryQuery.isError ? 'danger' : 'default'} mono>
-              {summaryQuery.isError ? 'Summary unavailable' : 'Live analytics'}
-            </MissionPill>
-          </MissionControlRow>
-        }
-      >
+    <div className="flex flex-col gap-6 p-4 lg:p-6" data-telemetry-view="">
+      <Faceplate kicker="Analytics command" serial="TELEMETRY" bodyClassName="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-h1 text-foreground">Telemetry</h1>
+            <p className="max-w-2xl text-body text-silver-mute">{activeSubviewCopy.description}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag>{activeSubviewCopy.title}</Tag>
+            <Tag>{summaryBadges.subview}</Tag>
+            <Tag mono>{summaryBadges.kind}</Tag>
+            <span className="flex items-center gap-1.5">
+              <LampTile
+                small
+                interactive={false}
+                label={summaryQuery.isError ? 'NO-GO' : 'GO'}
+                tone={summaryQuery.isError ? 'nogo' : 'go'}
+              />
+              <span className="text-caption text-silver-mute">
+                {summaryQuery.isError ? 'Summary unavailable' : 'Live analytics'}
+              </span>
+            </span>
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MissionMetricTile
+          <MetricTile
             label="Runs"
             value={summaryQuery.isLoading ? '--' : `${summary?.totalRuns ?? 0}`}
             hint="Completed runs captured for the active telemetry scope."
             icon={Rows3}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Tokens"
             value={summaryQuery.isLoading ? '--' : formatTokens(summary?.totalTokens)}
             hint="Prompt plus completion volume across the active filter."
             icon={Activity}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Cost"
             value={summaryQuery.isLoading ? '--' : formatCost(summary?.totalCostUsd)}
             hint="Provider spend inside the current telemetry slice."
             icon={DollarSign}
           />
-          <MissionMetricTile
+          <MetricTile
             label="Latency"
             value={summaryQuery.isLoading ? '--' : `${summary?.avgLatencyMs ?? 0}ms`}
             hint="Average completion latency across the selected run kind."
             icon={Gauge}
           />
         </div>
-      </MissionHero>
+      </Faceplate>
 
-      <MissionSectionCard
-        title="Telemetry scope"
-        description="Switch analytics views and filter run kind without leaving the telemetry shell."
-        data-telemetry-controls=""
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
-          <MissionControlRow density="compact" className="px-2 py-2">
-            <TelemetrySubtabs />
-          </MissionControlRow>
-          <MissionControlRow density="compact" className="justify-between px-2 py-2 xl:justify-end">
-            <span className="px-2 text-eyebrow-sm text-muted-foreground">Kind</span>
-            <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />
-          </MissionControlRow>
-        </div>
-      </MissionSectionCard>
+      <div data-telemetry-controls="">
+        <Faceplate kicker="Telemetry scope" bodyClassName="space-y-3">
+          <p className="text-caption text-silver-mute">
+            Switch analytics views and filter run kind without leaving the telemetry shell.
+          </p>
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="flex items-center px-2 py-2">
+              <TelemetrySubtabs />
+            </div>
+            <div className="flex items-center justify-between gap-2 px-2 py-2 xl:justify-end">
+              <span className="px-2 text-eyebrow-sm text-muted-foreground">Kind</span>
+              <TelemetryKindFilterChips active={kindFilter} onChange={setKindFilter} />
+            </div>
+          </div>
+        </Faceplate>
+      </div>
 
-      <MissionSectionCard
-        title="Governance context"
-        description="Tie telemetry to the budget, approval, and operator posture controlling the workspace."
-        data-telemetry-governance=""
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
+      <div data-telemetry-governance="">
+        <Faceplate kicker="Governance context" bodyClassName="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="max-w-2xl text-caption text-silver-mute">
+              Tie telemetry to the budget, approval, and operator posture controlling the workspace.
+            </p>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="border-white/10 bg-black/10 hover:bg-black/20"
               onClick={() =>
                 openAutonomy((approvalsQuery.data?.length ?? 0) > 0 ? 'approvals' : 'budgets')
               }
@@ -298,35 +300,34 @@ export function TelemetryView() {
               Open autonomy
             </Button>
           </div>
-        }
-      >
-        <div className="grid gap-3 md:grid-cols-3">
-          <MissionMetricTile
-            label="Policies"
-            value={
-              budgetOverviewQuery.isLoading
-                ? '--'
-                : `${budgetOverviewQuery.data?.activePolicyCount ?? 0}`
-            }
-            hint="Active budget controls currently governing this workspace."
-            icon={DollarSign}
-          />
-          <MissionMetricTile
-            label="Pending approvals"
-            value={approvalsQuery.isLoading ? '--' : `${approvalsQuery.data?.length ?? 0}`}
-            hint="Operator decisions still blocking or reviewing autonomy activity."
-            icon={Radar}
-          />
-          <MissionMetricTile
-            label="Operator posture"
-            value={operatorsQuery.isLoading ? '--' : operatorPosture}
-            hint="Shows whether the workspace is still local-only or already modeled for shared operators."
-            icon={Users2}
-          />
-        </div>
-      </MissionSectionCard>
+          <div className="grid gap-3 md:grid-cols-3">
+            <MetricTile
+              label="Policies"
+              value={
+                budgetOverviewQuery.isLoading
+                  ? '--'
+                  : `${budgetOverviewQuery.data?.activePolicyCount ?? 0}`
+              }
+              hint="Active budget controls currently governing this workspace."
+              icon={DollarSign}
+            />
+            <MetricTile
+              label="Pending approvals"
+              value={approvalsQuery.isLoading ? '--' : `${approvalsQuery.data?.length ?? 0}`}
+              hint="Operator decisions still blocking or reviewing autonomy activity."
+              icon={Radar}
+            />
+            <MetricTile
+              label="Operator posture"
+              value={operatorsQuery.isLoading ? '--' : operatorPosture}
+              hint="Shows whether the workspace is still local-only or already modeled for shared operators."
+              icon={Users2}
+            />
+          </div>
+        </Faceplate>
+      </div>
 
       {renderedSubview}
-    </MissionPageShell>
+    </div>
   );
 }

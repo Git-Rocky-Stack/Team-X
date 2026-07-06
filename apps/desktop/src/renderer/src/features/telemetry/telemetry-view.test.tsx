@@ -49,20 +49,23 @@ describe('TelemetryView kind filter chips', () => {
   });
 });
 
-describe('Telemetry mission-language carry-forward', () => {
-  it('wraps TelemetryView in the mission shell and control rows', () => {
-    expect(telemetryViewSrc).toContain('<MissionPageShell data-telemetry-view="">');
-    expect(telemetryViewSrc).toContain('<MissionHero');
+describe('Telemetry console composition', () => {
+  it('wraps TelemetryView in console faceplates with the selector contract intact', () => {
+    expect(telemetryViewSrc).toContain('data-telemetry-view=""');
+    expect(telemetryViewSrc).toContain('<Faceplate');
+    expect(telemetryViewSrc).toContain('<MetricTile');
     expect(telemetryViewSrc).toContain('data-telemetry-controls=""');
     expect(telemetryViewSrc).toContain('data-telemetry-governance=""');
     expect(telemetryViewSrc).toContain('data-telemetry-subtabs=""');
     expect(telemetryViewSrc).toContain('data-telemetry-kind-filter-row=""');
+    expect(telemetryViewSrc).not.toContain('mission-shell');
   });
 
   it('pins the top-level no-company state and segmented control selectors', () => {
     expect(telemetryViewSrc).toContain('data-telemetry-view-state="no-company"');
     expect(telemetryViewSrc).toContain('data-telemetry-subtab={tab.view}');
     expect(telemetryViewSrc).toContain('data-telemetry-kind-filter={filter}');
+    expect(telemetryViewSrc).toContain("'nav-tile px-3 py-1.5 text-button-sm'");
   });
 
   it('adds localized loading, error, and empty states to each telemetry surface', () => {
