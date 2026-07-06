@@ -76,3 +76,32 @@ describe('company-telemetry sweep', () => {
     expect(src).toContain('data-telemetry-company-state="empty"');
   });
 });
+
+describe('employee-telemetry sweep', () => {
+  const src = readSrc('telemetry/employee-telemetry.tsx');
+
+  it('renders the sortable table inside a display well', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('text-[var(--display-fg)]');
+    expect(src).toContain('border-[var(--display-border)]');
+    expect(src).toContain('tabular-nums');
+  });
+
+  it('carries zero mission-family or raw-chrome legacy', () => {
+    expect(src).not.toMatch(/Mission[A-Z]/);
+    expect(src).not.toContain('border-white/');
+    expect(src).not.toContain('bg-black');
+    expect(src).not.toContain('rounded-[20px]');
+    expect(src).not.toContain('text-foreground');
+  });
+
+  it('preserves state selectors and sort wiring', () => {
+    expect(src).toContain('data-telemetry-employees-state="loading"');
+    expect(src).toContain('data-telemetry-employees-state="error"');
+    expect(src).toContain('data-telemetry-employees-state="empty"');
+    expect(src).toContain('onClick={() => onClick(col)}');
+    expect(src).toContain('function toggleSort');
+  });
+});

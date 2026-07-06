@@ -87,7 +87,7 @@ describe('Telemetry console composition', () => {
 
   it('wraps charts and tables in mission section cards rather than flat surfaces', () => {
     expect(companyTelemetrySrc).toContain('<Faceplate');
-    expect(employeeTelemetrySrc).toContain('<MissionSectionCard');
+    expect(employeeTelemetrySrc).toContain('<Faceplate');
     expect(costBreakdownSrc).toContain('<MissionSectionCard');
     expect(costBreakdownSrc).toContain('<MissionControlRow');
   });

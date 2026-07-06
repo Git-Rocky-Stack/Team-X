@@ -4,19 +4,16 @@
  * Columns: Name, Role, Total Runs, Total Tokens, Avg Latency, Cost, Tool Calls.
  * Click any column header to sort. Joined with employee data for name/role display.
  *
- * Phase 3 — M17.
+ * Phase 3 — M17. Recomposed onto the Command Console primitives (Phase 7a);
+ * the table is a display surface inside a recessed well.
  */
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
-import { ArrowDown, ArrowUp, ArrowUpDown, Users2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 
+import { Faceplate, RecessedWell, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import {
-  MissionInsetSurface,
-  MissionSectionCard,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { telemetryRequestKind, useEmployeeStats } from '@/hooks/use-telemetry.js';
 
@@ -118,76 +115,79 @@ export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
 
   if (statsQuery.isLoading || employeeQuery.isLoading) {
     return (
-      <MissionSectionCard
-        title="Employee breakdown"
-        description="Loading per-employee analytics for the current telemetry filter."
-      >
-        <MissionStateBlock
-          title="Loading employee telemetry"
-          description="Operator output, latency, and tool-call analytics are syncing for this workspace."
-          icon={Users2}
-          data-telemetry-employees-state="loading"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Employee breakdown" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          Loading per-employee analytics for the current telemetry filter.
+        </p>
+        <div data-telemetry-employees-state="loading">
+          <SubviewState
+            lampLabel="SYNC"
+            lampTone="hold"
+            title="Loading employee telemetry"
+            description="Operator output, latency, and tool-call analytics are syncing for this workspace."
+          />
+        </div>
+      </Faceplate>
     );
   }
 
   if (statsQuery.isError || employeeQuery.isError) {
     return (
-      <MissionSectionCard
-        title="Employee breakdown"
-        description="The employee analytics queries failed for the current telemetry slice."
-        actions={
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-            onClick={() => {
-              statsQuery.refetch();
-              employeeQuery.refetch();
-            }}
-          >
-            Retry
-          </Button>
-        }
-      >
-        <MissionStateBlock
-          title="Employee telemetry could not load"
-          description="Retry the employee stats and roster queries to restore the comparison table."
-          icon={Users2}
-          tone="danger"
-          data-telemetry-employees-state="error"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Employee breakdown" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          The employee analytics queries failed for the current telemetry slice.
+        </p>
+        <div data-telemetry-employees-state="error">
+          <SubviewState
+            lampLabel="NO-GO"
+            lampTone="nogo"
+            title="Employee telemetry could not load"
+            description="Retry the employee stats and roster queries to restore the comparison table."
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  statsQuery.refetch();
+                  employeeQuery.refetch();
+                }}
+              >
+                Retry
+              </Button>
+            }
+          />
+        </div>
+      </Faceplate>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <MissionSectionCard
-        title="Employee breakdown"
-        description="No employee run history exists for the current telemetry filter."
-      >
-        <MissionStateBlock
-          title="No employee telemetry yet"
-          description="Employees will appear here once they process work and generate completed runs."
-          icon={Users2}
-          data-telemetry-employees-state="empty"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Employee breakdown" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          No employee run history exists for the current telemetry filter.
+        </p>
+        <div data-telemetry-employees-state="empty">
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
+            title="No employee telemetry yet"
+            description="Employees will appear here once they process work and generate completed runs."
+          />
+        </div>
+      </Faceplate>
     );
   }
 
   return (
-    <MissionSectionCard
-      title="Employee breakdown"
-      description="Sortable run, token, latency, cost, and tool-call analytics per operator."
-      className="overflow-hidden"
-    >
-      <MissionInsetSurface className="overflow-hidden rounded-[20px] bg-black/15">
+    <Faceplate kicker="Employee breakdown" bodyClassName="space-y-3">
+      <p className="text-caption text-silver-mute">
+        Sortable run, token, latency, cost, and tool-call analytics per operator.
+      </p>
+      <RecessedWell className="overflow-hidden p-0">
         <table className="w-full text-body">
           <thead>
-            <tr className="border-b border-white/10 bg-black/20">
+            <tr className="border-b border-[var(--display-border)]">
               <Th col="name" label="Employee" onClick={toggleSort}>
                 <SortIcon column="name" />
               </Th>
@@ -212,25 +212,35 @@ export function EmployeeTelemetry({ companyId, kindFilter }: Props) {
             {rows.map((row) => (
               <tr
                 key={row.employeeId}
-                className="border-b border-white/10 transition-colors last:border-b-0 hover:bg-surface-100/20"
+                className="border-b border-[var(--display-border)] transition-colors last:border-b-0 hover:bg-white/[0.03]"
               >
                 <td className="px-4 py-3">
-                  <div className="font-medium text-foreground">{row.name}</div>
-                  <div className="text-caption text-muted-foreground">{row.title}</div>
+                  <div className="font-medium text-[var(--display-fg)]">{row.name}</div>
+                  <div className="text-caption text-[var(--display-fg)] opacity-55">
+                    {row.title}
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>
-                <td className="px-4 py-3 text-right tabular-nums">
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
+                  {row.totalRuns}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
                   {formatTokens(row.totalTokens)}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{row.avgLatencyMs}ms</td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatCost(row.costUsd)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{row.totalToolCalls}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
+                  {row.avgLatencyMs}ms
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
+                  {formatCost(row.costUsd)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
+                  {row.totalToolCalls}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </MissionInsetSurface>
-    </MissionSectionCard>
+      </RecessedWell>
+    </Faceplate>
   );
 }
 
@@ -251,7 +261,7 @@ function Th({
     <th className={`px-4 py-3 text-label ${right ? 'text-right' : 'text-left'}`}>
       <button
         type="button"
-        className={`inline-flex items-center text-muted-foreground transition-colors hover:text-foreground ${
+        className={`inline-flex items-center text-[var(--display-fg)] opacity-60 transition-opacity hover:opacity-100 ${
           right ? 'justify-end' : 'justify-start'
         }`}
         onClick={() => onClick(col)}
