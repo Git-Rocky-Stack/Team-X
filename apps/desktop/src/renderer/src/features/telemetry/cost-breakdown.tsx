@@ -4,11 +4,11 @@
  * PieChart for provider-level cost distribution, BarChart for per-model cost,
  * and a date range filter (7d / 30d / 90d / all).
  *
- * Phase 3 — M17.
+ * Phase 3 — M17. Recomposed onto the Command Console primitives (Phase 7a);
+ * the categorical provider palette reads chart-theme's LED + metal family.
  */
 
 import type { TelemetryKindFilter } from '@team-x/shared-types';
-import { DollarSign } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   Bar,
@@ -24,15 +24,17 @@ import {
   YAxis,
 } from 'recharts';
 
-import { Button } from '@/components/ui/button.js';
 import {
-  MissionControlRow,
-  MissionInsetSurface,
-  MissionSectionCard,
-  MissionSegmentedButton,
-  MissionStateBlock,
-} from '@/features/mission/mission-shell.js';
+  CHART_GRID_STROKE,
+  CHART_TICK,
+  CHART_TOOLTIP_STYLE,
+  getProviderSeriesColor,
+} from './chart-theme.js';
+
+import { Faceplate, RecessedWell, SubviewState } from '@/components/console/index.js';
+import { Button } from '@/components/ui/button.js';
 import { telemetryRequestKind, useCostBreakdown } from '@/hooks/use-telemetry.js';
+import { cn } from '@/lib/utils.js';
 
 const DAY_MS = 86_400_000;
 
@@ -49,24 +51,6 @@ const RANGE_OPTIONS: { label: string; value: DateRange }[] = [
   { label: '90 days', value: '90d' },
   { label: 'All time', value: 'all' },
 ];
-
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: '#d97706',
-  ollama: '#22c55e',
-  openai: '#3b82f6',
-  google: '#ef4444',
-  groq: '#a855f7',
-  openrouter: '#ec4899',
-  together: '#14b8a6',
-  fireworks: '#f97316',
-};
-
-function getProviderColor(provider: string, index: number): string {
-  const key = provider.toLowerCase();
-  if (PROVIDER_COLORS[key]) return PROVIDER_COLORS[key];
-  const fallback = ['#6366f1', '#84cc16', '#06b6d4', '#f43f5e', '#8b5cf6', '#eab308'];
-  return fallback[index % fallback.length] ?? '#6366f1';
-}
 
 function formatCost(usd: string | number): string {
   const value = typeof usd === 'string' ? Number.parseFloat(usd) : usd;
@@ -114,44 +98,42 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
 
   if (breakdownQuery.isLoading) {
     return (
-      <MissionSectionCard
-        title="Cost analytics"
-        description="Loading provider and model-level cost breakdowns."
-      >
-        <MissionStateBlock
-          title="Loading cost telemetry"
-          description="Provider spend and model mix analytics are syncing for the selected time range."
-          icon={DollarSign}
-          data-telemetry-cost-state="loading"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Cost analytics" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          Loading provider and model-level cost breakdowns.
+        </p>
+        <div data-telemetry-cost-state="loading">
+          <SubviewState
+            lampLabel="SYNC"
+            lampTone="hold"
+            title="Loading cost telemetry"
+            description="Provider spend and model mix analytics are syncing for the selected time range."
+          />
+        </div>
+      </Faceplate>
     );
   }
 
   if (breakdownQuery.isError) {
     return (
-      <MissionSectionCard
-        title="Cost analytics"
-        description="The cost breakdown query failed for the current telemetry slice."
-        actions={
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/10 bg-black/10 text-foreground hover:bg-black/20"
-            onClick={() => breakdownQuery.refetch()}
-          >
-            Retry
-          </Button>
-        }
-      >
-        <MissionStateBlock
-          title="Cost telemetry could not load"
-          description="Retry the provider and model breakdown query to restore cost analytics."
-          icon={DollarSign}
-          tone="danger"
-          data-telemetry-cost-state="error"
-        />
-      </MissionSectionCard>
+      <Faceplate kicker="Cost analytics" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          The cost breakdown query failed for the current telemetry slice.
+        </p>
+        <div data-telemetry-cost-state="error">
+          <SubviewState
+            lampLabel="NO-GO"
+            lampTone="nogo"
+            title="Cost telemetry could not load"
+            description="Retry the provider and model breakdown query to restore cost analytics."
+            action={
+              <Button type="button" variant="outline" onClick={() => breakdownQuery.refetch()}>
+                Retry
+              </Button>
+            }
+          />
+        </div>
+      </Faceplate>
     );
   }
 
@@ -160,173 +142,188 @@ export function CostBreakdown({ companyId, kindFilter }: Props) {
 
   return (
     <div className="grid gap-6">
-      <MissionSectionCard
-        title="Cost analytics"
-        description="Inspect provider spend and model mix across a selectable time horizon."
-      >
-        <MissionControlRow className="justify-between gap-3 px-3 py-3">
+      <Faceplate kicker="Cost analytics" bodyClassName="space-y-3">
+        <p className="text-caption text-silver-mute">
+          Inspect provider spend and model mix across a selectable time horizon.
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 py-1">
           <span className="px-2 text-eyebrow-sm text-muted-foreground">Period</span>
           <div className="flex flex-wrap items-center gap-2">
             {RANGE_OPTIONS.map((option) => (
-              <MissionSegmentedButton
+              <button
                 key={option.value}
+                type="button"
+                aria-pressed={range === option.value}
                 onClick={() => setRange(option.value)}
-                active={range === option.value}
+                className={cn(
+                  'nav-tile px-3 py-1.5 text-button-sm',
+                  range === option.value && 'nav-tile-active',
+                )}
               >
                 {option.label}
-              </MissionSegmentedButton>
+              </button>
             ))}
           </div>
-        </MissionControlRow>
-      </MissionSectionCard>
+        </div>
+      </Faceplate>
 
       {isEmpty ? (
-        <MissionSectionCard
-          title="Cost analytics"
-          description="No paid-provider telemetry exists for the current period and run filter."
-        >
-          <MissionStateBlock
-            title="No cost data for this period"
-            description="Runs with paid providers will populate provider and model cost analytics here."
-            icon={DollarSign}
-            data-telemetry-cost-state="empty"
-          />
-        </MissionSectionCard>
+        <Faceplate kicker="Cost analytics" bodyClassName="space-y-3">
+          <p className="text-caption text-silver-mute">
+            No paid-provider telemetry exists for the current period and run filter.
+          </p>
+          <div data-telemetry-cost-state="empty">
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="No cost data for this period"
+              description="Runs with paid providers will populate provider and model cost analytics here."
+            />
+          </div>
+        </Faceplate>
       ) : (
         <>
           <div className="grid gap-6 xl:grid-cols-2">
-            <MissionSectionCard
-              title="Cost by provider"
-              description="Aggregate spend split by provider for the selected period."
-            >
+            <Faceplate kicker="Cost by provider" bodyClassName="space-y-3">
+              <p className="text-caption text-silver-mute">
+                Aggregate spend split by provider for the selected period.
+              </p>
               {providerData.every((provider) => provider.cost === 0) ? (
-                <MissionInsetSurface className="flex min-h-[260px] items-center justify-center border-dashed text-body text-muted-foreground">
-                  All runs are on free providers for this period.
-                </MissionInsetSurface>
+                <RecessedWell className="flex min-h-[260px] items-center justify-center p-3">
+                  <p className="text-body text-[var(--display-fg)] opacity-70">
+                    All runs are on free providers for this period.
+                  </p>
+                </RecessedWell>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={providerData}
-                      dataKey="cost"
-                      nameKey="provider"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      label={false}
-                      labelLine={false}
-                    >
-                      {providerData.map((entry, index) => (
-                        <Cell key={entry.provider} fill={getProviderColor(entry.provider, index)} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                      }}
-                      formatter={(value: unknown) => [formatCost(Number(value ?? 0)), 'Cost']}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: '11px' }}
-                      formatter={(value: string) => (
-                        <span className="text-muted-foreground">{value}</span>
-                      )}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <RecessedWell className="p-3">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={providerData}
+                        dataKey="cost"
+                        nameKey="provider"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={90}
+                        label={false}
+                        labelLine={false}
+                      >
+                        {providerData.map((entry, index) => (
+                          <Cell
+                            key={entry.provider}
+                            fill={getProviderSeriesColor(entry.provider, index)}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={CHART_TOOLTIP_STYLE}
+                        formatter={(value: unknown) => [formatCost(Number(value ?? 0)), 'Cost']}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '11px' }}
+                        formatter={(value: string) => (
+                          <span className="text-[var(--display-fg)] opacity-70">{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </RecessedWell>
               )}
-            </MissionSectionCard>
+            </Faceplate>
 
-            <MissionSectionCard
-              title="Cost by model"
-              description="Model-level spend and usage within the selected telemetry window."
-            >
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={modelData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.6)" />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    tickFormatter={(value: number) => formatCost(value)}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="model"
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    width={120}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                    }}
-                    formatter={(value: unknown, _name: unknown, props: unknown) => {
-                      const payload = (props as { payload?: { runs?: number; tokens?: number } })
-                        ?.payload;
-                      const runs = payload?.runs ?? 0;
-                      const tokens = payload?.tokens ?? 0;
-                      return [
-                        `${formatCost(Number(value ?? 0))} (${runs} runs, ${tokens.toLocaleString()} tokens)`,
-                        'Cost',
-                      ];
-                    }}
-                  />
-                  <Bar dataKey="cost" radius={[0, 4, 4, 0]}>
-                    {modelData.map((entry, index) => (
-                      <Cell key={entry.label} fill={getProviderColor(entry.provider, index)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </MissionSectionCard>
+            <Faceplate kicker="Cost by model" bodyClassName="space-y-3">
+              <p className="text-caption text-silver-mute">
+                Model-level spend and usage within the selected telemetry window.
+              </p>
+              <RecessedWell className="p-3">
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={modelData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                    <XAxis
+                      type="number"
+                      tick={CHART_TICK}
+                      tickFormatter={(value: number) => formatCost(value)}
+                    />
+                    <YAxis type="category" dataKey="model" tick={CHART_TICK} width={120} />
+                    <Tooltip
+                      contentStyle={CHART_TOOLTIP_STYLE}
+                      formatter={(value: unknown, _name: unknown, props: unknown) => {
+                        const payload = (props as { payload?: { runs?: number; tokens?: number } })
+                          ?.payload;
+                        const runs = payload?.runs ?? 0;
+                        const tokens = payload?.tokens ?? 0;
+                        return [
+                          `${formatCost(Number(value ?? 0))} (${runs} runs, ${tokens.toLocaleString()} tokens)`,
+                          'Cost',
+                        ];
+                      }}
+                    />
+                    <Bar dataKey="cost" radius={[0, 4, 4, 0]}>
+                      {modelData.map((entry, index) => (
+                        <Cell
+                          key={entry.label}
+                          fill={getProviderSeriesColor(entry.provider, index)}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </RecessedWell>
+            </Faceplate>
           </div>
 
-          <MissionSectionCard
-            title="Provider summary"
-            description="Raw provider and model totals for the current period."
-            className="overflow-hidden"
-          >
-            <MissionInsetSurface className="overflow-hidden rounded-[20px] bg-black/15">
+          <Faceplate kicker="Provider summary" bodyClassName="space-y-3">
+            <p className="text-caption text-silver-mute">
+              Raw provider and model totals for the current period.
+            </p>
+            <RecessedWell className="overflow-hidden p-0">
               <table className="w-full text-body">
                 <thead>
-                  <tr className="border-b border-white/10 bg-black/20">
-                    <th className="px-4 py-3 text-left text-label text-muted-foreground">
+                  <tr className="border-b border-[var(--display-border)]">
+                    <th className="px-4 py-3 text-left text-label text-[var(--display-fg)] opacity-60">
                       Provider
                     </th>
-                    <th className="px-4 py-3 text-left text-label text-muted-foreground">Model</th>
-                    <th className="px-4 py-3 text-right text-label text-muted-foreground">Runs</th>
-                    <th className="px-4 py-3 text-right text-label text-muted-foreground">
+                    <th className="px-4 py-3 text-left text-label text-[var(--display-fg)] opacity-60">
+                      Model
+                    </th>
+                    <th className="px-4 py-3 text-right text-label text-[var(--display-fg)] opacity-60">
+                      Runs
+                    </th>
+                    <th className="px-4 py-3 text-right text-label text-[var(--display-fg)] opacity-60">
                       Tokens
                     </th>
-                    <th className="px-4 py-3 text-right text-label text-muted-foreground">Cost</th>
+                    <th className="px-4 py-3 text-right text-label text-[var(--display-fg)] opacity-60">
+                      Cost
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr
                       key={`${row.provider}-${row.model}`}
-                      className="border-b border-white/10 transition-colors last:border-b-0 hover:bg-surface-100/20"
+                      className="border-b border-[var(--display-border)] transition-colors last:border-b-0 hover:bg-white/[0.03]"
                     >
-                      <td className="px-4 py-3 font-medium text-foreground">{row.provider}</td>
-                      <td className="px-4 py-3 text-code-sm text-muted-foreground">{row.model}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{row.totalRuns}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 font-medium text-[var(--display-fg)]">
+                        {row.provider}
+                      </td>
+                      <td className="px-4 py-3 text-code-sm text-[var(--display-fg)] opacity-70">
+                        {row.model}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
+                        {row.totalRuns}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
                         {row.totalTokens.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums text-[var(--display-fg)]">
                         {formatCost(row.costUsd)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </MissionInsetSurface>
-          </MissionSectionCard>
+            </RecessedWell>
+          </Faceplate>
         </>
       )}
     </div>

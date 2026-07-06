@@ -36,87 +36,106 @@ import { intentLabel } from '../command/intent-labels.js';
  */
 export const ROW_SUMMARY_MAX_CHARS = 140;
 
-/** Event type → semantic Tailwind color class. */
+/**
+ * Console display-chip tone recipes (Phase 7a — sweep). The chips render
+ * inside the audit list's RecessedWell — a display surface, dark in both
+ * shifts — so tones read the shift-stable `--led-*` family (never the
+ * Day-flipping `--tag-*` chassis tokens). Semantics:
+ *   GO      completion / creation / success
+ *   HOLD    review / pending / attention
+ *   NOGO    failure / violation / removal / destructive
+ *   SCOPE   informational lifecycle
+ *   NEUTRAL expiry / dismissal / unknown
+ * `command.executed` + `employee.updated` keep their existing brand tint
+ * (command authority — already console vocabulary).
+ */
+const CHIP_GO = 'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]';
+const CHIP_HOLD = 'border-[var(--led-hold-edge)] bg-[var(--hold-soft)] text-[var(--led-hold)]';
+const CHIP_NOGO = 'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]';
+const CHIP_SCOPE = 'border-[var(--led-scope-edge)] bg-[var(--scope-soft)] text-[var(--led-scope)]';
+const CHIP_NEUTRAL = 'border-[var(--display-border)] bg-transparent text-[var(--display-fg)]';
+
+/** Event type → semantic console chip class. */
 export const EVENT_TYPE_COLORS: Record<string, string> = {
   // Phase 1–4 events (pre-M30)
-  'employee.hired': 'bg-green-600/20 text-green-400',
+  'employee.hired': CHIP_GO,
   'employee.updated': 'bg-brand/15 text-brand',
-  'employee.fired': 'bg-red-600/20 text-red-400',
-  'employee.promoted': 'bg-blue-600/20 text-blue-400',
-  'ticket.created': 'bg-cyan-600/20 text-cyan-400',
-  'ticket.assigned': 'bg-yellow-600/20 text-yellow-400',
-  'ticket.participantAdded': 'bg-sky-600/20 text-sky-400',
-  'ticket.participantRemoved': 'bg-rose-600/20 text-rose-400',
-  'ticket.closed': 'bg-emerald-600/20 text-emerald-400',
-  'meeting.started': 'bg-purple-600/20 text-purple-400',
-  'meeting.ended': 'bg-purple-600/20 text-purple-400',
-  'mcp.added': 'bg-orange-600/20 text-orange-400',
-  'mcp.removed': 'bg-orange-600/20 text-orange-400',
-  'mcp.toggled': 'bg-orange-600/20 text-orange-400',
-  'extension.installed': 'bg-emerald-600/20 text-emerald-400',
-  'extension.removed': 'bg-rose-600/20 text-rose-400',
-  'skill.assignmentUpdated': 'bg-sky-600/20 text-sky-400',
-  'authority.grant.created': 'bg-emerald-600/20 text-emerald-400',
-  'authority.grant.deleted': 'bg-rose-600/20 text-rose-400',
-  'authority.request.reviewed': 'bg-amber-600/20 text-amber-400',
-  'authority.violation': 'bg-rose-600/20 text-rose-400',
-  'approval.reviewed': 'bg-amber-600/20 text-amber-400',
-  'chat.sent': 'bg-slate-600/20 text-slate-400',
-  'backup.created': 'bg-indigo-600/20 text-indigo-400',
-  'backup.restored': 'bg-indigo-600/20 text-indigo-400',
-  'vault.uploaded': 'bg-teal-600/20 text-teal-400',
-  'vault.deleted': 'bg-teal-600/20 text-teal-400',
-  'work.started': 'bg-sky-600/20 text-sky-400',
-  'work.completed': 'bg-sky-600/20 text-sky-400',
-  'work.failed': 'bg-red-600/20 text-red-400',
-  'token.delta': 'bg-gray-600/20 text-gray-400',
+  'employee.fired': CHIP_NOGO,
+  'employee.promoted': CHIP_HOLD,
+  'ticket.created': CHIP_SCOPE,
+  'ticket.assigned': CHIP_HOLD,
+  'ticket.participantAdded': CHIP_SCOPE,
+  'ticket.participantRemoved': CHIP_NOGO,
+  'ticket.closed': CHIP_GO,
+  'meeting.started': CHIP_HOLD,
+  'meeting.ended': CHIP_HOLD,
+  'mcp.added': CHIP_SCOPE,
+  'mcp.removed': CHIP_SCOPE,
+  'mcp.toggled': CHIP_SCOPE,
+  'extension.installed': CHIP_GO,
+  'extension.removed': CHIP_NOGO,
+  'skill.assignmentUpdated': CHIP_SCOPE,
+  'authority.grant.created': CHIP_GO,
+  'authority.grant.deleted': CHIP_NOGO,
+  'authority.request.reviewed': CHIP_HOLD,
+  'authority.violation': CHIP_NOGO,
+  'approval.reviewed': CHIP_HOLD,
+  'chat.sent': CHIP_SCOPE,
+  'backup.created': CHIP_GO,
+  'backup.restored': CHIP_GO,
+  'vault.uploaded': CHIP_GO,
+  'vault.deleted': CHIP_NOGO,
+  'work.started': CHIP_SCOPE,
+  'work.completed': CHIP_GO,
+  'work.failed': CHIP_NOGO,
+  'token.delta': CHIP_NEUTRAL,
 
   // M30 (NLU + palette)
   'command.executed': 'bg-brand/15 text-brand',
 
   // M32 T6 (write-side planner — frozen)
-  'plan.proposed': 'bg-violet-600/20 text-violet-400',
-  'plan.approved': 'bg-violet-600/20 text-violet-400',
-  'task.delegated': 'bg-sky-600/20 text-sky-400',
-  'task.escalated': 'bg-rose-600/20 text-rose-400',
-  'review.requested': 'bg-amber-600/20 text-amber-400',
-  'review.completed': 'bg-amber-600/20 text-amber-400',
+  'plan.proposed': CHIP_SCOPE,
+  'plan.approved': CHIP_GO,
+  'task.delegated': CHIP_SCOPE,
+  'task.escalated': CHIP_NOGO,
+  'review.requested': CHIP_HOLD,
+  'review.completed': CHIP_HOLD,
 
   // M28/M29 (RAG) — aspirational per CLAUDE.md bus-event table; chip
   // lands defensively so audit rows surface correctly the moment the
   // events start firing from the indexer.
-  'rag.index.indexed': 'bg-blue-600/20 text-blue-400',
-  'rag.index.reindexed': 'bg-blue-600/20 text-blue-400',
-  'rag.index.removed': 'bg-gray-600/20 text-gray-400',
+  'rag.index.indexed': CHIP_SCOPE,
+  'rag.index.reindexed': CHIP_SCOPE,
+  'rag.index.removed': CHIP_NEUTRAL,
 
   // M31 (agentic loop)
-  'agent.step': 'bg-sky-600/20 text-sky-400',
-  'agentic.completed': 'bg-emerald-600/20 text-emerald-400',
-  'agentic.failed': 'bg-rose-600/20 text-rose-400',
+  'agent.step': CHIP_SCOPE,
+  'agentic.completed': CHIP_GO,
+  'agentic.failed': CHIP_NOGO,
 
   // M33 (copilot service)
-  'copilot.analyzed': 'bg-blue-600/20 text-blue-400',
-  'copilot.insight': 'bg-amber-600/20 text-amber-400',
-  'copilot.dismissed': 'bg-gray-600/20 text-gray-400',
-  'copilot.expired': 'bg-gray-600/20 text-gray-400',
-  'company.linkStarted': 'bg-blue-600/20 text-blue-400',
-  'company.linked': 'bg-emerald-600/20 text-emerald-400',
-  'company.linkFailed': 'bg-rose-600/20 text-rose-400',
-  'company.unlinked': 'bg-zinc-600/20 text-zinc-400',
-  'company.reconnected': 'bg-sky-600/20 text-sky-400',
-  'company.packageExported': 'bg-indigo-600/20 text-indigo-400',
-  'company.packageImported': 'bg-sky-600/20 text-sky-400',
-  'company.templateInstalled': 'bg-violet-600/20 text-violet-400',
-  'runtime.session.started': 'bg-sky-600/20 text-sky-400',
-  'runtime.heartbeat': 'bg-blue-600/20 text-blue-400',
-  'runtime.checkout.claimed': 'bg-emerald-600/20 text-emerald-400',
-  'runtime.checkout.conflict': 'bg-rose-600/20 text-rose-400',
-  'runtime.execution.started': 'bg-sky-600/20 text-sky-400',
-  'runtime.execution.output': 'bg-indigo-600/20 text-indigo-400',
-  'runtime.execution.failed': 'bg-rose-600/20 text-rose-400',
-  'runtime.artifact.created': 'bg-emerald-600/20 text-emerald-400',
-  'runtime.session.stale': 'bg-amber-600/20 text-amber-400',
-  'runtime.session.recovered': 'bg-teal-600/20 text-teal-400',
+  'copilot.analyzed': CHIP_SCOPE,
+  'copilot.insight': CHIP_HOLD,
+  'copilot.dismissed': CHIP_NEUTRAL,
+  'copilot.expired': CHIP_NEUTRAL,
+  'company.linkStarted': CHIP_SCOPE,
+  'company.linked': CHIP_GO,
+  'company.linkFailed': CHIP_NOGO,
+  'company.unlinked': CHIP_NEUTRAL,
+  'company.reconnected': CHIP_SCOPE,
+  'company.packageExported': CHIP_SCOPE,
+  'company.packageImported': CHIP_SCOPE,
+  'company.templateInstalled': CHIP_SCOPE,
+  'runtime.session.started': CHIP_SCOPE,
+  'runtime.heartbeat': CHIP_SCOPE,
+  'runtime.checkout.claimed': CHIP_GO,
+  'runtime.checkout.conflict': CHIP_NOGO,
+  'runtime.execution.started': CHIP_SCOPE,
+  'runtime.execution.output': CHIP_SCOPE,
+  'runtime.execution.failed': CHIP_NOGO,
+  'runtime.artifact.created': CHIP_GO,
+  'runtime.session.stale': CHIP_HOLD,
+  'runtime.session.recovered': CHIP_GO,
 };
 
 /** Hand-tuned display labels where the auto-title-cased fallback reads
@@ -174,7 +193,7 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 /** Fallback color class when an event type is not in the map. */
-export const DEFAULT_COLOR = 'bg-zinc-600/20 text-zinc-400';
+export const DEFAULT_COLOR = CHIP_NEUTRAL;
 
 // ---------------------------------------------------------------------------
 // Pure helpers

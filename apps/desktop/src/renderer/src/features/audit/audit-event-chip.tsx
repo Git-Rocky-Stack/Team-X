@@ -70,9 +70,13 @@ export function AuditEventChip({ eventType, className }: AuditEventChipProps): R
   const displayLabel = getEventTypeLabel(eventType);
   const ariaLabel = getEventTypeAriaLabel(eventType);
 
+  // No text-size utility here: Badge's cn() (unconfigured twMerge) cannot
+  // distinguish the custom caption/eyebrow size roles from the LED
+  // text-colors in colorClass and drops one of them. The chip inherits
+  // Badge's base text-[10px] — the app-wide chip signature.
   const mergedClassName = className
-    ? `shrink-0 text-xs ${colorClass} ${className}`
-    : `shrink-0 text-xs ${colorClass}`;
+    ? `shrink-0 ${colorClass} ${className}`
+    : `shrink-0 ${colorClass}`;
 
   return (
     <Badge

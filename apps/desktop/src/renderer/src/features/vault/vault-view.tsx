@@ -1,14 +1,10 @@
 import type { VaultFile } from '@team-x/shared-types';
 import {
-  AlertTriangle,
-  CheckCircle2,
   Download,
   FileArchive,
   FileCode2,
   FileImage,
   FileText,
-  HardDrive,
-  Loader2,
   Search,
   Shield,
   Trash2,
@@ -17,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
@@ -136,8 +132,8 @@ export function VaultView({ companyId }: VaultViewProps) {
 
   if (!companyId) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-h3 text-muted-foreground">No company selected</p>
+      <div className="flex h-full flex-col justify-center p-4">
+        <SubviewState lampLabel="STBY" lampTone="off" title="No company selected" />
       </div>
     );
   }
@@ -145,34 +141,33 @@ export function VaultView({ companyId }: VaultViewProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <HardDrive className="h-5 w-5 text-brand" />
+      <div className="p-4 pb-0">
+        <Faceplate kicker="Ops" serial="VAULT" bodyClassName="flex items-center justify-between">
           <div>
             <h1 className="text-h1 text-foreground">File Vault</h1>
             {stats && (
-              <p className="text-caption text-muted-foreground">
+              <p className="text-caption text-silver-mute">
                 {stats.fileCount} file{stats.fileCount !== 1 ? 's' : ''} &middot;{' '}
                 {formatBytes(stats.totalBytes)}
               </p>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search files..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-56 pl-8 text-caption"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-56 pl-8 text-caption"
+              />
+            </div>
+            <Button size="sm" className="h-8 gap-1.5" onClick={handleUpload}>
+              <Upload className="h-3.5 w-3.5" />
+              Upload
+            </Button>
           </div>
-          <Button size="sm" className="h-8 gap-1.5" onClick={handleUpload}>
-            <Upload className="h-3.5 w-3.5" />
-            Upload
-          </Button>
-        </div>
+        </Faceplate>
       </div>
 
       {/* Content */}
@@ -180,21 +175,22 @@ export function VaultView({ companyId }: VaultViewProps) {
         {/* File list */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="p-4">
+              <SubviewState lampLabel="SYNC" lampTone="hold" title="Loading vault..." />
             </div>
           ) : displayFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <FileArchive className="mb-3 h-10 w-10 text-muted-foreground/50" />
-              <p className="text-body-strong text-muted-foreground">
-                {searchQuery ? 'No matching files' : 'No files in vault'}
-              </p>
-              <p className="mt-1 text-caption text-muted-foreground/70">
-                {searchQuery ? 'Try a different search term.' : 'Upload files to get started.'}
-              </p>
+            <div className="p-4">
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
+                title={searchQuery ? 'No matching files' : 'No files in vault'}
+                description={
+                  searchQuery ? 'Try a different search term.' : 'Upload files to get started.'
+                }
+              />
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-1 p-3">
               {displayFiles.map((file) => {
                 const Icon = getFileIcon(file.mimeType);
                 const isSelected = selectedFile?.id === file.id;
@@ -203,10 +199,10 @@ export function VaultView({ companyId }: VaultViewProps) {
                     type="button"
                     key={file.id}
                     onClick={() => setSelectedFile(file)}
-                    className={`flex w-full items-center gap-3 px-6 py-3 text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-card border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       isSelected
-                        ? 'bg-brand/5 border-l-2 border-brand'
-                        : 'hover:bg-surface-100 border-l-2 border-transparent'
+                        ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                        : 'border-transparent hover:border-[var(--hairline-strong)]'
                     }`}
                   >
                     <Icon className="h-8 w-8 shrink-0 text-muted-foreground/70" />
@@ -223,9 +219,9 @@ export function VaultView({ companyId }: VaultViewProps) {
                     {file.tags.length > 0 && (
                       <div className="flex shrink-0 gap-1">
                         {file.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Tag key={tag} mono>
                             {tag}
-                          </Badge>
+                          </Tag>
                         ))}
                       </div>
                     )}
@@ -238,7 +234,7 @@ export function VaultView({ companyId }: VaultViewProps) {
 
         {/* Detail panel */}
         {selectedFile && (
-          <div className="w-80 shrink-0 border-l border-border overflow-y-auto scrollbar-thin">
+          <div className="w-80 shrink-0 border-l border-[var(--hairline)] overflow-y-auto scrollbar-thin">
             <div className="p-6">
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
@@ -250,7 +246,7 @@ export function VaultView({ companyId }: VaultViewProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedFile(null)}
-                  className="ml-2 rounded p-1 text-muted-foreground hover:text-foreground"
+                  className="cap ml-2 p-1.5"
                 >
                   <XCircle className="h-4 w-4" />
                 </button>
@@ -263,7 +259,7 @@ export function VaultView({ companyId }: VaultViewProps) {
                 <DetailRow label="Modified" value={formatDate(selectedFile.updatedAt)} />
                 <div>
                   <p className="text-label text-muted-foreground mb-1">SHA256</p>
-                  <p className="break-all text-code-sm text-muted-foreground/80 bg-surface-50 rounded p-2">
+                  <p className="break-all rounded-inset bg-[var(--void)] p-2 text-code-sm text-[var(--display-fg)]">
                     {selectedFile.sha256}
                   </p>
                 </div>
@@ -272,9 +268,9 @@ export function VaultView({ companyId }: VaultViewProps) {
                     <p className="text-label text-muted-foreground mb-1">Tags</p>
                     <div className="flex flex-wrap gap-1">
                       {selectedFile.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-[10px]">
+                        <Tag key={tag} mono>
                           {tag}
-                        </Badge>
+                        </Tag>
                       ))}
                     </div>
                   </div>
@@ -302,22 +298,20 @@ export function VaultView({ companyId }: VaultViewProps) {
                   {verifyMutation.isPending ? 'Verifying...' : 'Verify Integrity'}
                 </Button>
                 {verifyMutation.data && (
-                  <div
-                    className={`flex items-center gap-1.5 rounded px-2 py-1 text-caption ${
-                      verifyMutation.data.ok
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-red-500/10 text-red-400'
-                    }`}
-                  >
-                    {verifyMutation.data.ok ? (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Integrity verified
-                      </>
-                    ) : (
-                      <>
-                        <AlertTriangle className="h-3.5 w-3.5" /> Hash mismatch
-                      </>
-                    )}
+                  <div className="flex items-center gap-1.5 px-1 py-1">
+                    <LampTile
+                      small
+                      interactive={false}
+                      label={verifyMutation.data.ok ? 'GO' : 'NO-GO'}
+                      tone={verifyMutation.data.ok ? 'go' : 'nogo'}
+                    />
+                    <span
+                      className={`text-caption ${
+                        verifyMutation.data.ok ? 'text-[var(--tag-go)]' : 'text-[var(--tag-warn)]'
+                      }`}
+                    >
+                      {verifyMutation.data.ok ? 'Integrity verified' : 'Hash mismatch'}
+                    </span>
                   </div>
                 )}
                 <Button
