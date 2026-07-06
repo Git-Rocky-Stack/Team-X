@@ -150,6 +150,10 @@ describe('audit-event-chip sweep', () => {
     expect(chipSrc).toContain('aria-label={ariaLabel}');
     expect(chipSrc).toContain('data-event-type={eventType}');
     expect(chipSrc).not.toContain('text-xs');
+    // No text-size utility may pass through Badge's cn(): unconfigured twMerge
+    // lumps custom sizes (text-caption) with the LED text-colors and drops one.
+    // Chips render at Badge's base text-[10px] — the app-wide chip signature.
+    expect(chipSrc).not.toContain('text-caption');
   });
 });
 
