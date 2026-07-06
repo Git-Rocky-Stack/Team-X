@@ -85,11 +85,10 @@ describe('Telemetry console composition', () => {
     }
   });
 
-  it('wraps charts and tables in mission section cards rather than flat surfaces', () => {
+  it('wraps charts and tables in console faceplates rather than flat surfaces', () => {
     expect(companyTelemetrySrc).toContain('<Faceplate');
     expect(employeeTelemetrySrc).toContain('<Faceplate');
-    expect(costBreakdownSrc).toContain('<MissionSectionCard');
-    expect(costBreakdownSrc).toContain('<MissionControlRow');
+    expect(costBreakdownSrc).toContain('<Faceplate');
   });
 
   it('ties telemetry to autonomy governance signals rather than cost alone', () => {

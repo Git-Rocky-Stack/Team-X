@@ -105,3 +105,30 @@ describe('employee-telemetry sweep', () => {
     expect(src).toContain('function toggleSort');
   });
 });
+
+describe('cost-breakdown sweep', () => {
+  const src = readSrc('telemetry/cost-breakdown.tsx');
+
+  it('composes range chips, themed charts, and the summary table from console vocabulary', () => {
+    expect(src).toContain("'nav-tile px-3 py-1.5 text-button-sm'");
+    expect(src).toContain('getProviderSeriesColor');
+    expect(src).toContain('CHART_TOOLTIP_STYLE');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('<SubviewState');
+  });
+
+  it('carries zero mission-family legacy, raw hex, or raw chrome', () => {
+    expect(src).not.toMatch(/Mission[A-Z]/);
+    expect(src).not.toMatch(/#[0-9a-fA-F]{6}/);
+    expect(src).not.toContain('PROVIDER_COLORS');
+    expect(src).not.toContain('border-white/');
+    expect(src).not.toContain('bg-black');
+  });
+
+  it('preserves state selectors and range wiring', () => {
+    expect(src).toContain('data-telemetry-cost-state="loading"');
+    expect(src).toContain('data-telemetry-cost-state="error"');
+    expect(src).toContain('data-telemetry-cost-state="empty"');
+    expect(src).toContain('onClick={() => setRange(option.value)}');
+  });
+});
