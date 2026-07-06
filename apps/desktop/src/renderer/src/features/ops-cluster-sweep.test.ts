@@ -183,3 +183,33 @@ describe('audit-view sweep', () => {
     expect(src).toContain('setPage((p) => p + 1)');
   });
 });
+
+describe('vault-view sweep', () => {
+  const src = readSrc('vault/vault-view.tsx');
+
+  it('composes from console primitives with armed row selection', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<Tag');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero legacy status colors or brand-tint selection', () => {
+    expect(src).not.toContain('bg-brand/5');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('bg-green-500/10');
+    expect(src).not.toContain('bg-red-500/10');
+    expect(src).not.toContain('animate-spin');
+  });
+
+  it('preserves the E2E text + handler contract', () => {
+    expect(src).toContain('File Vault');
+    expect(src).toContain("{stats.fileCount} file{stats.fileCount !== 1 ? 's' : ''}");
+    expect(src).toContain('onClick={() => setSelectedFile(file)}');
+    expect(src).toContain('handleVerify(selectedFile.id)');
+    expect(src).toContain('handleDelete(selectedFile.id)');
+    expect(src).toContain('Open Location');
+  });
+});
