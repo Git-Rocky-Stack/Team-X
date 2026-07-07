@@ -178,3 +178,32 @@ describe('planner-section sweep', () => {
     expect(src).toContain('decompose_project');
   });
 });
+
+describe('permissions-section sweep', () => {
+  const src = readSrc('settings/permissions-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero shadcn-card or brand-selected composition', () => {
+    expect(src).not.toContain("from '@/components/ui/card'");
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('border-destructive/30');
+    expect(src).not.toContain('bg-muted/20');
+  });
+
+  it('preserves preset selectors + LAW test hooks', () => {
+    expect(src).toContain('data-permissions-section=""');
+    expect(src).toContain('data-testid={`preset-card-${key}`}');
+    expect(src).toContain('id={`preset-${key}`}');
+    expect(src).toContain('aria-label={`${key}-preset`}');
+    expect(src).toContain('aria-label="Show advanced authority matrix"');
+    expect(src).toContain('applyPreset');
+    expect(src).toContain('Safe Mode');
+    expect(src).toContain('Standard');
+    expect(src).toContain('Advanced');
+  });
+});

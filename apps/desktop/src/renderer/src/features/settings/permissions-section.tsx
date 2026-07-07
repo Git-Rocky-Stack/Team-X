@@ -13,11 +13,9 @@
 
 import { useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
 import {
   useAuthorityGrants,
@@ -25,6 +23,7 @@ import {
   useDeleteAuthorityGrant,
 } from '@/hooks/use-extensions.js';
 import { ipc } from '@/lib/ipc.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 type PermissionPreset = 'safe' | 'standard' | 'advanced';
@@ -167,150 +166,143 @@ export function PermissionsSection() {
 
   return (
     <section className="space-y-4" data-permissions-section="">
-      <h2 className="text-h2 text-foreground">Extension Permissions</h2>
-      <p className="text-body-sm text-muted-foreground mt-1">
-        Configure what capabilities extensions can access. Presets provide common configurations;
-        use Advanced for granular control.
-      </p>
+      <div>
+        <h2 className="text-h2 text-foreground">Extension Permissions</h2>
+        <p className="text-body-sm text-muted-foreground mt-1">
+          Configure what capabilities extensions can access. Presets provide common configurations;
+          use Advanced for granular control.
+        </p>
+      </div>
 
       {!companyId ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <p className="text-body text-muted-foreground">
-              Select a workspace to manage permissions.
-            </p>
-          </CardContent>
-        </Card>
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="Select a workspace to manage permissions."
+          className="min-h-0 p-6"
+        />
       ) : authorityQuery.isLoading ? (
-        <Card>
-          <CardContent className="py-6">
-            <div className="space-y-3">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </CardContent>
-        </Card>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading permissions…"
+          className="min-h-0 p-6"
+        />
       ) : authorityQuery.isError ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <p className="text-body text-destructive">Failed to load permissions configuration.</p>
-          </CardContent>
-        </Card>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load permissions configuration."
+          className="min-h-0 p-6"
+        />
       ) : (
         <div className="space-y-4">
           {/* Preset Cards */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-h3">Permission Presets</CardTitle>
-              <CardDescription>
+          <Faceplate kicker="Authority" serial="PRESETS" bodyClassName="space-y-3">
+            <div>
+              <h3 className="text-h3 text-foreground">Permission Presets</h3>
+              <p className="text-caption text-muted-foreground mt-0.5">
                 Choose a preset to quickly configure extension permissions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-3">
-                {(Object.entries(PRESETS) as [PermissionPreset, PresetConfig][]).map(
-                  ([key, config]) => {
-                    const isSelected = selectedPreset === key;
-                    return (
-                      <div
-                        key={key}
-                        data-testid={`preset-card-${key}`}
-                        className={`relative rounded-lg border-2 p-4 ${
-                          isSelected
-                            ? 'brand-selected'
-                            : 'border-border/70 bg-muted/20 hover:border-border transition-colors'
-                        }`}
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {(Object.entries(PRESETS) as [PermissionPreset, PresetConfig][]).map(
+                ([key, config]) => {
+                  const isSelected = selectedPreset === key;
+                  return (
+                    <div
+                      key={key}
+                      data-testid={`preset-card-${key}`}
+                      className={cn(
+                        'relative rounded-lg border p-4 transition-colors',
+                        isSelected
+                          ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                          : 'border-[var(--hairline)] bg-transparent hover:border-[var(--hairline-strong)]',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="preset"
+                        id={`preset-${key}`}
+                        aria-label={`${key}-preset`}
+                        checked={isSelected}
+                        onChange={() => void applyPreset(key)}
+                        disabled={isApplying || !companyId}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor={`preset-${key}`}
+                        className={`block cursor-pointer ${isApplying ? 'opacity-50' : ''}`}
                       >
-                        <input
-                          type="radio"
-                          name="preset"
-                          id={`preset-${key}`}
-                          aria-label={`${key}-preset`}
-                          checked={isSelected}
-                          onChange={() => void applyPreset(key)}
-                          disabled={isApplying || !companyId}
-                          className="sr-only"
-                        />
-                        <label
-                          htmlFor={`preset-${key}`}
-                          className={`block cursor-pointer ${isApplying ? 'opacity-50' : ''}`}
-                        >
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-body-strong capitalize">{config.label}</span>
-                            {isSelected && (
-                              <Badge variant="default" className="text-[10px]">
-                                Active
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mb-3 text-caption text-muted-foreground">
-                            {config.description}
-                          </p>
-
-                          {/* Allowed Paths */}
-                          {config.defaultPaths.length > 0 ? (
-                            <div className="space-y-1">
-                              <p className="text-eyebrow-sm text-muted-foreground">
-                                Allowed Paths:
-                              </p>
-                              <div className="flex flex-wrap gap-1">
-                                {config.defaultPaths.map((path) => (
-                                  <span
-                                    key={path}
-                                    className="rounded bg-muted px-1.5 py-0.5 text-code-sm"
-                                  >
-                                    {formatPath(path)}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-caption text-muted-foreground">
-                              User-defined paths only
-                            </p>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-body-strong capitalize">{config.label}</span>
+                          {isSelected && (
+                            <span className="text-eyebrow-sm text-[var(--armed)]">Active</span>
                           )}
-                        </label>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
+                        </div>
+                        <p className="mb-3 text-caption text-muted-foreground">
+                          {config.description}
+                        </p>
 
-              {createGrant.isError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
-                  Failed to apply permission preset.
-                </div>
+                        {/* Allowed Paths */}
+                        {config.defaultPaths.length > 0 ? (
+                          <div className="space-y-1">
+                            <p className="text-eyebrow-sm text-muted-foreground">Allowed Paths:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {config.defaultPaths.map((path) => (
+                                <Tag key={path} mono>
+                                  {formatPath(path)}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-caption text-muted-foreground">
+                            User-defined paths only
+                          </p>
+                        )}
+                      </label>
+                    </div>
+                  );
+                },
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {createGrant.isError && (
+              <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
+                Failed to apply permission preset.
+              </div>
+            )}
+          </Faceplate>
 
           {/* Advanced Toggle */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-h3">Advanced Authority Matrix</CardTitle>
-                  <CardDescription>
-                    View and manage all authority grants with granular control.
-                  </CardDescription>
-                </div>
-                <Switch
-                  checked={showAdvanced}
-                  onCheckedChange={setShowAdvanced}
-                  aria-label="Show advanced authority matrix"
-                />
+          <Faceplate kicker="Authority" serial="MATRIX" bodyClassName="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-h3 text-foreground">Advanced Authority Matrix</h3>
+                <p className="text-caption text-muted-foreground mt-0.5">
+                  View and manage all authority grants with granular control.
+                </p>
               </div>
-            </CardHeader>
+              <Switch
+                checked={showAdvanced}
+                onCheckedChange={setShowAdvanced}
+                aria-label="Show advanced authority matrix"
+              />
+            </div>
 
             {showAdvanced && (
-              <CardContent className="space-y-4">
+              <div className="space-y-4">
                 {/* Add custom path section */}
                 <div className="space-y-2">
                   <p className="text-label text-muted-foreground">Add Custom Path</p>
                   <p className="text-caption text-muted-foreground">
                     Grant extensions access to specific filesystem paths. Use templates like{' '}
-                    <code className="rounded bg-muted px-1 py-0.5">{'{{documents}}'}</code> or
-                    browse to select a directory.
+                    <code className="rounded bg-[var(--void)] px-1 py-0.5 text-[var(--display-fg)]">
+                      {'{{documents}}'}
+                    </code>{' '}
+                    or browse to select a directory.
                   </p>
                   <div className="flex gap-2">
                     <Input
@@ -347,7 +339,7 @@ export function PermissionsSection() {
                     </Button>
                   </div>
                   {createGrant.isError && (
-                    <p className="text-caption text-destructive">
+                    <p className="text-caption text-[var(--led-nogo)]">
                       Failed to add path. Please try again.
                     </p>
                   )}
@@ -359,7 +351,7 @@ export function PermissionsSection() {
                     Existing Grants ({employeeGrants.length})
                   </p>
                   {employeeGrants.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
+                    <div className="rounded-inset border border-dashed border-[var(--hairline)] px-3 py-6 text-center">
                       <p className="text-body text-muted-foreground">
                         No custom authority grants configured. Use presets above for quick setup or
                         add custom paths.
@@ -370,17 +362,15 @@ export function PermissionsSection() {
                       {employeeGrants.map((grant) => (
                         <div
                           key={grant.id}
-                          className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2"
+                          className="flex items-center justify-between rounded-inset border border-[var(--hairline)] px-3 py-2"
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-body-strong truncate">
                                 {formatPath(grant.resourceId)}
                               </span>
-                              <Badge variant="outline">{grant.resourceKind}</Badge>
-                              <Badge variant="secondary">
-                                {formatPermission(grant.permission)}
-                              </Badge>
+                              <Tag mono>{grant.resourceKind}</Tag>
+                              <Tag>{formatPermission(grant.permission)}</Tag>
                             </div>
                           </div>
                           <Button
@@ -397,9 +387,9 @@ export function PermissionsSection() {
                     </div>
                   )}
                 </div>
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </Faceplate>
         </div>
       )}
     </section>
