@@ -16,9 +16,8 @@ import type {
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
 import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhanced-ai.js';
 import { useProviders } from '@/hooks/use-providers.js';
@@ -54,21 +53,29 @@ export function EnhancedAiSection() {
 
   if (configLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="AI" serial="ENHANCED" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Enhanced AI</h2>
-        <Skeleton className="h-48 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading Enhanced AI configuration…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (configError || !config) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="AI" serial="ENHANCED" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Enhanced AI</h2>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          Failed to load Enhanced AI configuration.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load Enhanced AI configuration."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -91,54 +98,36 @@ export function EnhancedAiSection() {
   const llmDisabled = !hasEnabledProvider && !detectionPending;
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="AI" serial="ENHANCED" bodyClassName="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">Enhanced AI</h2>
         {setConfig.isPending && (
           <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
         )}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1.5">
           {detectionPending ? (
-            <Badge
-              variant="outline"
-              className="border-muted-foreground/30 bg-muted/20 text-muted-foreground text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse"
-              />
-              Detecting…
-            </Badge>
+            <>
+              <LampTile small interactive={false} label="SYNC" tone="hold" />
+              <span className="text-caption text-silver-mute">Detecting…</span>
+            </>
           ) : hasEnabledProvider ? (
-            <Badge
-              variant="outline"
-              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
-              />
-              LLM Detected
-            </Badge>
+            <>
+              <LampTile small interactive={false} label="GO" tone="go" />
+              <span className="text-caption text-silver-mute">LLM Detected</span>
+            </>
           ) : (
-            <Badge
-              variant="outline"
-              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
-              />
-              No LLM Detected
-            </Badge>
+            <>
+              <LampTile small interactive={false} label="NO-GO" tone="nogo" />
+              <span className="text-caption text-silver-mute">No LLM Detected</span>
+            </>
           )}
         </span>
       </div>
 
       {/* LLM Provider */}
       <div
-        className="rounded-lg border border-border bg-surface-50 p-4 space-y-3"
+        className="rounded-inset border border-[var(--hairline)] p-4 space-y-3"
         aria-disabled={llmDisabled}
       >
         <h3 className="text-h3 text-foreground">LLM Provider</h3>
@@ -246,7 +235,7 @@ export function EnhancedAiSection() {
 
       {/* Feature Toggles */}
       <div
-        className="rounded-lg border border-border bg-surface-50 p-4 space-y-4"
+        className="rounded-inset border border-[var(--hairline)] p-4 space-y-4"
         aria-disabled={llmDisabled}
       >
         <h3 className="text-h3 text-foreground">Additional AI Settings</h3>
@@ -441,19 +430,19 @@ export function EnhancedAiSection() {
 
       {/* Save error banner */}
       {setConfig.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
       )}
 
       {/* Info banner for LLM */}
       {!detectionPending && !hasEnabledProvider && (
-        <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-body text-amber-400">
+        <div className="rounded-inset border border-[var(--led-warn-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-warn)]">
           <span className="min-w-0">
             Enable an LLM provider in Provider settings to enable Enhanced AI features.
           </span>
         </div>
       )}
-    </section>
+    </Faceplate>
   );
 }

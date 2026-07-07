@@ -261,3 +261,34 @@ describe('backup-section sweep', () => {
     expect(src).toContain('Overwrite all data?');
   });
 });
+
+describe('enhanced-ai-section sweep', () => {
+  const src = readSrc('settings/enhanced-ai-section.tsx');
+
+  // Form/knob panels stay adaptive chassis, not RecessedWells: `.well` is
+  // opaque-dark in both shifts, so `text-foreground` labels would vanish on
+  // the Day-Shift silver face. Consistent with concurrency/agentic/planner.
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<Switch');
+    expect(src).toContain('className="brand-range"');
+  });
+
+  it('carries zero legacy panel or palette composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('text-amber-400');
+    expect(src).not.toContain('border-green-400/40');
+  });
+
+  it('preserves LLM config ids + feature toggles', () => {
+    expect(src).toContain('id="ai-llm-provider"');
+    expect(src).toContain('id="ai-llm-temperature"');
+    expect(src).toContain('id="ai-planning-threshold"');
+    expect(src).toContain('id="ai-tracing-sample-rate"');
+    expect(src).toContain("commit('queryExpansionEnabled'");
+    expect(src).toContain('aria-label="Toggle distributed tracing"');
+  });
+});
