@@ -20,8 +20,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Faceplate, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { useAgenticSettings, useSetAgentic } from '@/hooks/use-settings.js';
 
 function clamp(value: number, min: number, max: number): number {
@@ -44,21 +44,29 @@ export function AgenticSection() {
 
   if (isLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="Agentic" serial="LOOP" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Agentic Loop</h2>
-        <Skeleton className="h-36 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading agentic loop settings…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (isError || !data) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Agentic" serial="LOOP" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Agentic Loop</h2>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          Failed to load agentic loop settings.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load agentic loop settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -80,7 +88,7 @@ export function AgenticSection() {
   const timeoutMaxSec = Math.round(timeoutMs.max / 1000);
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="Agentic" serial="LOOP" bodyClassName="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">Agentic Loop</h2>
@@ -90,14 +98,14 @@ export function AgenticSection() {
       </div>
 
       {/* Description */}
-      <p className="text-body-sm text-muted-foreground mt-1">
+      <p className="text-caption text-silver-mute">
         Budget caps for the ReAct agentic loop triggered by complex requests from the command
         palette. Tighter caps mean faster termination; wider caps allow deeper reasoning at the cost
         of tokens and wall-clock time.
       </p>
 
       {/* Knobs */}
-      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
+      <div className="space-y-4">
         {/* Max steps */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
@@ -206,10 +214,10 @@ export function AgenticSection() {
 
       {/* Save error banner */}
       {setAgentic.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <span className="min-w-0 truncate">Failed to save: {String(setAgentic.error)}</span>
         </div>
       )}
-    </section>
+    </Faceplate>
   );
 }

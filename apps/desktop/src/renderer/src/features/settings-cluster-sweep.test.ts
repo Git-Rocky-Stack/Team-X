@@ -112,3 +112,69 @@ describe('privacy-section sweep', () => {
     expect(src).toContain('Local Only');
   });
 });
+
+describe('concurrency-section sweep', () => {
+  const src = readSrc('settings/concurrency-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+  });
+
+  it('carries zero legacy composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-background/40');
+  });
+
+  it('preserves slot + cap wiring', () => {
+    expect(src).toContain('id="orchestrator-slots"');
+    expect(src).toContain('commitSlots');
+    expect(src).toContain('commitProviderCap');
+    expect(src).toContain('provider-cap-${kind}');
+  });
+});
+
+describe('agentic-section sweep', () => {
+  const src = readSrc('settings/agentic-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+  });
+
+  it('carries zero legacy composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('bg-red-500/10');
+  });
+
+  it('preserves budget-knob wiring', () => {
+    expect(src).toContain('id="agentic-max-steps"');
+    expect(src).toContain('id="agentic-max-tokens"');
+    expect(src).toContain('id="agentic-timeout-ms"');
+    expect(src).toContain('budget_exhausted');
+  });
+});
+
+describe('planner-section sweep', () => {
+  const src = readSrc('settings/planner-section.tsx');
+
+  it('composes from console primitives + console select', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('well-input h-8 w-full px-3 text-code-sm');
+  });
+
+  it('carries zero legacy composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-background px-3');
+    expect(src).not.toContain('text-red-400');
+  });
+
+  it('preserves knob + approval wiring', () => {
+    expect(src).toContain('id="planner-max-tickets"');
+    expect(src).toContain('id="planner-approval-level"');
+    expect(src).toContain('commitLevel');
+    expect(src).toContain('decompose_project');
+  });
+});

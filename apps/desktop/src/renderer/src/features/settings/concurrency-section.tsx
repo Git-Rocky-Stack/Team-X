@@ -11,8 +11,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Faceplate, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { useProviders } from '@/hooks/use-providers.js';
 import { useConcurrencySettings, useSetConcurrency } from '@/hooks/use-settings.js';
 
@@ -33,21 +33,29 @@ export function ConcurrencySection() {
 
   if (isLoading) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="Runtime" serial="CONCURRENCY" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Concurrency</h2>
-        <Skeleton className="h-40 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading concurrency…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (isError || !data || !draft) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Runtime" serial="CONCURRENCY" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Concurrency</h2>
-        <div className="rounded-lg border border-border bg-surface-50 px-4 py-3 text-body text-muted-foreground">
-          Failed to load concurrency settings.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load concurrency settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -101,7 +109,7 @@ export function ConcurrencySection() {
   }
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="Runtime" serial="CONCURRENCY" bodyClassName="space-y-4">
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">Concurrency</h2>
         {setConcurrency.isPending && (
@@ -109,100 +117,95 @@ export function ConcurrencySection() {
         )}
       </div>
 
-      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-4">
-            <label htmlFor="orchestrator-slots" className="text-label text-muted-foreground">
-              Orchestrator Slots
-            </label>
-            <span className="text-code-sm text-foreground tabular-nums">
-              {draft.orchestratorSlots}
-            </span>
-          </div>
-          <Input
-            id="orchestrator-slots"
-            type="number"
-            inputMode="numeric"
-            min={slotClamp.min}
-            max={slotClamp.max}
-            step={1}
-            value={current.orchestratorSlots}
-            onChange={(e) =>
-              setDraft({
-                ...current,
-                orchestratorSlots: Number.parseInt(e.target.value, 10) || 0,
-              })
-            }
-            onBlur={() => commitSlots(current.orchestratorSlots)}
-            disabled={setConcurrency.isPending}
-            className="h-8 text-code-sm"
-          />
-          <p className="text-caption text-muted-foreground/70">
-            Maximum concurrent agent work items across all providers ({slotClamp.min}–
-            {slotClamp.max}, default {slotClamp.default}).
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-4">
+          <label htmlFor="orchestrator-slots" className="text-label text-muted-foreground">
+            Orchestrator Slots
+          </label>
+          <span className="text-code-sm text-foreground tabular-nums">
+            {draft.orchestratorSlots}
+          </span>
+        </div>
+        <Input
+          id="orchestrator-slots"
+          type="number"
+          inputMode="numeric"
+          min={slotClamp.min}
+          max={slotClamp.max}
+          step={1}
+          value={current.orchestratorSlots}
+          onChange={(e) =>
+            setDraft({
+              ...current,
+              orchestratorSlots: Number.parseInt(e.target.value, 10) || 0,
+            })
+          }
+          onBlur={() => commitSlots(current.orchestratorSlots)}
+          disabled={setConcurrency.isPending}
+          className="h-8 text-code-sm"
+        />
+        <p className="text-caption text-muted-foreground/70">
+          Maximum concurrent agent work items across all providers ({slotClamp.min}–{slotClamp.max},
+          default {slotClamp.default}).
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-body-strong text-foreground">Per-Provider Kind Caps</p>
+          <p className="text-caption text-muted-foreground mt-0.5">
+            Maximum concurrent requests per provider kind for configured provider kinds.
           </p>
         </div>
 
-        <div className="space-y-2">
-          <div>
-            <p className="text-body-strong text-foreground">Per-Provider Kind Caps</p>
-            <p className="text-caption text-muted-foreground mt-0.5">
-              Maximum concurrent requests per provider kind for configured provider kinds.
-            </p>
+        {visibleKinds.length === 0 ? (
+          <div className="rounded-md border border-dashed border-[var(--hairline)] px-3 py-3 text-caption text-muted-foreground">
+            No provider kinds configured yet.
           </div>
-
-          {visibleKinds.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border px-3 py-3 text-caption text-muted-foreground">
-              No provider kinds configured yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {visibleKinds.map((kind) => {
-                const providerCount = providerKindCounts.get(kind) ?? 0;
-                const capValue = current.providerCaps[kind] ?? capClamp.min;
-                return (
-                  <div
-                    key={kind}
-                    className="rounded-md border border-border bg-background/40 px-3 py-2"
-                  >
-                    <div className="mb-1.5 flex items-center justify-between gap-4">
-                      <label
-                        htmlFor={`provider-cap-${kind}`}
-                        className="text-code-sm text-muted-foreground"
-                      >
-                        {kind}
-                        {providerCount > 1 ? ` ×${providerCount}` : ''}
-                      </label>
-                      <span className="text-code-sm text-foreground tabular-nums">{capValue}</span>
-                    </div>
-                    <Input
-                      id={`provider-cap-${kind}`}
-                      type="number"
-                      inputMode="numeric"
-                      min={capClamp.min}
-                      max={capClamp.max}
-                      step={1}
-                      value={capValue}
-                      onChange={(e) =>
-                        setDraft({
-                          ...current,
-                          providerCaps: {
-                            ...current.providerCaps,
-                            [kind]: Number.parseInt(e.target.value, 10) || 0,
-                          },
-                        })
-                      }
-                      onBlur={() => commitProviderCap(kind, capValue)}
-                      disabled={setConcurrency.isPending}
-                      className="h-8 text-code-sm"
-                    />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {visibleKinds.map((kind) => {
+              const providerCount = providerKindCounts.get(kind) ?? 0;
+              const capValue = current.providerCaps[kind] ?? capClamp.min;
+              return (
+                <div key={kind} className="rounded-inset border border-[var(--hairline)] px-3 py-2">
+                  <div className="mb-1.5 flex items-center justify-between gap-4">
+                    <label
+                      htmlFor={`provider-cap-${kind}`}
+                      className="text-code-sm text-muted-foreground"
+                    >
+                      {kind}
+                      {providerCount > 1 ? ` ×${providerCount}` : ''}
+                    </label>
+                    <span className="text-code-sm text-foreground tabular-nums">{capValue}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  <Input
+                    id={`provider-cap-${kind}`}
+                    type="number"
+                    inputMode="numeric"
+                    min={capClamp.min}
+                    max={capClamp.max}
+                    step={1}
+                    value={capValue}
+                    onChange={(e) =>
+                      setDraft({
+                        ...current,
+                        providerCaps: {
+                          ...current.providerCaps,
+                          [kind]: Number.parseInt(e.target.value, 10) || 0,
+                        },
+                      })
+                    }
+                    onBlur={() => commitProviderCap(kind, capValue)}
+                    disabled={setConcurrency.isPending}
+                    className="h-8 text-code-sm"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </section>
+    </Faceplate>
   );
 }
