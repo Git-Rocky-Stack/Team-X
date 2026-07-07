@@ -207,3 +207,57 @@ describe('permissions-section sweep', () => {
     expect(src).toContain('Advanced');
   });
 });
+
+describe('memory-section sweep', () => {
+  const src = readSrc('settings/memory-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<RecessedWell');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero legacy chooser or panel composition', () => {
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('border-white/10 bg-black/10');
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('text-red-400');
+  });
+
+  it('preserves budget chooser + knob wiring', () => {
+    expect(src).toContain('data-settings-memory=""');
+    expect(src).toContain('id="memory-recent-turn-limit"');
+    expect(src).toContain('id="memory-checkpoint-history-limit"');
+    expect(src).toContain("commit('defaultTargetTokenBudget'");
+    expect(src).toContain('Default pack budget');
+  });
+});
+
+describe('backup-section sweep', () => {
+  const src = readSrc('settings/backup-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<Tag');
+    expect(src).toContain('cap-warn');
+  });
+
+  it('carries zero legacy surface or palette composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-surface-100');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('bg-green-500/10');
+  });
+
+  it('preserves backup action wiring + delete selectors', () => {
+    expect(src).toContain('data-backup-delete={backup.filename}');
+    expect(src).toContain('aria-label={`Delete backup ${backup.filename}`}');
+    expect(src).toContain('createBackup.mutate');
+    expect(src).toContain('restoreBackup.mutate');
+    expect(src).toContain('deleteBackup.mutate');
+    expect(src).toContain('Create Backup');
+    expect(src).toContain('Overwrite all data?');
+  });
+});
