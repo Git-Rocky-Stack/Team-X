@@ -36,7 +36,7 @@ Wave-B/C sections share one legacy idiom (`<section className="space-y-3">` + `<
 | Legacy | → Console |
 |---|---|
 | `<section className="space-y-3" [data-*]>` root | keep the `<section>` **and any `data-*` on it**; body wrapped in `<Faceplate kicker="…" serial="…">` |
-| `<h2 className="text-h2 text-foreground">Title</h2>` + description `<p className="text-body-sm text-muted-foreground">` | `Faceplate kicker="<UPPER SHORT>" serial="<TITLE>"` + description as `<p className="text-caption text-silver-mute">` inside the faceplate body |
+| `<h2 className="text-h2 text-foreground">Title</h2>` + description `<p className="text-body-sm text-muted-foreground">` | `<Faceplate kicker="<short descriptor>" serial="<SHORT-UPPER>">` **keeping** `<h2 className="text-h2 text-foreground">Title</h2>` inside the body (kicker/serial are small mono stripe labels, NOT the title — the 7a telemetry-view idiom), with description as `<p className="text-caption text-silver-mute">` |
 | inline saving `Loader2 … aria-label="Saving"` (spinner) | `<LampTile small interactive={false} label="SYNC" tone="hold" />` rendered under the same `{isPending && …}` guard, wrapped in `<span aria-label="Saving">` (aria preserved; `animate-spin` removed) |
 | `rounded-lg border border-border bg-surface-50 p-4` panel | `<RecessedWell className="space-y-4 p-4">` |
 | sub-card `rounded-md border border-border bg-background/40` | inner `<div className="rounded-inset border border-[var(--hairline)] bg-[var(--void)]/40 …">` |
@@ -94,7 +94,8 @@ describe('settings-view shell sweep', () => {
     expect(src).toContain('<Faceplate');
     expect(src).not.toContain('amoled-menu-surface');
     expect(src).not.toMatch(/\bbg-black\b/);
-    expect(src).not.toContain('text-h1 text-foreground');
+    // NOTE: `text-h1 text-foreground` is a CURRENT Carbon type token, not legacy —
+    // the console recompose KEEPS the <h1> title inside the Faceplate body.
   });
 
   it('preserves all 15 scroll targets + the focus effect', () => {
@@ -121,7 +122,7 @@ describe('settings-view shell sweep', () => {
 Run (from `apps/desktop`): `pnpm vitest run src/renderer/src/features/settings-cluster-sweep.test.ts`
 Expected: FAIL on the `<Faceplate` / no-`amoled` pins.
 
-- [ ] **Step 3: Recompose `settings-view.tsx`.** Root `<div className="amoled-menu-surface flex h-full flex-col bg-black">` → `<div className="flex h-full flex-col bg-background">`. Header block (`border-b border-border px-4 py-4` + `<h1 className="text-h1 text-foreground">Settings</h1>` + subtitle) → `<Faceplate kicker="Console" serial="SETTINGS">` carrying the title as its `serial` and the subtitle as `<p className="text-caption text-silver-mute">Manage providers, API keys, and system preferences.</p>` — wrap in the existing `border-b border-border px-4 py-4` container. The scroll body (`flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6`) and **every** `<ErrorBoundary>` + `<section data-settings-section="…">` wrapper + child ordering stay byte-identical.
+- [ ] **Step 3: Recompose `settings-view.tsx`.** Root `<div className="amoled-menu-surface flex h-full flex-col bg-black">` → `<div className="flex h-full flex-col bg-background">`. Header block (`border-b border-border px-4 py-4` + `<h1 className="text-h1 text-foreground">Settings</h1>` + subtitle) → a `<div className="border-b border-border px-4 py-4">` wrapping `<Faceplate kicker="Console" serial="SETTINGS">` whose body **keeps** `<h1 className="text-h1 text-foreground">Settings</h1>` plus the subtitle as `<p className="text-caption text-silver-mute">Manage providers, API keys, and system preferences.</p>` (kicker/serial are stripe labels, not the title). The scroll body (`flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6`) and **every** `<ErrorBoundary>` + `<section data-settings-section="…">` wrapper + child ordering stay byte-identical.
 
 - [ ] **Step 4: Run — PASS**, then gates.
 
