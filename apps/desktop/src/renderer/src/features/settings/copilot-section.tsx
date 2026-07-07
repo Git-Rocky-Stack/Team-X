@@ -24,14 +24,16 @@ import { useEffect, useState } from 'react';
 
 import { formatCopilotWeightLabel } from '../copilot/copilot-helpers.js';
 
+import { Faceplate, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
+import { Switch } from '@/components/ui/switch.js';
 import {
   useCopilotSettings,
   useCopilotWeights,
   useSetCopilot,
   useSetCopilotWeights,
 } from '@/hooks/use-settings.js';
+import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
 
 function clamp(value: number, min: number, max: number): number {
@@ -81,21 +83,29 @@ export function CopilotSection() {
 
   if (isLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="Copilot" serial="ANALYZER" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Copilot</h2>
-        <Skeleton className="h-56 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading copilot settings…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (isError || !data) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Copilot" serial="ANALYZER" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Copilot</h2>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          Failed to load copilot settings.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load copilot settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -134,9 +144,10 @@ export function CopilotSection() {
 
   const { intervalMinutes } = COPILOT_SETTINGS_CLAMPS;
   const weights = weightDraft ?? COPILOT_CATEGORY_WEIGHTS_DEFAULT;
+  const controlsDisabled = setCopilot.isPending || !companyId;
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="Copilot" serial="ANALYZER" bodyClassName="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">Copilot</h2>
@@ -146,193 +157,177 @@ export function CopilotSection() {
       </div>
 
       {/* Description */}
-      <p className="text-body-sm text-muted-foreground mt-1">
+      <p className="text-body-sm text-muted-foreground">
         The copilot analyzer watches company activity and proposes actionable insights on a
         schedule. Turn it off, change its cadence, or narrow the categories it reports on.
       </p>
 
-      {/* Knobs */}
-      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
-        {/* Enabled toggle */}
+      {/* Enabled toggle */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <label htmlFor="copilot-enabled" className="text-label text-muted-foreground">
+            Analyzer Enabled
+          </label>
+          <p className="text-caption text-muted-foreground/70">
+            When off, every scheduled and event-triggered tick short-circuits.
+          </p>
+        </div>
+        <Switch
+          id="copilot-enabled"
+          checked={draft.enabled}
+          onCheckedChange={(checked) => commitEnabled(checked)}
+          disabled={controlsDisabled}
+        />
+      </div>
+
+      {/* Interval minutes */}
+      <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <label htmlFor="copilot-enabled" className="text-label text-muted-foreground">
-              Analyzer Enabled
-            </label>
-            <p className="text-caption text-muted-foreground/70">
-              When off, every scheduled and event-triggered tick short-circuits.
-            </p>
-          </div>
-          <button
-            id="copilot-enabled"
-            type="button"
-            role="switch"
-            aria-checked={draft.enabled}
-            onClick={() => commitEnabled(!draft.enabled)}
-            disabled={setCopilot.isPending || !companyId}
-            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors ${
-              draft.enabled
-                ? 'border-[#FFAA2024]/70 bg-[#FFAA2024]/80'
-                : 'border-border bg-surface-200'
-            } focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50`}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-background transition-transform ${
-                draft.enabled ? 'translate-x-4' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
+          <label htmlFor="copilot-interval-minutes" className="text-label text-muted-foreground">
+            Scheduled Interval (minutes)
+          </label>
+          <span className="text-code-sm text-foreground tabular-nums">{draft.intervalMinutes}</span>
         </div>
+        <Input
+          id="copilot-interval-minutes"
+          type="number"
+          inputMode="numeric"
+          min={intervalMinutes.min}
+          max={intervalMinutes.max}
+          step={1}
+          value={draft.intervalMinutes}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              intervalMinutes: Number.parseInt(e.target.value, 10) || 0,
+            })
+          }
+          onBlur={() => {
+            const next = clamp(draft.intervalMinutes, intervalMinutes.min, intervalMinutes.max);
+            if (next !== draft.intervalMinutes) setDraft({ ...draft, intervalMinutes: next });
+            commitIntervalMinutes(next);
+          }}
+          disabled={controlsDisabled}
+          className="h-8 text-code-sm"
+        />
+        <p className="text-caption text-muted-foreground/70">
+          How often the analyzer tick fires ({intervalMinutes.min}–{intervalMinutes.max}, default{' '}
+          {intervalMinutes.default}). Saves restart the per-company timer immediately.
+        </p>
+      </div>
 
-        {/* Interval minutes */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-4">
-            <label htmlFor="copilot-interval-minutes" className="text-label text-muted-foreground">
-              Scheduled Interval (minutes)
-            </label>
-            <span className="text-code-sm text-foreground tabular-nums">
-              {draft.intervalMinutes}
-            </span>
-          </div>
-          <Input
-            id="copilot-interval-minutes"
-            type="number"
-            inputMode="numeric"
-            min={intervalMinutes.min}
-            max={intervalMinutes.max}
-            step={1}
-            value={draft.intervalMinutes}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                intervalMinutes: Number.parseInt(e.target.value, 10) || 0,
-              })
-            }
-            onBlur={() => {
-              const next = clamp(draft.intervalMinutes, intervalMinutes.min, intervalMinutes.max);
-              if (next !== draft.intervalMinutes) setDraft({ ...draft, intervalMinutes: next });
-              commitIntervalMinutes(next);
-            }}
-            disabled={setCopilot.isPending || !companyId}
-            className="h-8 text-code-sm"
-          />
-          <p className="text-caption text-muted-foreground/70">
-            How often the analyzer tick fires ({intervalMinutes.min}–{intervalMinutes.max}, default{' '}
-            {intervalMinutes.default}). Saves restart the per-company timer immediately.
-          </p>
+      {/* Categories */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-label text-muted-foreground">Allowed Categories</span>
+          <span className="text-code-sm text-foreground/70 tabular-nums">
+            {draft.categories.length}/{COPILOT_CATEGORIES.length}
+          </span>
         </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {COPILOT_CATEGORIES.map((cat) => {
+            const checked = draft.categories.includes(cat);
+            return (
+              <label
+                key={cat}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-caption transition-colors',
+                  checked
+                    ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
+                    : 'border-[var(--hairline)] bg-transparent text-muted-foreground hover:text-foreground',
+                  controlsDisabled && 'opacity-50',
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleCategory(cat)}
+                  disabled={controlsDisabled}
+                  className="h-3 w-3 rounded border-[var(--hairline-strong)] accent-[var(--armed)]"
+                />
+                <span>{CATEGORY_LABELS[cat]}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="text-caption text-muted-foreground/70">
+          The analyzer only proposes insights in categories you enable. Clearing every category
+          falls back to the full set.
+        </p>
+      </div>
 
-        {/* Categories */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-label text-muted-foreground">Allowed Categories</span>
-            <span className="text-code-sm text-foreground/70 tabular-nums">
-              {draft.categories.length}/{COPILOT_CATEGORIES.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {COPILOT_CATEGORIES.map((cat) => {
-              const checked = draft.categories.includes(cat);
-              return (
+      {/* Category weighting */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-label text-muted-foreground">Category weighting</span>
+          {weightsQuery.isFetching && (
+            <span className="text-caption font-mono text-muted-foreground/70">Loading</span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {COPILOT_CATEGORIES.map((cat) => {
+            const value = weights[cat];
+            return (
+              <div
+                key={cat}
+                className="grid min-h-10 grid-cols-[minmax(6rem,1fr)_4.5rem_5rem] items-center gap-2"
+                data-copilot-weight-category={cat}
+              >
                 <label
-                  key={cat}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-caption transition-colors ${
-                    checked
-                      ? 'border-[#FFAA2024]/50 bg-[#FFAA2024]/10 text-foreground'
-                      : 'border-border bg-surface-50 text-muted-foreground hover:text-foreground'
-                  } ${setCopilot.isPending || !companyId ? 'opacity-50' : ''}`}
+                  htmlFor={`copilot-weight-${cat}`}
+                  className="min-w-0 text-label text-muted-foreground"
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleCategory(cat)}
-                    disabled={setCopilot.isPending || !companyId}
-                    className="h-3 w-3 rounded border-border accent-brand"
-                  />
-                  <span>{CATEGORY_LABELS[cat]}</span>
+                  {CATEGORY_LABELS[cat]}
                 </label>
-              );
-            })}
-          </div>
-          <p className="text-caption text-muted-foreground/70">
-            The analyzer only proposes insights in categories you enable. Clearing every category
-            falls back to the full set.
-          </p>
+                <span className="text-right text-code-sm text-foreground tabular-nums">
+                  {formatCopilotWeightLabel(value)}
+                </span>
+                <Input
+                  id={`copilot-weight-${cat}`}
+                  type="number"
+                  inputMode="decimal"
+                  min={COPILOT_CATEGORY_WEIGHT_CLAMP.min}
+                  max={COPILOT_CATEGORY_WEIGHT_CLAMP.max}
+                  step={0.1}
+                  value={value}
+                  onChange={(e) =>
+                    setWeightDraft({
+                      ...weights,
+                      [cat]: Number.parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  onBlur={() => commitWeight(cat, value)}
+                  disabled={
+                    setCopilotWeights.isPending ||
+                    weightsQuery.isLoading ||
+                    !companyId ||
+                    !weightDraft
+                  }
+                  className="h-8 text-code-sm"
+                />
+              </div>
+            );
+          })}
         </div>
-
-        {/* Category weighting */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-label text-muted-foreground">Category weighting</span>
-            {weightsQuery.isFetching && (
-              <span className="text-caption font-mono text-muted-foreground/70">Loading</span>
-            )}
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            {COPILOT_CATEGORIES.map((cat) => {
-              const value = weights[cat];
-              return (
-                <div
-                  key={cat}
-                  className="grid min-h-10 grid-cols-[minmax(6rem,1fr)_4.5rem_5rem] items-center gap-2"
-                  data-copilot-weight-category={cat}
-                >
-                  <label
-                    htmlFor={`copilot-weight-${cat}`}
-                    className="min-w-0 text-label text-muted-foreground"
-                  >
-                    {CATEGORY_LABELS[cat]}
-                  </label>
-                  <span className="text-right text-code-sm text-foreground tabular-nums">
-                    {formatCopilotWeightLabel(value)}
-                  </span>
-                  <Input
-                    id={`copilot-weight-${cat}`}
-                    type="number"
-                    inputMode="decimal"
-                    min={COPILOT_CATEGORY_WEIGHT_CLAMP.min}
-                    max={COPILOT_CATEGORY_WEIGHT_CLAMP.max}
-                    step={0.1}
-                    value={value}
-                    onChange={(e) =>
-                      setWeightDraft({
-                        ...weights,
-                        [cat]: Number.parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    onBlur={() => commitWeight(cat, value)}
-                    disabled={
-                      setCopilotWeights.isPending ||
-                      weightsQuery.isLoading ||
-                      !companyId ||
-                      !weightDraft
-                    }
-                    className="h-8 text-code-sm"
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-caption text-muted-foreground/70">
-            Lower noisy categories toward 0.0x or boost useful ones up to 2.0x.
-          </p>
-        </div>
+        <p className="text-caption text-muted-foreground/70">
+          Lower noisy categories toward 0.0x or boost useful ones up to 2.0x.
+        </p>
       </div>
 
       {/* Save error banner */}
       {setCopilot.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <span className="min-w-0 truncate">Failed to save: {String(setCopilot.error)}</span>
         </div>
       )}
 
       {setCopilotWeights.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <span className="min-w-0 truncate">
             Failed to save category weights: {String(setCopilotWeights.error)}
           </span>
         </div>
       )}
-    </section>
+    </Faceplate>
   );
 }

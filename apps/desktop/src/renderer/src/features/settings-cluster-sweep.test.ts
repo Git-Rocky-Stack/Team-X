@@ -292,3 +292,36 @@ describe('enhanced-ai-section sweep', () => {
     expect(src).toContain('aria-label="Toggle distributed tracing"');
   });
 });
+
+describe('copilot-section sweep', () => {
+  const src = readSrc('settings/copilot-section.tsx');
+
+  // The hand-rolled `<button role="switch">` becomes a Radix <Switch>, which
+  // supplies role/aria-checked at runtime — the E2E `#copilot-enabled`
+  // selector still resolves. Knob panel stays chassis (form, not display).
+  it('composes from console primitives + Switch', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<Switch');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('drops the hand-rolled toggle + raw-hex palette', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('#FFAA2024');
+    expect(src).not.toContain('role="switch"');
+    expect(src).not.toContain('bg-surface-200');
+    expect(src).not.toContain('text-red-400');
+  });
+
+  it('preserves copilot control ids + weight selectors', () => {
+    expect(src).toContain('id="copilot-enabled"');
+    expect(src).toContain('id="copilot-interval-minutes"');
+    expect(src).toContain('data-copilot-weight-category={cat}');
+    expect(src).toContain('id={`copilot-weight-${cat}`}');
+    expect(src).toContain('commitEnabled');
+    expect(src).toContain('toggleCategory');
+    expect(src).toContain('commitWeight');
+    expect(src).toContain('Allowed Categories');
+    expect(src).toContain('Category weighting');
+  });
+});
