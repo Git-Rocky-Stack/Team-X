@@ -7,6 +7,7 @@
 
 import { AlertTriangle, CheckCircle2, Download, Loader2, RefreshCw, Rocket } from 'lucide-react';
 
+import { Faceplate } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { useCheckForUpdate, useInstallUpdate } from '@/hooks/use-updater.js';
 
@@ -21,10 +22,10 @@ export function UpdaterSection() {
   const isDownloading = installUpdate.isPending;
 
   return (
-    <div className="rounded-lg border border-border bg-surface-50 p-4">
-      <div className="flex items-center justify-between mb-3">
+    <Faceplate kicker="Ops" serial="UPDATES" bodyClassName="space-y-3">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4 text-brand" />
+          <RefreshCw className="h-4 w-4 text-[var(--armed)]" />
           <h2 className="text-h2 text-foreground">Updates</h2>
         </div>
         <Button
@@ -42,16 +43,16 @@ export function UpdaterSection() {
         </Button>
       </div>
 
-      <p className="text-body-sm text-muted-foreground mb-3">
+      <p className="text-caption text-silver-mute">
         Updates are checked only when you click the button above. Team-X never phones home.
       </p>
 
       {/* Update available */}
       {isAvailable && !isDownloading && !installUpdate.isSuccess && (
-        <div className="rounded border border-brand/30 bg-brand/5 px-3 py-3">
+        <div className="rounded-inset border border-[var(--armed-edge)] bg-[var(--armed-soft)] px-3 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Download className="h-4 w-4 text-brand" />
+              <Download className="h-4 w-4 text-[var(--armed)]" />
               <div>
                 <p className="text-body-strong">Version {result.version} is available</p>
                 {result.releaseDate && (
@@ -81,7 +82,7 @@ export function UpdaterSection() {
             </Button>
           </div>
           {result.releaseNotes && (
-            <div className="mt-2 max-h-24 overflow-y-auto rounded bg-surface-100 px-2 py-1.5 text-caption text-muted-foreground">
+            <div className="mt-2 max-h-24 overflow-y-auto rounded-inset bg-[var(--void)] px-2 py-1.5 text-caption text-[var(--display-fg)]">
               {result.releaseNotes}
             </div>
           )}
@@ -90,7 +91,7 @@ export function UpdaterSection() {
 
       {/* Downloading / installing */}
       {isDownloading && (
-        <div className="flex items-center gap-2 rounded bg-blue-500/10 px-3 py-2 text-body text-blue-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-scope-edge)] bg-[var(--scope-soft)] px-3 py-2 text-body text-[var(--led-scope)]">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Downloading and installing update...
         </div>
@@ -98,7 +99,7 @@ export function UpdaterSection() {
 
       {/* Install initiated (app will restart) */}
       {installUpdate.isSuccess && installUpdate.data?.initiated && (
-        <div className="flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-go-edge)] bg-[var(--go-soft)] px-3 py-2 text-body text-[var(--led-go)]">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Update installed. Restarting...
         </div>
@@ -106,7 +107,7 @@ export function UpdaterSection() {
 
       {/* Install failed */}
       {(installUpdate.isError || (installUpdate.isSuccess && !installUpdate.data?.initiated)) && (
-        <div className="flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <AlertTriangle className="h-3.5 w-3.5" />
           Install failed: {installUpdate.data?.error ?? String(installUpdate.error)}
         </div>
@@ -114,7 +115,7 @@ export function UpdaterSection() {
 
       {/* No update available */}
       {isNotAvailable && (
-        <div className="flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-go-edge)] bg-[var(--go-soft)] px-3 py-2 text-body text-[var(--led-go)]">
           <CheckCircle2 className="h-3.5 w-3.5" />
           You are running the latest version.
         </div>
@@ -122,11 +123,11 @@ export function UpdaterSection() {
 
       {/* Check error */}
       {isError && !isAvailable && (
-        <div className="flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <AlertTriangle className="h-3.5 w-3.5" />
           Check failed: {result?.error ?? String(checkUpdate.error)}
         </div>
       )}
-    </div>
+    </Faceplate>
   );
 }

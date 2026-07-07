@@ -39,3 +39,76 @@ describe('settings-view shell sweep', () => {
     expect(src).toContain('componentName="UpdaterSection"');
   });
 });
+
+describe('updater-section sweep', () => {
+  const src = readSrc('settings/updater-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('bg-[var(--go-soft)]');
+    expect(src).toContain('bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero legacy composition', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-surface-100');
+    expect(src).not.toContain('bg-brand/5');
+    expect(src).not.toContain('text-brand');
+    expect(src).not.toMatch(/\b(text|bg|border)-(red|green|blue)-[0-9]/);
+  });
+
+  it('preserves update handlers + copy', () => {
+    expect(src).toContain('checkUpdate.mutate()');
+    expect(src).toContain('installUpdate.mutate()');
+    expect(src).toContain('Check for Updates');
+    expect(src).toContain('Install & Restart');
+    expect(src).toContain('Team-X never phones home');
+  });
+});
+
+describe('runtime-section sweep', () => {
+  const src = readSrc('settings/runtime-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero legacy composition', () => {
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('text-brand');
+  });
+
+  it('preserves strategy wiring + hardware readouts', () => {
+    expect(src).toContain('setRuntime.mutate({ strategy: opt.value })');
+    expect(src).toContain('orchestrator slot');
+    expect(src).toContain('{hw.cpuCores} cores');
+    expect(src).toContain('{hw.totalRamGb} GB');
+  });
+});
+
+describe('privacy-section sweep', () => {
+  const src = readSrc('settings/privacy-section.tsx');
+
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+    expect(src).toContain('TIER_LED');
+  });
+
+  it('carries zero brand-selected or legacy palette', () => {
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-destructive');
+  });
+
+  it('preserves tier wiring + provider availability', () => {
+    expect(src).toContain('setPrivacy.mutate({ maxTier: opt.value })');
+    expect(src).toContain('Allowed');
+    expect(src).toContain('Blocked');
+    expect(src).toContain('Local Only');
+  });
+});
