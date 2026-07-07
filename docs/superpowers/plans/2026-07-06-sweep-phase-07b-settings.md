@@ -50,7 +50,7 @@ Wave-B/C sections share one legacy idiom (`<section className="space-y-3">` + `<
 | status `Badge` (Enabled/Detected/Active) green LED family | `<LampTile small interactive={false} label="ON" tone="go" />` (Detecting → `label="SYNC" tone="hold"`; Disabled/Offline/None → `label="OFF" tone="nogo"`); the visible badge text is kept as an adjacent `text-caption` span |
 | category / count `Badge variant="outline"` | `<Tag mono>…</Tag>` |
 | raw `<select … className="h-8 … border border-border bg-background …">` | **console-select recipe:** `className="h-8 w-full rounded-inset border border-[var(--hairline-strong)] bg-[var(--void)] px-3 text-code-sm text-[var(--display-fg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"` — `id`/`value`/`onChange`/`disabled`/`<option>`/`<optgroup>` byte-identical |
-| action `Button size="sm"` | `.cap px-3 py-1.5 text-button-sm` (icon-only → `.cap p-1.5`); destructive → append `.cap-warn` |
+| action `Button size="sm"` with legacy className overrides | **keep the Phase-1 restyled `<Button>` variant** (`outline`/`default`/`ghost`/`destructive` — already console-styled) and **strip only** the legacy overrides (raw palette, zinc, `border-white/10 bg-black/10`) — the 7a export-button idiom. Use a **raw `<button className="cap px-3 py-1.5 text-button-sm">`** (icon-only `cap p-1.5`; destructive `cap cap-warn`) ONLY for pagination / icon-only / segmented buttons where the machined-cap look is intended |
 | `text-brand` accent icon | `text-[var(--armed)]` |
 | `text-green-400` / `text-destructive` inline status | `text-led-go` / `text-led-nogo` |
 | `text-amber-400 bg-amber-500/10 border-amber-400/30` info banner | `text-led-warn bg-[var(--warn-soft)] border-[var(--led-warn-edge)]` |
