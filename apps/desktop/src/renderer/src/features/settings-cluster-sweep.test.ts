@@ -367,3 +367,49 @@ describe('extensions-section sweep', () => {
     expect(src).toContain('Active Authority Grants');
   });
 });
+
+describe('rag-section sweep', () => {
+  const src = readSrc('settings/rag-section.tsx');
+
+  // One Faceplate wraps the section; form/knob panels stay adaptive chassis
+  // (`.well` is opaque-dark in both shifts). Index Stats ride phosphor
+  // MetricTiles, status badges become LampTiles, and the hand-rolled
+  // `<button role="switch">` master toggle becomes a Radix Switch.
+  it('composes from console primitives + Switch', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<Switch');
+    expect(src).toContain('className="brand-range"');
+  });
+
+  it('drops the hand-rolled toggle + legacy surface/palette', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-surface-100');
+    expect(src).not.toContain('role="switch"');
+    expect(src).not.toContain('bg-brand');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('text-amber-400');
+    expect(src).not.toContain('bg-green-500/10');
+    expect(src).not.toContain('border-green-400/40');
+  });
+
+  it('preserves RAG control ids + config + maintenance wiring', () => {
+    expect(src).toContain('id="rag-enabled-toggle"');
+    expect(src).toContain('aria-label="Enable RAG"');
+    expect(src).toContain('id="rag-embedding-provider"');
+    expect(src).toContain('id="rag-embedding-model"');
+    expect(src).toContain('id="rag-embedding-dimension"');
+    expect(src).toContain('id="rag-top-k"');
+    expect(src).toContain('id="rag-threshold"');
+    expect(src).toContain('id="rag-max-tokens"');
+    expect(src).toContain('handleToggle');
+    expect(src).toContain('handleRebuildConfirm');
+    expect(src).toContain('handleDeleteConfirm');
+    expect(src).toContain('Chunks Indexed');
+    expect(src).toContain('Rebuild Index');
+    expect(src).toContain('Delete All Embeddings');
+  });
+});
