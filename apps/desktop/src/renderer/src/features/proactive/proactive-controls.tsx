@@ -17,9 +17,8 @@ import type { DashboardEvent } from '@team-x/shared-types';
 import { AlertTriangle, Bot, Loader2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Faceplate, MetricTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
-import { Card } from '@/components/ui/card.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { Switch } from '@/components/ui/switch.js';
 import { ipc } from '@/lib/ipc.js';
 
@@ -127,41 +126,48 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
   // Loading state
   if (settingsLoading || enabledOptimistic === null) {
     return (
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-3">
+      <Faceplate kicker="Autonomy" serial="PROACTIVE" bodyClassName="space-y-3">
+        <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-h3">Proactive Mode</h3>
+          <h3 className="text-h3 text-foreground">Proactive Mode</h3>
         </div>
-        <Skeleton className="h-24 w-full" />
-      </Card>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading proactive settings…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   // Error state
   if (settingsError || !settings) {
     return (
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-3">
+      <Faceplate kicker="Autonomy" serial="PROACTIVE" bodyClassName="space-y-3">
+        <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-h3">Proactive Mode</h3>
+          <h3 className="text-h3 text-foreground">Proactive Mode</h3>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-caption text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          Failed to load proactive settings.
-        </div>
-      </Card>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load proactive settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   const isEnabled = enabledOptimistic;
 
   return (
-    <Card className="p-4">
+    <Faceplate kicker="Autonomy" serial="PROACTIVE" bodyClassName="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-h3">Proactive Mode</h3>
+          <h3 className="text-h3 text-foreground">Proactive Mode</h3>
         </div>
         <Switch
           checked={isEnabled}
@@ -171,44 +177,42 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
       </div>
 
       {/* Status description */}
-      <p className="text-caption text-muted-foreground mb-4">
+      <p className="text-caption text-muted-foreground">
         {isEnabled
           ? 'Agents will actively recognize opportunities and act without explicit commands.'
           : 'Proactive mode is disabled. Agents will only respond to direct commands.'}
       </p>
 
-      {/* Autonomy mode badge */}
-      <div className="flex items-center gap-2 mb-4">
+      {/* Autonomy mode chip */}
+      <div className="flex items-center gap-2">
         <span className="text-caption text-muted-foreground">Autonomy:</span>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-label capitalize">
-          {settings.autonomyMode}
-        </span>
+        <Tag className="capitalize">{settings.autonomyMode}</Tag>
       </div>
 
       {/* Work status */}
       {isEnabled && (
         <div className="space-y-3">
           {stateLoading || !state ? (
-            <Skeleton className="h-16 w-full" />
+            <SubviewState
+              lampLabel="SYNC"
+              lampTone="hold"
+              title="Loading work status…"
+              className="min-h-0 p-4"
+            />
           ) : stateError ? (
-            <div className="flex items-center gap-2 rounded border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-caption text-red-400">
+            <div className="flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-2 py-1.5 text-caption text-[var(--led-nogo)]">
               <AlertTriangle className="h-3 w-3" />
               Failed to load work status
             </div>
           ) : (
-            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
-              <div className="flex items-center justify-between text-caption">
-                <span className="text-muted-foreground">Active Work</span>
-                <span className="font-semibold">{state.activeWork}</span>
-              </div>
-              <div className="flex items-center justify-between text-caption">
-                <span className="text-muted-foreground">Queued Work</span>
-                <span className="font-semibold">{state.queuedWork}</span>
-              </div>
-              <div className="flex items-center justify-between text-caption">
-                <span className="text-muted-foreground">Last Scan</span>
-                <span className="font-semibold">{formatTimestamp(state.lastScanAt)}</span>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <MetricTile label="Active Work" value={String(state.activeWork)} />
+              <MetricTile label="Queued Work" value={String(state.queuedWork)} />
+              <MetricTile
+                label="Last Scan"
+                value={formatTimestamp(state.lastScanAt)}
+                className="col-span-2"
+              />
             </div>
           )}
 
@@ -237,11 +241,14 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
 
       {/* Disabled state message */}
       {!isEnabled && (
-        <div className="rounded-lg bg-muted/50 p-3 text-center text-caption text-muted-foreground">
-          Enable proactive mode to allow agents to work autonomously
-        </div>
+        <SubviewState
+          lampLabel="STBY"
+          lampTone="off"
+          title="Enable proactive mode to allow agents to work autonomously"
+          className="min-h-0 p-6"
+        />
       )}
-    </Card>
+    </Faceplate>
   );
 }
 

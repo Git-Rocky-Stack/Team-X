@@ -413,3 +413,38 @@ describe('rag-section sweep', () => {
     expect(src).toContain('Delete All Embeddings');
   });
 });
+
+describe('proactive-controls sweep', () => {
+  const src = readSrc('proactive/proactive-controls.tsx');
+
+  // Orphan surface (no live importer — a Phase-8 purge candidate) recomposed in
+  // place for console consistency: Card → Faceplate, autonomy chip → Tag,
+  // Active/Queued/Last-Scan readouts → phosphor MetricTiles, empty/error →
+  // SubviewState. The full-width Scan action stays a standard Button.
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<Tag');
+  });
+
+  it('carries zero shadcn-card or legacy palette composition', () => {
+    expect(src).not.toContain("from '@/components/ui/card'");
+    expect(src).not.toContain('bg-muted');
+    expect(src).not.toContain('text-red-400');
+    expect(src).not.toContain('border-red-400/30');
+  });
+
+  it('preserves proactive handlers, hook exports + status copy', () => {
+    expect(src).toContain('handleToggleEnabled');
+    expect(src).toContain('handleScanNow');
+    expect(src).toContain('export function useDecomposeGoal()');
+    expect(src).toContain('export function useScanForWork()');
+    expect(src).toContain('aria-label="Toggle proactive mode"');
+    expect(src).toContain('Proactive Mode');
+    expect(src).toContain('Active Work');
+    expect(src).toContain('Queued Work');
+    expect(src).toContain('Last Scan');
+    expect(src).toContain('Scan for Work Now');
+  });
+});
