@@ -325,3 +325,45 @@ describe('copilot-section sweep', () => {
     expect(src).toContain('Category weighting');
   });
 });
+
+describe('extensions-section sweep', () => {
+  const src = readSrc('settings/extensions-section.tsx');
+
+  // The four shadcn Cards become console Faceplates; the color-coded permission
+  // Badge becomes a LampTile status lamp (allow=GO / deny=NO-GO / prompt=HOLD);
+  // inventory + proactive counts become phosphor MetricTiles. The autonomy
+  // chooser stays chassis carrying the armed selection tint.
+  it('composes from console primitives', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<MetricTile');
+    expect(src).toContain('<SubviewState');
+    expect(src).toContain('<Tag');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+  });
+
+  it('carries zero shadcn-card or legacy palette composition', () => {
+    expect(src).not.toContain("from '@/components/ui/card'");
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('bg-muted/20');
+    expect(src).not.toContain('bg-muted/30');
+    expect(src).not.toContain('border-destructive/30');
+    expect(src).not.toContain('bg-brand-900');
+    expect(src).not.toContain('bg-red-950');
+    expect(src).not.toContain('bg-amber-950');
+  });
+
+  it('preserves authority LAW selectors + handlers + card copy', () => {
+    expect(src).toContain('data-extensions-authority-stable=""');
+    expect(src).toContain('data-extension-add-skill=""');
+    expect(src).toContain('data-extension-add-mcp=""');
+    expect(src).toContain('handleProactiveToggle');
+    expect(src).toContain('async function reviewRequest(');
+    expect(src).toContain('<InstallSkillDialog');
+    expect(src).toContain('<ImportMcpDialog');
+    expect(src).toContain('Autonomy Policy');
+    expect(src).toContain('Authority Snapshot');
+    expect(src).toContain('Pending Authority Reviews');
+    expect(src).toContain('Active Authority Grants');
+  });
+});
