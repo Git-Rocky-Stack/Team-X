@@ -830,12 +830,12 @@ export function PortabilitySection() {
 
                 {missingSecretRefs.length > 0 ? (
                   <div
-                    className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/8 px-3 py-3"
+                    className="mt-3 rounded-inset border border-[var(--led-hold-edge)] bg-[var(--hold-soft)] px-3 py-3"
                     data-portability-secret-wizard=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-body-strong text-foreground">Missing secret wizard</div>
-                      <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-eyebrow-sm text-amber-300">
+                      <span className="rounded-full border border-[var(--led-hold-edge)] bg-[var(--hold-soft)] px-2 py-0.5 text-eyebrow-sm text-[var(--led-hold)]">
                         {secretBindings.length} bound
                       </span>
                     </div>
@@ -847,7 +847,7 @@ export function PortabilitySection() {
                       {missingSecretRefs.map((secret) => (
                         <div
                           key={secret.id}
-                          className="rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                          className="rounded-inset border border-[var(--hairline)] px-3 py-3"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="min-w-0">
@@ -858,9 +858,7 @@ export function PortabilitySection() {
                                 {secret.path}
                               </div>
                             </div>
-                            <span className="rounded-full border border-white/10 px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
-                              {secret.bindable ? 'bindable' : 'manual'}
-                            </span>
+                            <Tag>{secret.bindable ? 'bindable' : 'manual'}</Tag>
                           </div>
                           {secret.bindable ? (
                             <Input
@@ -986,7 +984,7 @@ export function PortabilitySection() {
           )}
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+        <div className="rounded-inset border border-[var(--hairline)] p-3">
           <div className="text-body-strong text-foreground">Local template library</div>
           <p className="mt-1 text-caption text-muted-foreground">
             Template-backed workspace creation lives in the workspace switcher. This library keeps
@@ -1012,7 +1010,7 @@ export function PortabilitySection() {
               {templatesQuery.data?.map((template) => (
                 <div
                   key={template.packagePath}
-                  className="rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                  className="rounded-inset border border-[var(--hairline)] px-3 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
@@ -1038,12 +1036,7 @@ export function PortabilitySection() {
                   {template.manifest.compatibility.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                       {template.manifest.compatibility.slice(0, 4).map((entry) => (
-                        <span
-                          key={entry}
-                          className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
-                        >
-                          {humanizeCompatibility(entry)}
-                        </span>
+                        <Tag key={entry}>{humanizeCompatibility(entry)}</Tag>
                       ))}
                     </div>
                   ) : null}

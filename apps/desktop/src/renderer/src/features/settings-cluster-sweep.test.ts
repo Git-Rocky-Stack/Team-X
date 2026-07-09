@@ -509,4 +509,28 @@ describe('portability-section sweep', () => {
     expect(src).toContain('Import Workspace');
     expect(src).toContain('Install Template');
   });
+
+  // 16e — secret wizard + template library + whole-file legacy sweep.
+  it('sweeps the secret wizard + library and preserves the secret binding hooks', () => {
+    expect(src).toContain('data-portability-secret-wizard=""');
+    expect(src).toContain('data-portability-secret-input={secret.id}');
+    expect(src).toContain('Missing secret wizard');
+    expect(src).toContain('Local template library');
+    // secret wizard keeps its amber-caution intent on the hold family
+    expect(src).toContain('bg-[var(--hold-soft)]');
+  });
+
+  it('carries zero legacy composition across the whole file', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-black/10');
+    expect(src).not.toContain('border-white/10');
+    expect(src).not.toContain('bg-background/');
+    expect(src).not.toContain('brand-selected');
+    expect(src).not.toContain('emerald');
+    expect(src).not.toContain('text-destructive');
+    expect(src).not.toContain('bg-brand');
+    expect(src).not.toContain('text-brand');
+    expect(src).not.toContain('border-brand');
+    expect(src).not.toMatch(/\b(bg|text|border)-(red|green|amber|blue)-[0-9]/);
+  });
 });
