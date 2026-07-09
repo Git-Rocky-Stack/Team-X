@@ -25,9 +25,6 @@ type SkillInstallSource = 'local' | 'url';
 
 const LAST_LOCAL_SKILL_PATH_KEY = 'teamx.lastLocalSkillPath';
 
-const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
-
 function formatInstallError(message: string | null): string | null {
   if (!message) return null;
   if (message.includes('local skill folder not found')) {
@@ -172,9 +169,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
               role="tab"
               aria-selected={source === 'local'}
               className={cn(
-                selectClass,
-                'h-auto min-h-14 items-start gap-2 text-left',
-                source === 'local' && 'border-brand/60 bg-brand/10 text-foreground',
+                'flex h-auto min-h-14 w-full items-start gap-2 rounded-inset border px-3 py-2 text-left text-body transition-colors',
+                source === 'local'
+                  ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                  : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
               )}
               onClick={() => setSource('local')}
               data-skill-source-local=""
@@ -192,9 +190,10 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
               role="tab"
               aria-selected={source === 'url'}
               className={cn(
-                selectClass,
-                'h-auto min-h-14 items-start gap-2 text-left',
-                source === 'url' && 'border-brand/60 bg-brand/10 text-foreground',
+                'flex h-auto min-h-14 w-full items-start gap-2 rounded-inset border px-3 py-2 text-left text-body transition-colors',
+                source === 'url'
+                  ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                  : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
               )}
               onClick={() => setSource('url')}
               data-skill-source-url=""
@@ -264,13 +263,13 @@ export function InstallSkillDialog({ open, onOpenChange, companyId }: InstallSki
           )}
 
           {directoryError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
+            <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
               {directoryError}
             </div>
           )}
 
           {activeError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-body text-destructive">
+            <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
               {activeError}
             </div>
           )}

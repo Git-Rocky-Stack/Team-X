@@ -649,3 +649,28 @@ describe('import-mcp-dialog sweep', () => {
     expect(src).toContain('id="mcp-transport"');
   });
 });
+
+describe('install-skill-dialog sweep', () => {
+  const src = readSrc('settings/install-skill-dialog.tsx');
+
+  it('arms the source chooser + retints error boxes onto console tokens', () => {
+    expect(src).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
+    expect(src).toContain('bg-[var(--warn-soft)]');
+  });
+
+  it('drops the brand chooser + destructive palette', () => {
+    expect(src).not.toContain('bg-brand');
+    expect(src).not.toContain('border-brand');
+    expect(src).not.toContain('text-destructive');
+    expect(src).not.toContain('selectClass');
+  });
+
+  it('preserves the dialog contract, submit + skill source selectors', () => {
+    expect(src).toContain('<DialogTitle>Install Skill</DialogTitle>');
+    expect(src).toContain('function handleSubmit(');
+    expect(src).toContain('data-skill-source-local=""');
+    expect(src).toContain('data-skill-source-url=""');
+    expect(src).toContain('data-skill-folder-path=""');
+    expect(src).toContain('id="skill-folder-path"');
+  });
+});
