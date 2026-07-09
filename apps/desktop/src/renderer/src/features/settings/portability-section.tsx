@@ -12,6 +12,7 @@ import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Faceplate, LampTile } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
@@ -37,11 +38,11 @@ import { useAppStore } from '@/store/app-store.js';
 function readinessTone(readiness: 'ready' | 'warning' | 'blocked'): string {
   switch (readiness) {
     case 'ready':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      return 'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]';
     case 'warning':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+      return 'border-[var(--led-hold-edge)] bg-[var(--hold-soft)] text-[var(--led-hold)]';
     default:
-      return 'border-red-500/30 bg-red-500/10 text-red-300';
+      return 'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]';
   }
 }
 
@@ -102,13 +103,13 @@ function packageSourceLabel(preview: CompanyImportPreview): string {
 function actionTone(action: CompanyPackageImportPlanAction): string {
   switch (action) {
     case 'create':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      return 'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]';
     case 'rename':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+      return 'border-[var(--led-hold-edge)] bg-[var(--hold-soft)] text-[var(--led-hold)]';
     case 'replace':
-      return 'border-brand/30 bg-brand/10 text-brand';
+      return 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-[var(--armed-lit)]';
     default:
-      return 'border-white/10 bg-black/10 text-muted-foreground';
+      return 'border-[var(--hairline)] bg-[var(--carbon-850)] text-silver-mute';
   }
 }
 
@@ -157,13 +158,13 @@ function cloudLinkTone(
 ): string {
   switch (state) {
     case 'linked':
-      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+      return 'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]';
     case 'sync-paused':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+      return 'border-[var(--led-hold-edge)] bg-[var(--hold-soft)] text-[var(--led-hold)]';
     case 'sync-degraded':
-      return 'border-red-500/30 bg-red-500/10 text-red-300';
+      return 'border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] text-[var(--led-nogo)]';
     default:
-      return 'border-white/10 bg-black/10 text-muted-foreground';
+      return 'border-[var(--hairline)] bg-[var(--carbon-850)] text-silver-mute';
   }
 }
 
@@ -311,23 +312,24 @@ export function PortabilitySection() {
   }
 
   return (
-    <section className="space-y-3" data-settings-portability="">
-      <div className="flex items-center gap-2">
-        <h2 className="text-h2 text-foreground">Portability & Templates</h2>
-        {(exportWorkspace.isPending ||
-          exportTemplate.isPending ||
-          installTemplate.isPending ||
-          importPackage.isPending) && (
-          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Working" />
-        )}
-      </div>
+    <section data-settings-portability="">
+      <Faceplate kicker="Portability" serial="TEMPLATES" bodyClassName="space-y-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-h2 text-foreground">Portability & Templates</h2>
+          {(exportWorkspace.isPending ||
+            exportTemplate.isPending ||
+            installTemplate.isPending ||
+            importPackage.isPending) && (
+            <span aria-label="Working">
+              <LampTile small label="SYNC" tone="hold" />
+            </span>
+          )}
+        </div>
 
-      <p className="text-body-sm text-muted-foreground mt-1">
-        Export the active workspace, save reusable templates, preview external Team-X packages
-        before importing them, and keep sharing posture visible as a real operator concern.
-      </p>
-
-      <div className="space-y-4 rounded-lg border border-border bg-surface-50 p-4">
+        <p className="text-body-sm text-muted-foreground">
+          Export the active workspace, save reusable templates, preview external Team-X packages
+          before importing them, and keep sharing posture visible as a real operator concern.
+        </p>
         <div className="rounded-lg border border-white/10 bg-black/10 p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -1076,7 +1078,7 @@ export function PortabilitySection() {
             </div>
           )}
         </div>
-      </div>
+      </Faceplate>
     </section>
   );
 }

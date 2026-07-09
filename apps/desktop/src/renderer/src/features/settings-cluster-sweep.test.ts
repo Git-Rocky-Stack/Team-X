@@ -448,3 +448,29 @@ describe('proactive-controls sweep', () => {
     expect(src).toContain('Scan for Work Now');
   });
 });
+
+describe('portability-section sweep', () => {
+  const src = readSrc('settings/portability-section.tsx');
+
+  // Recomposed in five committed region sub-steps (16a-16e). Whole-file
+  // legacy-absence pins land in 16e: this file's `emerald`/`bg-black/10`
+  // tokens span several regions, and the source-string harness reads the file
+  // as one string, so a whole-file negative can only pass once the last region
+  // sweeps. Intermediate sub-steps therefore use positive + selector pins only.
+
+  // 16a — tone helpers + section header/shell.
+  it('composes the section header from a console faceplate + SYNC lamp', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<LampTile');
+    expect(src).toContain('label="SYNC"');
+    expect(src).toContain('aria-label="Working"');
+    expect(src).toContain('data-settings-portability=""');
+  });
+
+  it('re-tones the readiness/action/cloud-link maps onto the LED + armed families', () => {
+    expect(src).toContain('bg-[var(--go-soft)]');
+    expect(src).toContain('bg-[var(--hold-soft)]');
+    expect(src).toContain('bg-[var(--warn-soft)]');
+    expect(src).toContain('bg-[var(--armed-soft)]');
+  });
+});
