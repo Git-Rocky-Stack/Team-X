@@ -534,3 +534,25 @@ describe('portability-section sweep', () => {
     expect(src).not.toMatch(/\b(bg|text|border)-(red|green|amber|blue)-[0-9]/);
   });
 });
+
+describe('providers-section sweep', () => {
+  const src = readSrc('settings/providers-section.tsx');
+
+  it('composes the host from a console faceplate + subview states', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<SubviewState');
+  });
+
+  it('carries zero legacy palette', () => {
+    expect(src).not.toContain('text-destructive');
+    expect(src).not.toContain("from '@/components/ui/skeleton");
+  });
+
+  it('preserves the add-provider action + card grid mount', () => {
+    expect(src).toContain('setAddOpen(true)');
+    expect(src).toContain('<ProviderCard');
+    expect(src).toContain('<AddProviderDialog');
+    expect(src).toContain('Add Provider');
+    expect(src).toContain('AI Providers');
+  });
+});
