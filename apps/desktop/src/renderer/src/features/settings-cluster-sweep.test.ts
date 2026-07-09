@@ -674,3 +674,26 @@ describe('install-skill-dialog sweep', () => {
     expect(src).toContain('id="skill-folder-path"');
   });
 });
+
+describe('grant-authority-dialog sweep', () => {
+  const src = readSrc('settings/grant-authority-dialog.tsx');
+
+  it('recomposes the authority selects onto the console-select recipe', () => {
+    expect(src).toContain("'well-input flex h-10 w-full px-3 py-2 text-body'");
+  });
+
+  it('drops the raw select + destructive palette', () => {
+    expect(src).not.toContain('border-input');
+    expect(src).not.toContain('bg-background');
+    expect(src).not.toContain('text-destructive');
+  });
+
+  it('preserves the dialog contract, submit + authority selectors', () => {
+    expect(src).toContain('<DialogTitle>Grant Authority</DialogTitle>');
+    expect(src).toContain('function handleSubmit(');
+    expect(src).toContain('data-authority-scope-kind=""');
+    expect(src).toContain('data-authority-permission=""');
+    expect(src).toContain('data-authority-grant-submit=""');
+    expect(src).toContain('id="authority-capability"');
+  });
+});
