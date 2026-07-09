@@ -556,3 +556,42 @@ describe('providers-section sweep', () => {
     expect(src).toContain('AI Providers');
   });
 });
+
+describe('provider-card sweep', () => {
+  const src = readSrc('settings/provider-card.tsx');
+
+  it('composes the card shell from a console faceplate + tier LED map', () => {
+    expect(src).toContain('<Faceplate');
+    expect(src).toContain('<Tag');
+    // Tier is a category coding, not a health status: local/open/proprietary =
+    // go/scope/hold. Amber caution is kept on --led-hold (not --led-warn).
+    expect(src).toContain("local: 'text-[var(--led-go)] border-[var(--led-go-edge)]'");
+    expect(src).toContain("'proprietary-cloud': 'text-[var(--led-hold)] border-[var(--led-hold-edge)]'");
+    expect(src).toContain('well-input h-8 w-full px-3 text-code-sm');
+  });
+
+  it('drops the raw card/select palette + status greens', () => {
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('bg-surface-100');
+    expect(src).not.toContain('text-green-400');
+    expect(src).not.toContain('text-blue-400');
+    expect(src).not.toContain('text-amber-400');
+    expect(src).not.toContain('bg-background');
+  });
+
+  it('preserves provider handlers, model ids, tier labels + action copy', () => {
+    expect(src).toContain('function handleToggle()');
+    expect(src).toContain('function handleSaveKey(');
+    expect(src).toContain('function handleTest()');
+    expect(src).toContain('function handleRemove()');
+    expect(src).toContain('saveOllamaModel');
+    expect(src).toContain('id={`provider-model-${provider.id}`}');
+    expect(src).toContain('id={`provider-model-select-${provider.id}`}');
+    expect(src).toContain('Set API Key');
+    expect(src).toContain('Connected');
+    expect(src).toContain('Detected Local Models');
+    expect(src).toContain('Detected Cloud Models');
+    expect(src).toContain('Suggested Cloud Models');
+    expect(src).toContain('TIER_LABEL: Record<PrivacyTier, string>');
+  });
+});

@@ -12,7 +12,7 @@ import type { PrivacyTier, ProviderConfig } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import {
@@ -27,9 +27,9 @@ import {
 // ---------------------------------------------------------------------------
 
 const TIER_STYLE: Record<PrivacyTier, string> = {
-  local: 'text-green-400 border-green-400/30',
-  'open-source-cloud': 'text-blue-400 border-blue-400/30',
-  'proprietary-cloud': 'text-amber-400 border-amber-400/30',
+  local: 'text-[var(--led-go)] border-[var(--led-go-edge)]',
+  'open-source-cloud': 'text-[var(--led-scope)] border-[var(--led-scope-edge)]',
+  'proprietary-cloud': 'text-[var(--led-hold)] border-[var(--led-hold-edge)]',
 };
 
 const TIER_LABEL: Record<PrivacyTier, string> = {
@@ -153,25 +153,22 @@ export function ProviderCard({ provider }: ProviderCardProps) {
   }
 
   return (
-    <div className="flex flex-col rounded-lg border border-border bg-surface-50 overflow-hidden">
+    <Faceplate bolts={false} className="flex flex-col overflow-hidden" bodyClassName="p-0">
       {/* ---- Header ---- */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-100 text-button-sm font-bold uppercase text-muted-foreground">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--carbon-850)] text-button-sm font-bold uppercase text-muted-foreground">
             {provider.kind.charAt(0)}
           </div>
           <div className="min-w-0">
             <p className="text-body-strong text-foreground truncate">{provider.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+              <Tag mono className="text-[10px] px-1.5 py-0">
                 {provider.kind}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={`text-[10px] px-1.5 py-0 ${TIER_STYLE[provider.privacyTier]}`}
-              >
+              </Tag>
+              <Tag className={`text-[10px] px-1.5 py-0 ${TIER_STYLE[provider.privacyTier]}`}>
                 {TIER_LABEL[provider.privacyTier]}
-              </Badge>
+              </Tag>
             </div>
           </div>
         </div>
@@ -184,7 +181,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
           disabled={isBusy}
           className={`shrink-0 gap-1.5 text-button-sm ${
             provider.enabled
-              ? 'text-green-400 border-green-400/30 hover:bg-green-400/10'
+              ? 'text-[var(--led-go)] border-[var(--led-go-edge)] hover:bg-[var(--go-soft)]'
               : 'text-muted-foreground'
           }`}
         >
@@ -202,7 +199,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       )}
 
       {isOllama && (
-        <div className="border-t border-border px-4 py-3">
+        <div className="border-t border-[var(--hairline)] px-4 py-3">
           <label
             htmlFor={`provider-model-${provider.id}`}
             className="text-label text-muted-foreground"
@@ -239,7 +236,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               {modelQuery.isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Refresh'}
             </Button>
           </form>
-          <div className="mt-2 rounded-md border border-border bg-background/40 px-3 py-2">
+          <div className="mt-2 rounded-inset border border-[var(--hairline)] px-3 py-2">
             <div className="mb-1.5 flex items-center justify-between gap-2">
               <label
                 htmlFor={`provider-model-select-${provider.id}`}
@@ -260,7 +257,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                 Loading Ollama tags...
               </div>
             ) : modelError ? (
-              <p className="text-caption text-destructive">
+              <p className="text-caption text-[var(--led-nogo)]">
                 {modelStatus === 'error'
                   ? `Ollama server error${
                       modelQuery.data?.detail ? ` (${modelQuery.data.detail})` : ''
@@ -278,7 +275,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
                     saveOllamaModel(nextModel);
                   }
                 }}
-                className="h-8 w-full rounded-md border border-border bg-background px-3 text-code-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="well-input h-8 w-full px-3 text-code-sm"
               >
                 <option value="">Choose an Ollama model…</option>
                 {detectedLocalModels.length > 0 && (
@@ -312,7 +309,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
             )}
           </div>
           {hasUnsavedOllamaModel && (
-            <p className="mt-2 text-caption text-amber-400/80">
+            <p className="mt-2 text-caption text-[var(--led-hold)]">
               {updateMut.isPending
                 ? 'Saving the selected Ollama model now...'
                 : 'Model change is staged locally. Press Save to apply it.'}
@@ -330,7 +327,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
       {/* ---- API Key section (non-Ollama providers) ---- */}
       {needsKey && (
-        <div className="border-t border-border px-4 py-3">
+        <div className="border-t border-[var(--hairline)] px-4 py-3">
           {showKeyInput ? (
             <form onSubmit={handleSaveKey} className="flex gap-2">
               <Input
@@ -377,7 +374,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       )}
 
       {/* ---- Actions footer ---- */}
-      <div className="border-t border-border px-4 py-3 flex items-center justify-between gap-2">
+      <div className="border-t border-[var(--hairline)] px-4 py-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -393,14 +390,14 @@ export function ProviderCard({ provider }: ProviderCardProps) {
 
           {/* Test result indicator */}
           {testMut.isSuccess && testMut.data.ok && (
-            <span className="text-caption text-green-400">Connected</span>
+            <span className="text-caption text-[var(--led-go)]">Connected</span>
           )}
           {testMut.isSuccess && !testMut.data.ok && (
-            <span className="text-caption text-destructive" title={testMut.data.error}>
+            <span className="text-caption text-[var(--led-nogo)]" title={testMut.data.error}>
               Failed
             </span>
           )}
-          {testMut.isError && <span className="text-caption text-destructive">Error</span>}
+          {testMut.isError && <span className="text-caption text-[var(--led-nogo)]">Error</span>}
         </div>
 
         <Button
@@ -417,12 +414,12 @@ export function ProviderCard({ provider }: ProviderCardProps) {
       </div>
 
       {removeMut.isError && (
-        <div className="border-t border-border px-4 py-2">
-          <p className="text-caption text-destructive">
+        <div className="border-t border-[var(--hairline)] px-4 py-2">
+          <p className="text-caption text-[var(--led-nogo)]">
             Failed to remove provider. {errorMessage(removeMut.error, 'Try again.')}
           </p>
         </div>
       )}
-    </div>
+    </Faceplate>
   );
 }
