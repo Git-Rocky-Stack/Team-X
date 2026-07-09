@@ -566,7 +566,9 @@ describe('provider-card sweep', () => {
     // Tier is a category coding, not a health status: local/open/proprietary =
     // go/scope/hold. Amber caution is kept on --led-hold (not --led-warn).
     expect(src).toContain("local: 'text-[var(--led-go)] border-[var(--led-go-edge)]'");
-    expect(src).toContain("'proprietary-cloud': 'text-[var(--led-hold)] border-[var(--led-hold-edge)]'");
+    expect(src).toContain(
+      "'proprietary-cloud': 'text-[var(--led-hold)] border-[var(--led-hold-edge)]'",
+    );
     expect(src).toContain('well-input h-8 w-full px-3 text-code-sm');
   });
 
@@ -695,5 +697,49 @@ describe('grant-authority-dialog sweep', () => {
     expect(src).toContain('data-authority-permission=""');
     expect(src).toContain('data-authority-grant-submit=""');
     expect(src).toContain('id="authority-capability"');
+  });
+});
+
+describe('settings cluster cross-file legacy absence', () => {
+  const files = [
+    'settings/settings-view.tsx',
+    'settings/updater-section.tsx',
+    'settings/runtime-section.tsx',
+    'settings/privacy-section.tsx',
+    'settings/concurrency-section.tsx',
+    'settings/agentic-section.tsx',
+    'settings/planner-section.tsx',
+    'settings/permissions-section.tsx',
+    'settings/rag-section.tsx',
+    'settings/enhanced-ai-section.tsx',
+    'settings/copilot-section.tsx',
+    'settings/extensions-section.tsx',
+    'settings/backup-section.tsx',
+    'settings/memory-section.tsx',
+    'proactive/proactive-controls.tsx',
+    'settings/portability-section.tsx',
+    'settings/providers-section.tsx',
+    'settings/provider-card.tsx',
+    'settings/add-provider-dialog.tsx',
+    'settings/import-mcp-dialog.tsx',
+    'settings/install-skill-dialog.tsx',
+    'settings/grant-authority-dialog.tsx',
+  ];
+
+  it('keeps every swept settings file free of the legacy composition families', () => {
+    for (const file of files) {
+      const src = readSrc(file);
+      expect(src, file).not.toContain('amoled-menu-surface');
+      expect(src, file).not.toContain('brand-selected');
+      expect(src, file).not.toMatch(/from '@\/components\/ui\/card'/);
+      expect(src, file).not.toContain('bg-surface-50');
+      expect(src, file).not.toMatch(/#[0-9a-fA-F]{6,8}\b/);
+      expect(src, file).not.toMatch(/\b(text|bg|border)-(red|green|amber|emerald|blue)-[0-9]/);
+    }
+  });
+
+  it('confirms the amoled-menu-surface recipe is deleted from globals.css', () => {
+    const css = readFileSync(join(featuresDir, '../styles/globals.css'), 'utf8');
+    expect(css).not.toContain('.amoled-menu-surface');
   });
 });
