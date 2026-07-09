@@ -473,4 +473,14 @@ describe('portability-section sweep', () => {
     expect(src).toContain('bg-[var(--warn-soft)]');
     expect(src).toContain('bg-[var(--armed-soft)]');
   });
+
+  // 16b — cloud-link shell region.
+  it('recomposes the cloud-link shell onto a chassis panel + neutral tags', () => {
+    expect(src).toContain('data-cloud-link-shell=""');
+    expect(src).toContain('rounded-inset border border-[var(--hairline)]');
+    expect(src).toContain('<Tag');
+    expect(src).toContain('Link Workspace');
+    expect(src).toContain('Reconnect');
+    expect(src).toContain('Unlink Workspace');
+  });
 });

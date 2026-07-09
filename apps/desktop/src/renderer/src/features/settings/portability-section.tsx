@@ -12,7 +12,7 @@ import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Faceplate, LampTile } from '@/components/console/index.js';
+import { Faceplate, LampTile, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
@@ -425,7 +425,7 @@ export function PortabilitySection() {
               </div>
 
               <div
-                className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                className="mt-3 rounded-inset border border-[var(--hairline)] px-3 py-3"
                 data-cloud-link-shell=""
               >
                 <div className="flex items-center justify-between gap-3">
@@ -447,7 +447,7 @@ export function PortabilitySection() {
                     <Skeleton className="h-12 rounded-lg" />
                   </div>
                 ) : cloudLinkQuery.isError || !cloudLink ? (
-                  <p className="mt-3 text-caption text-destructive">
+                  <p className="mt-3 text-caption text-[var(--led-nogo)]">
                     Failed to load linked-workspace posture for this workspace.
                   </p>
                 ) : (
@@ -458,12 +458,10 @@ export function PortabilitySection() {
                       >
                         {cloudLinkStateLabel(cloudLink.state)}
                       </span>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-muted-foreground">
+                      <Tag mono>
                         {cloudLink.cloudWorkspaceId ?? 'No cloud workspace id reserved'}
-                      </span>
-                      <span className="rounded-full border border-white/10 px-2 py-0.5 text-muted-foreground">
-                        {cloudLink.deviceId}
-                      </span>
+                      </Tag>
+                      <Tag mono>{cloudLink.deviceId}</Tag>
                     </div>
 
                     <p className="mt-3 text-caption text-muted-foreground">
@@ -505,17 +503,17 @@ export function PortabilitySection() {
                     </div>
 
                     {linkWorkspace.isError ? (
-                      <p className="mt-3 text-caption text-destructive">
+                      <p className="mt-3 text-caption text-[var(--led-nogo)]">
                         Failed to link workspace: {String(linkWorkspace.error)}
                       </p>
                     ) : null}
                     {reconnectWorkspace.isError ? (
-                      <p className="mt-3 text-caption text-destructive">
+                      <p className="mt-3 text-caption text-[var(--led-nogo)]">
                         Failed to reconnect workspace: {String(reconnectWorkspace.error)}
                       </p>
                     ) : null}
                     {unlinkWorkspace.isError ? (
-                      <p className="mt-3 text-caption text-destructive">
+                      <p className="mt-3 text-caption text-[var(--led-nogo)]">
                         Failed to unlink workspace: {String(unlinkWorkspace.error)}
                       </p>
                     ) : null}
