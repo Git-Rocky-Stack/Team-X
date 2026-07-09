@@ -494,4 +494,19 @@ describe('portability-section sweep', () => {
     expect(src).toContain('Open Autonomy Access');
     expect(src).toContain('pending invites');
   });
+
+  // 16d — export/template/preview panels + manifest preview + plan + diagnostics.
+  it('recomposes the preview/plan/diagnostics onto console chassis + scope accent', () => {
+    expect(src).toContain('data-portability-manifest-preview=""');
+    expect(src).toContain('data-portability-import-plan=""');
+    expect(src).toContain('data-portability-runtime-template-diagnostics=""');
+    // Runtime diagnostics is informational, so its brand-red accent becomes the
+    // teal scope family — armed-red is reserved for command authority.
+    expect(src).toContain('bg-[var(--scope-soft)]');
+    expect(src).toContain('Manifest Preview');
+    expect(src).toContain('Export Package');
+    expect(src).toContain('Save Template');
+    expect(src).toContain('Import Workspace');
+    expect(src).toContain('Install Template');
+  });
 });

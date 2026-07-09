@@ -600,7 +600,7 @@ export function PortabilitySection() {
           )}
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+        <div className="rounded-inset border border-[var(--hairline)] p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-body-strong text-foreground">
@@ -622,18 +622,18 @@ export function PortabilitySection() {
             </Button>
           </div>
           {exportWorkspace.isSuccess ? (
-            <p className="mt-3 text-caption text-emerald-600">
+            <p className="mt-3 text-caption text-[var(--led-go)]">
               Workspace package saved to {exportWorkspace.data.packagePath}
             </p>
           ) : null}
           {exportWorkspace.isError ? (
-            <p className="mt-3 text-caption text-destructive">
+            <p className="mt-3 text-caption text-[var(--led-nogo)]">
               Failed to export workspace package: {String(exportWorkspace.error)}
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+        <div className="rounded-inset border border-[var(--hairline)] p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-body-strong text-foreground">
@@ -655,30 +655,25 @@ export function PortabilitySection() {
             </Button>
           </div>
           {exportTemplate.isSuccess ? (
-            <p className="mt-3 text-caption text-emerald-600">
+            <p className="mt-3 text-caption text-[var(--led-go)]">
               Template saved to {exportTemplate.data.packagePath}
             </p>
           ) : null}
           {exportTemplate.isSuccess && exportTemplate.data.manifest.compatibility.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
               {exportTemplate.data.manifest.compatibility.map((entry) => (
-                <span
-                  key={entry}
-                  className="rounded-full border border-white/10 bg-background/70 px-2 py-1"
-                >
-                  {humanizeCompatibility(entry)}
-                </span>
+                <Tag key={entry}>{humanizeCompatibility(entry)}</Tag>
               ))}
             </div>
           ) : null}
           {exportTemplate.isError ? (
-            <p className="mt-3 text-caption text-destructive">
+            <p className="mt-3 text-caption text-[var(--led-nogo)]">
               Failed to save template: {String(exportTemplate.error)}
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+        <div className="rounded-inset border border-[var(--hairline)] p-3">
           <div className="text-body-strong text-foreground">
             Preview package from path or GitHub
           </div>
@@ -706,13 +701,13 @@ export function PortabilitySection() {
               <Skeleton className="h-12 rounded-lg" />
             </div>
           ) : packagePreviewQuery.isError || !packagePreview ? (
-            <p className="mt-3 text-caption text-destructive">
+            <p className="mt-3 text-caption text-[var(--led-nogo)]">
               Failed to preview package: {String(packagePreviewQuery.error)}
             </p>
           ) : (
             <div className="mt-3 space-y-3">
               <div
-                className="rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                className="rounded-inset border border-[var(--hairline)] px-3 py-3"
                 data-portability-manifest-preview=""
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -725,9 +720,7 @@ export function PortabilitySection() {
                       <span className="truncate">{packageSourceLabel(packagePreview)}</span>
                     </p>
                   </div>
-                  <span className="rounded-full border border-white/10 px-2 py-0.5 text-eyebrow-sm text-muted-foreground">
-                    {packageModeLabel(packagePreview.manifest.mode)}
-                  </span>
+                  <Tag>{packageModeLabel(packagePreview.manifest.mode)}</Tag>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
@@ -741,12 +734,9 @@ export function PortabilitySection() {
 
                 <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
                   {packagePreview.manifest.sections.map((section) => (
-                    <span
-                      key={section}
-                      className="rounded-full border border-white/10 px-2 py-1 uppercase tracking-[0.14em]"
-                    >
+                    <Tag key={section} className="uppercase tracking-[0.14em]">
                       {section}
-                    </span>
+                    </Tag>
                   ))}
                 </div>
 
@@ -755,12 +745,7 @@ export function PortabilitySection() {
                     <div className="text-eyebrow text-muted-foreground">Compatibility</div>
                     <div className="mt-2 flex flex-wrap gap-2 text-caption text-muted-foreground">
                       {packagePreview.manifest.compatibility.map((entry) => (
-                        <span
-                          key={entry}
-                          className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
-                        >
-                          {humanizeCompatibility(entry)}
-                        </span>
+                        <Tag key={entry}>{humanizeCompatibility(entry)}</Tag>
                       ))}
                     </div>
                   </div>
@@ -768,7 +753,7 @@ export function PortabilitySection() {
 
                 {packagePreview.plan ? (
                   <div
-                    className="mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-3"
+                    className="mt-3 rounded-inset border border-[var(--hairline)] px-3 py-3"
                     data-portability-import-plan=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -784,7 +769,7 @@ export function PortabilitySection() {
                       {packagePreview.plan.items.map((item) => (
                         <div
                           key={item.id}
-                          className="rounded-lg border border-white/10 bg-background/70 px-3 py-2"
+                          className="rounded-inset border border-[var(--hairline)] px-3 py-2"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="text-body-strong text-foreground">{item.label}</div>
@@ -803,14 +788,14 @@ export function PortabilitySection() {
 
                 {runtimeProfileCount > 0 || runtimeTemplateNotes.length > 0 ? (
                   <div
-                    className="mt-3 rounded-lg border border-brand/15 bg-brand/8 px-3 py-3"
+                    className="mt-3 rounded-inset border border-[var(--led-scope-edge)] bg-[var(--scope-soft)] px-3 py-3"
                     data-portability-runtime-template-diagnostics=""
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-body-strong text-foreground">
                         Runtime template diagnostics
                       </div>
-                      <span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-eyebrow-sm text-brand">
+                      <span className="rounded-full border border-[var(--led-scope-edge)] bg-[var(--scope-soft)] px-2 py-0.5 text-eyebrow-sm text-[var(--led-scope)]">
                         {runtimeProfileCount} runtime profile
                         {runtimeProfileCount === 1 ? '' : 's'}
                       </span>
@@ -818,12 +803,7 @@ export function PortabilitySection() {
                     {runtimeProfileKinds.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-2 text-caption text-muted-foreground">
                         {runtimeProfileKinds.map((kind) => (
-                          <span
-                            key={kind}
-                            className="rounded-full border border-white/10 bg-black/10 px-2 py-1"
-                          >
-                            {runtimeKindLabel(kind)}
-                          </span>
+                          <Tag key={kind}>{runtimeKindLabel(kind)}</Tag>
                         ))}
                       </div>
                     ) : null}
@@ -911,7 +891,7 @@ export function PortabilitySection() {
               </div>
 
               {packagePreview.manifest.mode === 'workspace-export' ? (
-                <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+                <div className="rounded-inset border border-[var(--hairline)] px-3 py-3">
                   <div className="text-body-strong text-foreground">Import as new workspace</div>
                   <p className="mt-1 text-caption text-muted-foreground">
                     Import stays non-destructive. Team-X will create a fresh workspace copy with new
@@ -955,18 +935,18 @@ export function PortabilitySection() {
                     </Button>
                   </div>
                   {importPackage.isSuccess ? (
-                    <p className="mt-3 text-caption text-emerald-600">
+                    <p className="mt-3 text-caption text-[var(--led-go)]">
                       Workspace imported and switched to {importName.trim() || importSlug.trim()}.
                     </p>
                   ) : null}
                   {importPackage.isError ? (
-                    <p className="mt-3 text-caption text-destructive">
+                    <p className="mt-3 text-caption text-[var(--led-nogo)]">
                       Failed to import workspace package: {String(importPackage.error)}
                     </p>
                   ) : null}
                 </div>
               ) : (
-                <div className="rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+                <div className="rounded-inset border border-[var(--hairline)] px-3 py-3">
                   <div className="text-body-strong text-foreground">Install into local library</div>
                   <p className="mt-1 text-caption text-muted-foreground">
                     Template packages become visible in the workspace switcher after installation,
@@ -991,12 +971,12 @@ export function PortabilitySection() {
                     </Button>
                   </div>
                   {installTemplate.isSuccess ? (
-                    <p className="mt-3 text-caption text-emerald-600">
+                    <p className="mt-3 text-caption text-[var(--led-go)]">
                       Template installed to {installTemplate.data.template.packagePath}
                     </p>
                   ) : null}
                   {installTemplate.isError ? (
-                    <p className="mt-3 text-caption text-destructive">
+                    <p className="mt-3 text-caption text-[var(--led-nogo)]">
                       Failed to install template: {String(installTemplate.error)}
                     </p>
                   ) : null}
@@ -1019,7 +999,7 @@ export function PortabilitySection() {
               <Skeleton className="h-16 rounded-lg" />
             </div>
           ) : templatesQuery.isError ? (
-            <p className="mt-3 text-caption text-destructive">
+            <p className="mt-3 text-caption text-[var(--led-nogo)]">
               Failed to load the local template library.
             </p>
           ) : (templatesQuery.data?.length ?? 0) === 0 ? (
