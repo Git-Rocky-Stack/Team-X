@@ -483,4 +483,15 @@ describe('portability-section sweep', () => {
     expect(src).toContain('Reconnect');
     expect(src).toContain('Unlink Workspace');
   });
+
+  // 16c — sharing posture + chooser + readiness + operator invites.
+  it('arms the sharing-mode chooser + preserves the invite-readiness shell', () => {
+    expect(src).toContain('data-portability-invite-readiness=""');
+    // brand-selected lives only in this chooser, so its whole-file negative
+    // can already pass at 16c (unlike emerald, which spans regions).
+    expect(src).not.toContain('brand-selected');
+    expect(src).toContain('rounded-inset border px-3 py-3 text-left');
+    expect(src).toContain('Open Autonomy Access');
+    expect(src).toContain('pending invites');
+  });
 });

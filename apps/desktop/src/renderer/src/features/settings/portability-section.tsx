@@ -330,7 +330,7 @@ export function PortabilitySection() {
           Export the active workspace, save reusable templates, preview external Team-X packages
           before importing them, and keep sharing posture visible as a real operator concern.
         </p>
-        <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+        <div className="rounded-inset border border-[var(--hairline)] p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-body-strong text-foreground">Sharing posture</div>
@@ -354,7 +354,7 @@ export function PortabilitySection() {
               <Skeleton className="h-16 rounded-lg" />
             </div>
           ) : sharingReadinessQuery.isError || !sharingReadiness ? (
-            <p className="mt-3 text-caption text-destructive">
+            <p className="mt-3 text-caption text-[var(--led-nogo)]">
               Failed to resolve sharing readiness for this workspace.
             </p>
           ) : (
@@ -371,10 +371,10 @@ export function PortabilitySection() {
                       type="button"
                       onClick={() => updateSharingMode.mutate(mode)}
                       disabled={updateSharingMode.isPending}
-                      className={`rounded-lg border px-3 py-3 text-left ${
+                      className={`rounded-inset border px-3 py-3 text-left transition-colors ${
                         selected
-                          ? 'brand-selected'
-                          : 'border-white/10 bg-background/60 hover:border-white/20 transition-colors'
+                          ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
+                          : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -396,7 +396,7 @@ export function PortabilitySection() {
                 })}
               </div>
 
-              <div className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3">
+              <div className="mt-3 rounded-inset border border-[var(--hairline)] px-3 py-3">
                 <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
                   <span>Configured {modeLabel(sharingReadiness.configuredMode)}</span>
                   <span>Effective {modeLabel(sharingReadiness.effectiveMode)}</span>
@@ -418,7 +418,7 @@ export function PortabilitySection() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-caption text-emerald-600">
+                  <p className="mt-3 text-caption text-[var(--led-go)]">
                     The currently selected sharing posture is ready on this workspace.
                   </p>
                 )}
@@ -522,7 +522,7 @@ export function PortabilitySection() {
               </div>
 
               <div
-                className="mt-3 rounded-lg border border-white/10 bg-background/70 px-3 py-3"
+                className="mt-3 rounded-inset border border-[var(--hairline)] px-3 py-3"
                 data-portability-invite-readiness=""
               >
                 <div className="flex items-center justify-between gap-3">
@@ -551,7 +551,7 @@ export function PortabilitySection() {
                     <Skeleton className="h-12 rounded-lg" />
                   </div>
                 ) : invitesQuery.isError ? (
-                  <p className="mt-3 text-caption text-destructive">
+                  <p className="mt-3 text-caption text-[var(--led-nogo)]">
                     Failed to load shared operator invites for this workspace.
                   </p>
                 ) : invites.length === 0 ? (
@@ -565,7 +565,7 @@ export function PortabilitySection() {
                     {invites.slice(0, 3).map((invite) => (
                       <div
                         key={invite.id}
-                        className="rounded-lg border border-white/10 bg-black/10 px-3 py-3"
+                        className="rounded-inset border border-[var(--hairline)] px-3 py-3"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 text-caption">
                           <div className="min-w-0 text-foreground">
@@ -592,7 +592,7 @@ export function PortabilitySection() {
               </div>
 
               {updateSharingMode.isError ? (
-                <p className="mt-3 text-caption text-destructive">
+                <p className="mt-3 text-caption text-[var(--led-nogo)]">
                   Failed to save sharing posture: {String(updateSharingMode.error)}
                 </p>
               ) : null}
