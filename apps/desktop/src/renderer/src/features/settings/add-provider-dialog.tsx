@@ -156,9 +156,8 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
     );
   }
 
-  // Shared input styling to match native selects with the Input component
-  const selectClass =
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  // Shared console-select styling for the native selects (well-input recipe).
+  const selectClass = 'well-input flex h-10 w-full px-3 py-2 text-body';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -171,7 +170,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
           }}
           role="presentation"
         />
-        <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-background p-6 shadow-xl">
+        <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-overlay border border-[var(--hairline-strong)] bg-[var(--carbon-850)] p-6 shadow-xl">
           <h2 className="text-h3 text-foreground">Add Provider</h2>
           <p className="mt-1 text-body-sm text-muted-foreground">
             Register a new LLM provider for your agents to use.
@@ -285,7 +284,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
             </div>
 
             {addMut.isError && (
-              <p className="text-body text-destructive mt-1">
+              <p className="text-body text-[var(--led-nogo)] mt-1">
                 Failed to add provider. Check your inputs and try again.
               </p>
             )}

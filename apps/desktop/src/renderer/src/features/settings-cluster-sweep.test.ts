@@ -595,3 +595,31 @@ describe('provider-card sweep', () => {
     expect(src).toContain('TIER_LABEL: Record<PrivacyTier, string>');
   });
 });
+
+describe('add-provider-dialog sweep', () => {
+  const src = readSrc('settings/add-provider-dialog.tsx');
+
+  it('recomposes the hand-rolled panel + selects onto console vocabulary', () => {
+    expect(src).toContain('bg-[var(--carbon-850)]');
+    expect(src).toContain("'well-input flex h-10 w-full px-3 py-2 text-body'");
+  });
+
+  it('drops the raw panel + select palette', () => {
+    expect(src).not.toContain('bg-background');
+    expect(src).not.toContain('border-input');
+    expect(src).not.toContain('text-destructive');
+  });
+
+  it('preserves the dialog contract, handlers, field ids + keychain copy', () => {
+    expect(src).toContain('<Dialog open={open} onOpenChange={onOpenChange}');
+    expect(src).toContain('function handleSubmit(');
+    expect(src).toContain('function handleKindChange(');
+    expect(src).toContain('id="provider-kind"');
+    expect(src).toContain('id="provider-name"');
+    expect(src).toContain('id="provider-tier"');
+    expect(src).toContain('id="provider-key"');
+    expect(src).toContain('id="provider-url"');
+    expect(src).toContain('Add Provider');
+    expect(src).toContain('Stored in your OS keychain');
+  });
+});
