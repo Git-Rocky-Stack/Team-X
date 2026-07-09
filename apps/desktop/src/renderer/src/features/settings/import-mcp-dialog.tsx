@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -26,8 +26,7 @@ interface ImportMcpDialogProps {
   companyId: string | null;
 }
 
-const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+const selectClass = 'well-input flex h-10 w-full px-3 py-2 text-body';
 
 type ImportMode = 'template' | 'manual';
 
@@ -198,9 +197,11 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
               {templatesQuery.isLoading ? (
                 <p className="text-body text-muted-foreground">Loading built-in templates...</p>
               ) : templatesQuery.isError ? (
-                <p className="text-body text-destructive">Failed to load built-in MCP templates.</p>
+                <p className="text-body text-[var(--led-nogo)]">
+                  Failed to load built-in MCP templates.
+                </p>
               ) : selectedTemplate ? (
-                <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                <div className="rounded-inset border border-[var(--hairline)] px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-body-strong text-foreground">
@@ -211,8 +212,8 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline">{selectedTemplate.transport}</Badge>
-                      {selectedTemplate.installed && <Badge variant="secondary">Installed</Badge>}
+                      <Tag>{selectedTemplate.transport}</Tag>
+                      {selectedTemplate.installed && <Tag>Installed</Tag>}
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-caption text-muted-foreground">
@@ -320,15 +321,15 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
           )}
 
           {mode === 'manual' && testConnection.isSuccess && testConnection.data.ok && (
-            <p className="text-body text-emerald-600">
+            <p className="text-body text-[var(--led-go)]">
               Connection ok. Detected {testConnection.data.toolCount ?? 0} tool(s).
             </p>
           )}
           {mode === 'manual' && testConnection.isError && (
-            <p className="text-body text-destructive">Failed to test MCP connection.</p>
+            <p className="text-body text-[var(--led-nogo)]">Failed to test MCP connection.</p>
           )}
           {mode === 'manual' && testConnection.isSuccess && testConnection.data.ok === false && (
-            <p className="text-body text-destructive">
+            <p className="text-body text-[var(--led-nogo)]">
               {testConnection.data.error ?? 'MCP connection test failed.'}
             </p>
           )}
@@ -338,12 +339,12 @@ export function ImportMcpDialog({ open, onOpenChange, companyId }: ImportMcpDial
             </p>
           )}
           {mode === 'manual' && addMcpServer.isError && (
-            <p className="text-body text-destructive">
+            <p className="text-body text-[var(--led-nogo)]">
               Failed to import the MCP server. Check the transport settings and try again.
             </p>
           )}
           {mode === 'template' && installTemplate.isError && (
-            <p className="text-body text-destructive">
+            <p className="text-body text-[var(--led-nogo)]">
               Failed to install the selected template into this workspace.
             </p>
           )}

@@ -623,3 +623,29 @@ describe('add-provider-dialog sweep', () => {
     expect(src).toContain('Stored in your OS keychain');
   });
 });
+
+describe('import-mcp-dialog sweep', () => {
+  const src = readSrc('settings/import-mcp-dialog.tsx');
+
+  it('recomposes the dialog content onto console vocabulary', () => {
+    expect(src).toContain("'well-input flex h-10 w-full px-3 py-2 text-body'");
+    expect(src).toContain('<Tag');
+    expect(src).toContain('rounded-inset border border-[var(--hairline)]');
+  });
+
+  it('drops the legacy palette', () => {
+    expect(src).not.toContain('text-destructive');
+    expect(src).not.toContain('bg-muted');
+    expect(src).not.toContain('bg-surface-50');
+    expect(src).not.toContain('emerald');
+  });
+
+  it('preserves the dialog contract, submit + field ids', () => {
+    expect(src).toContain('<DialogContent>');
+    expect(src).toContain('<DialogTitle>Import MCP</DialogTitle>');
+    expect(src).toContain('function handleSubmit(');
+    expect(src).toContain('id="mcp-import-mode"');
+    expect(src).toContain('id="mcp-template"');
+    expect(src).toContain('id="mcp-transport"');
+  });
+});
