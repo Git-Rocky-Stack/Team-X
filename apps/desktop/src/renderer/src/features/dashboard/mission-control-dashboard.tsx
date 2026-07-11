@@ -45,6 +45,7 @@ import {
 import { Button } from '@/components/ui/button.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { CopilotDashboardWidget } from '@/features/copilot/copilot-dashboard-widget.js';
+import { ProactiveControls } from '@/features/proactive/proactive-controls.js';
 import { useApprovals } from '@/hooks/use-approvals.js';
 import { useBudgetOverview } from '@/hooks/use-budgets.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
@@ -1734,6 +1735,21 @@ export function MissionControlDashboard({
                     </>
                   )}
                 </Faceplate>
+              </div>
+
+              <div data-dashboard-secondary-panel="proactive">
+                {companyId ? (
+                  <ProactiveControls companyId={companyId} />
+                ) : (
+                  <Faceplate kicker="Autonomy" serial="PROACTIVE">
+                    <PanelMessageState
+                      icon={Bot}
+                      title="Select a workspace"
+                      description="Pick a workspace to load proactive execution status."
+                      dataState="proactive-unselected"
+                    />
+                  </Faceplate>
+                )}
               </div>
             </div>
           </>
