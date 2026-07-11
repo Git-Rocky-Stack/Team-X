@@ -125,6 +125,7 @@
 
     /* Displays-stay-dark group — defined ONCE, never overridden by any shift */
     --void: #000000;
+    --scrim: rgb(0 0 0 / 0.5); /* modal backdrop — both shifts */
     --display-bg-top: #040404;
     --display-bg-bottom: #070707;
     --display-border: rgba(0, 0, 0, 0.8);

@@ -74,3 +74,24 @@ describe('sidenav dual-form fix (Wave C)', () => {
     expect(src).not.toContain('--led-warn');
   });
 });
+
+describe('small polish items (Wave C)', () => {
+  it('pluralizes the visible-thread count', () => {
+    const src = readSrc('chat/chat-view.tsx');
+    expect(src).toContain("'1 visible thread'");
+    expect(src).not.toContain('<Tag>{threads.length} visible threads</Tag>');
+  });
+
+  it('tokenizes the modal scrim', () => {
+    const css = readFileSync(join(featuresDir, '../styles/globals.css'), 'utf8');
+    expect(css).toContain('--scrim:');
+    expect(readSrc('settings/add-provider-dialog.tsx')).toContain('bg-[var(--scrim)]');
+    expect(readSrc('settings/add-provider-dialog.tsx')).not.toContain('bg-black/50');
+  });
+
+  it('truncates the MetricTile LCD figure with a full-value tooltip', () => {
+    const src = readFileSync(join(featuresDir, '../components/console/metric-tile.tsx'), 'utf8');
+    expect(src).toContain('truncate text-numeric');
+    expect(src).toContain('title={value}');
+  });
+});

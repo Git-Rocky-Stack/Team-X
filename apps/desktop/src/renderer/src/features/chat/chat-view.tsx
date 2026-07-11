@@ -151,7 +151,9 @@ export function ChatView({ companyId, employees }: ChatViewProps) {
         </p>
         <Tag mono>Drawer-backed threads</Tag>
         <div className="flex flex-wrap items-center gap-2">
-          <Tag>{threads.length} visible threads</Tag>
+          <Tag>
+            {threads.length === 1 ? '1 visible thread' : `${threads.length} visible threads`}
+          </Tag>
           <Tag mono>{employees.length} employees</Tag>
           <Tag mono>
             {activeThreadId ? 'Drawer locked on active thread' : 'Select any row to open drawer'}

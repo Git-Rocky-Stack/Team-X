@@ -163,7 +163,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className={`fixed inset-0 z-50 ${open ? 'block' : 'hidden'}`} aria-hidden={!open}>
         <div
-          className="fixed inset-0 bg-black/50"
+          className="fixed inset-0 bg-[var(--scrim)]"
           onClick={() => onOpenChange(false)}
           onKeyDown={() => {
             /* no-op: backdrop dismiss is pointer-only; keyboard dismiss is handled by the dialog */
