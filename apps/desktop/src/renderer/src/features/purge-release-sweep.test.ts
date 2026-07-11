@@ -48,3 +48,12 @@ describe('globals.css legacy purge (Wave B)', () => {
     expect(css).toContain('hsl(var(--armed-hsl) / 0.58)');
   });
 });
+
+describe('sidenav dual-form fix (Wave C)', () => {
+  const src = readFileSync(join(featuresDir, '../app/sidenav.tsx'), 'utf8');
+
+  it('steady error dot uses the NO-GO fault token, not the alert-red', () => {
+    expect(src).toContain('bg-[var(--led-nogo)]');
+    expect(src).not.toContain('--led-warn');
+  });
+});

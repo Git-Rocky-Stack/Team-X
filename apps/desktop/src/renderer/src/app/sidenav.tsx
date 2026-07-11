@@ -24,7 +24,7 @@ function statusColor(status: string): string {
     case 'blocked':
       return 'bg-[var(--led-hold)]';
     case 'error':
-      return 'bg-[var(--led-warn)]';
+      return 'bg-[var(--led-nogo)]';
     default:
       return 'bg-[var(--graphite)]';
   }
