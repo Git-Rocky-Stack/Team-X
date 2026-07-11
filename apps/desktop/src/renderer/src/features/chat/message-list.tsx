@@ -108,7 +108,7 @@ function StreamingBubble({ text, employeeName }: StreamingBubbleProps) {
       <div className="well max-w-[96%] px-4 py-3 text-body leading-7 text-[var(--display-fg)] break-words">
         {text.length > 0 ? (
           <>
-            <div className="mb-2 flex items-center gap-2 text-eyebrow-sm text-silver-mute">
+            <div className="mb-2 flex items-center gap-2 text-eyebrow-sm text-[var(--display-fg-mute)]">
               <span className="h-2 w-2 rounded-sm bg-[var(--armed-lit)]" />
               Live stream
             </div>

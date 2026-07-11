@@ -246,7 +246,7 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
             <span>{latestRun.createdTicketIds.length} tickets opened</span>
           </div>
           {latestRun.recommendations.length === 0 ? (
-            <RecessedWell className="px-3 py-2 text-caption text-silver-mute">
+            <RecessedWell className="px-3 py-2 text-caption text-[var(--display-fg-mute)]">
               No new improvement signals.
             </RecessedWell>
           ) : (
@@ -266,7 +266,7 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
             <Tag>{snapshot.openTicketCount}</Tag>
           </div>
           {snapshot.openTickets.length === 0 ? (
-            <RecessedWell className="px-3 py-3 text-caption text-silver-mute">
+            <RecessedWell className="px-3 py-3 text-caption text-[var(--display-fg-mute)]">
               No open self-improvement tickets.
             </RecessedWell>
           ) : (
@@ -284,7 +284,7 @@ export function AgentImprovementPanel({ companyId }: { companyId: string }) {
             <Tag>{snapshot.recentRuns.length}</Tag>
           </div>
           {snapshot.recentRuns.length === 0 ? (
-            <RecessedWell className="px-3 py-3 text-caption text-silver-mute">
+            <RecessedWell className="px-3 py-3 text-caption text-[var(--display-fg-mute)]">
               No loop runs recorded.
             </RecessedWell>
           ) : (

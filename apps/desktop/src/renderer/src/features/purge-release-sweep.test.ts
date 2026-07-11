@@ -49,6 +49,23 @@ describe('globals.css legacy purge (Wave B)', () => {
   });
 });
 
+describe('display-fg-mute token (Wave C)', () => {
+  it('defines the always-dark muted text token', () => {
+    const css = readFileSync(join(featuresDir, '../styles/globals.css'), 'utf8');
+    expect(css).toContain('--display-fg-mute: #8a8a86');
+  });
+
+  it('moves in-well muted text off the chassis token', () => {
+    expect(readSrc('chat/message-list.tsx')).toContain('text-[var(--display-fg-mute)]');
+    expect(readSrc('dashboard/mission-control-dashboard.tsx')).toContain(
+      'text-[var(--display-fg-mute)]',
+    );
+    expect(
+      readFileSync(join(featuresDir, '../components/console/subview-state.tsx'), 'utf8'),
+    ).toContain('text-[var(--display-fg-mute)]');
+  });
+});
+
 describe('sidenav dual-form fix (Wave C)', () => {
   const src = readFileSync(join(featuresDir, '../app/sidenav.tsx'), 'utf8');
 

@@ -108,7 +108,7 @@ function DetailField({
 }) {
   return (
     <RecessedWell className="flex flex-col gap-1.5 px-3 py-2.5">
-      <span className="flex items-center gap-1.5 text-eyebrow-sm text-silver-mute">
+      <span className="flex items-center gap-1.5 text-eyebrow-sm text-[var(--display-fg-mute)]">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </span>

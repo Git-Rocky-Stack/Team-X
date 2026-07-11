@@ -500,7 +500,7 @@ function RuntimeOperationsBand({
 
             {summary.recentSessions.length === 0 ? (
               <RecessedWell
-                className="p-5 text-body text-silver-mute"
+                className="p-5 text-body text-[var(--display-fg-mute)]"
                 data-dashboard-runtime-empty=""
               >
                 No external runtime session is active for this workspace.
@@ -816,19 +816,19 @@ export function MissionControlDashboard({
                   <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {visiblePrimaryPanelCount(layout)} / 2
                   </span>
-                  <span className="text-eyebrow-sm text-silver-mute">live panels</span>
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">live panels</span>
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
                   <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {commandRows.length}
                   </span>
-                  <span className="text-eyebrow-sm text-silver-mute">recent commands</span>
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">recent commands</span>
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
                   <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {tickets.length}
                   </span>
-                  <span className="text-eyebrow-sm text-silver-mute">tracked tickets</span>
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">tracked tickets</span>
                 </RecessedWell>
                 <RecessedWell
                   className="flex items-center gap-2 px-3 py-1.5"
@@ -864,7 +864,7 @@ export function MissionControlDashboard({
                   )}
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
-                  <span className="text-eyebrow-sm text-silver-mute">
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">
                     {operatorPosture} posture
                   </span>
                 </RecessedWell>
@@ -1175,7 +1175,7 @@ export function MissionControlDashboard({
                         <RecessedWell className="flex flex-col gap-3 p-4 text-body text-led-hold">
                           <div className="space-y-1">
                             <p className="font-medium">Run history refresh failed</p>
-                            <p className="text-silver-mute">
+                            <p className="text-[var(--display-fg-mute)]">
                               {agentRunsQuery.errorMessage ??
                                 'Live dashboard events are still rendering, but the persisted run log did not refresh.'}
                             </p>
@@ -1493,7 +1493,7 @@ export function MissionControlDashboard({
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)_minmax(320px,0.9fr)]">
               <Faceplate kicker="COPILOT INSIGHTS" serial="SECONDARY RAIL" className="h-full">
                 <RecessedWell className="p-4" data-dashboard-secondary-panel="copilot">
-                  <p className="mb-3 text-caption text-silver-mute">
+                  <p className="mb-3 text-caption text-[var(--display-fg-mute)]">
                     Keep live findings visible without letting them outrank the work boards.
                   </p>
                   <div className="[&_[data-copilot-widget-count]]:border-[var(--hairline)] [&_[data-copilot-widget-count]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:border-[var(--hairline)] [&_[data-copilot-widget-view-all]]:bg-carbon-900 [&_[data-copilot-widget-view-all]]:hover:bg-carbon-850 [&_[data-copilot-widget]]:border-0 [&_[data-copilot-widget]]:bg-transparent [&_[data-copilot-widget]]:p-0">
@@ -1690,7 +1690,7 @@ export function MissionControlDashboard({
                         </div>
                       </div>
 
-                      <RecessedWell className="p-4 text-body text-silver-mute">
+                      <RecessedWell className="p-4 text-body text-[var(--display-fg-mute)]">
                         Current window: {formatCompactNumber(todayUsage?.totalRuns ?? 0)} runs,{' '}
                         {formatCompactNumber(todayUsage?.totalTokens ?? 0)} tokens,{' '}
                         {formatUsd(todayUsage?.costUsd)} cost.

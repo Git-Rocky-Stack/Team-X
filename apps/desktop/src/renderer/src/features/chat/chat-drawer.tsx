@@ -532,7 +532,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                         className="h-4 w-4 shrink-0 animate-spin text-[var(--armed-lit)]"
                         aria-hidden="true"
                       />
-                      <span className="text-caption text-silver-mute">
+                      <span className="text-caption text-[var(--display-fg-mute)]">
                         Copilot is reasoning. The persisted transcript refreshes as each step lands.
                       </span>
                     </>
@@ -545,8 +545,8 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                     </>
                   ) : (
                     <>
-                      <Eye className="h-4 w-4 shrink-0 text-silver-mute" aria-hidden="true" />
-                      <span className="text-caption text-silver-mute">
+                      <Eye className="h-4 w-4 shrink-0 text-[var(--display-fg-mute)]" aria-hidden="true" />
+                      <span className="text-caption text-[var(--display-fg-mute)]">
                         Copilot transcript is read only in the drawer.
                       </span>
                     </>
@@ -598,8 +598,8 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
 
               <div className="border-t border-[var(--hairline)] px-4 py-3">
                 <RecessedWell className="flex items-center gap-2 px-3 py-3">
-                  <Eye className="h-4 w-4 shrink-0 text-silver-mute" />
-                  <span className="text-caption text-silver-mute">
+                  <Eye className="h-4 w-4 shrink-0 text-[var(--display-fg-mute)]" />
+                  <span className="text-caption text-[var(--display-fg-mute)]">
                     Observing agent conversation. This transcript is read only.
                   </span>
                 </RecessedWell>

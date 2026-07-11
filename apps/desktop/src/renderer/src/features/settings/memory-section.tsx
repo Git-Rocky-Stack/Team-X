@@ -89,7 +89,7 @@ export function MemorySection() {
             <span className="text-numeric tabular-nums text-[var(--display-fg)]">
               {draft.defaultTargetTokenBudget.toLocaleString()}
             </span>
-            <span className="text-eyebrow-sm text-silver-mute">tokens</span>
+            <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">tokens</span>
           </RecessedWell>
           <div className="flex flex-wrap gap-2">
             {MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.map((budget) => {

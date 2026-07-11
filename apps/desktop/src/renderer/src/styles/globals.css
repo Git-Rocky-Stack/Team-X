@@ -129,6 +129,7 @@
     --display-bg-bottom: #070707;
     --display-border: rgba(0, 0, 0, 0.8);
     --display-fg: #b3b3b3; /* text on always-dark surfaces — NOT --silver (which flips on Day) */
+    --display-fg-mute: #8a8a86; /* muted text on always-dark surfaces — ≥4.5:1 on --void; NOT --silver-mute (chassis-calibrated, AA-marginal on wells in Day) */
     --phosphor: #41e25e;
     --phosphor-dim: #2e5237;
 
