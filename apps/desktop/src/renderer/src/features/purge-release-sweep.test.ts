@@ -3,7 +3,7 @@
  * Wave A: proactive mount. Wave B: legacy deletion (file-absence + CSS pins
  * land in the task that deletes them — Phase-3 lesson 5). Wave C: polish pins.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,5 +23,12 @@ describe('dashboard proactive mount (Wave A)', () => {
 
   it('guards the null-workspace case with the panel-state idiom', () => {
     expect(src).toContain('dataState="proactive-unselected"');
+  });
+});
+
+describe('mission-shell purge (Wave B)', () => {
+  it('deletes the legacy primitive library and its test', () => {
+    expect(existsSync(join(featuresDir, 'mission/mission-shell.tsx'))).toBe(false);
+    expect(existsSync(join(featuresDir, 'mission/mission-shell.test.tsx'))).toBe(false);
   });
 });
