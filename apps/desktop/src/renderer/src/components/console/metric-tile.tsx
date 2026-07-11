@@ -43,8 +43,10 @@ export function MetricTile({
         {Icon ? <Icon className="h-4 w-4 text-silver-mute" /> : null}
         {label}
       </div>
-      <LcdWell tone={tone} className="px-3 py-1.5">
-        <span className="text-numeric tabular-nums">{value}</span>
+      <LcdWell tone={tone} className="min-w-0 px-3 py-1.5">
+        <span className="block truncate text-numeric tabular-nums" title={value}>
+          {value}
+        </span>
       </LcdWell>
       {hint ? <p className="text-caption text-silver-mute">{hint}</p> : null}
     </>

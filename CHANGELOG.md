@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-07-11
+
+### Added
+- **Command Console aesthetic — the complete v3.4.0 sweep.** Every renderer
+  surface now composes from the Carbon Pro / Command Console design system
+  (DESIGN.md): machined faceplates with hex-bolt hardware, recessed phosphor
+  LCD wells, stencil word-lamps + annunciator rail, functional VU meters,
+  armed-red `#AA2024` as the LIVE/command voice (dual-form rule: steady =
+  live, blinking = unacknowledged), Archivo / Public Sans / Departure Mono /
+  Iosevka typography, and dual-shift theming — Night Ops (brushed black) +
+  Day Shift (silver anodized) with displays-stay-dark in both. Landed across
+  eight phases: foundation + restyled primitives, shell + command deck,
+  Mission Control, Autonomy (shell + heavy panels), Boards & Planning,
+  Work + Comms + Guide, Ops (Telemetry / Audit / Vault with console-token
+  charts), and Settings (15 sections + 4 dialogs + provider cards).
+- **Proactive Mode dashboard widget.** The proactive execution controls now
+  mount on the Mission Control secondary rail beside Copilot Insights:
+  master enable toggle, autonomy-mode readout, Active/Queued Work and
+  Last-Scan LCD tiles (5-second live polling), and a Scan-for-Work-Now
+  action — previously backend-only surface, now operable from the flagship
+  view.
+- **`--display-fg-mute` token.** Muted text inside always-dark wells/displays
+  now carries a dedicated shift-invariant token (≈5.9:1 on void) instead of
+  the chassis-calibrated silver that fell to ~3.1:1 in Day Shift; applied
+  across 24 in-well sites including the shared `SubviewState` description.
+
+### Changed
+- **Legacy composition families deleted.** The pre-sweep vocabulary is gone
+  from the codebase: the mission primitive library (`mission-shell` + its 16
+  `globals.css` recipes), the chooser-selection recipe family and its three
+  tier variants, and the `amoled` menu surface (deleted in 7b). The legacy
+  channel alias token was renamed to console vocabulary (`--armed-hsl`) with
+  its live consumers (brand-range sliders, scrollbar thumbs) re-pointed
+  pixel-identically. Cross-file source-pin guards enforce absence.
+- **tailwind-merge now knows the semantic text tokens.** `cn()` uses
+  `extendTailwindMerge` with every custom fontSize class registered, killing
+  the recurring silent-collapse bug class where a text-size token vanished
+  when composed with a text color.
+
+### Fixed
+- **Add Provider dialog closes on Escape.** The hand-rolled machined-plate
+  panel mounts no Radix `DialogContent`, so Radix's built-in Escape handling
+  never attached — the dialog was keyboard-inescapable and its scrim blocked
+  the app until pointer-dismissed. A window keydown listener scoped to the
+  open state restores standard dialog keyboarding.
+- **Day-Shift contrast on the privacy provider list.** Allowed/Blocked LED
+  text sat on the silver chassis (~1.9:1); the list now renders as the
+  recessed display well the design specified, restoring AA in both shifts.
+- **Sidenav steady error dot onto NO-GO.** The employee status dot used the
+  blink-only alert red for steady error states, violating the dual-form
+  rule; steady faults now carry the NO-GO token.
+- **Copy + polish:** singular/plural on the visible-thread count, a
+  tokenized modal scrim (`--scrim`), and MetricTile LCD figures now truncate
+  with a full-value tooltip instead of overflowing at narrow widths.
+
+### Internal
+- **Local GGUF runtime groundwork (v3.3.0 scope) ships inside this release
+  as backend-only infrastructure** — the `@team-x/local-gguf-runtime`
+  package, `localGguf.*` IPC families, and migration `0036_local_gguf` are
+  present but expose **no user-facing UI yet**; a future release adds the
+  renderer surface.
+
 ### Documentation
 - **Comprehensive documentation accuracy pass (2026-07-03).** Every public doc
   re-verified against the shipped feature surface: README rebuilt (correct

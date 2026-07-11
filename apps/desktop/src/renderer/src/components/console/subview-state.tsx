@@ -52,7 +52,9 @@ export function SubviewState({
       <LampTile label={lampLabel} tone={lampTone} small interactive={false} />
       <div className="space-y-1">
         <p className="text-body-strong text-[var(--display-fg)]">{title}</p>
-        {description ? <p className="max-w-md text-body text-silver-mute">{description}</p> : null}
+        {description ? (
+          <p className="max-w-md text-body text-[var(--display-fg-mute)]">{description}</p>
+        ) : null}
       </div>
       {children}
       {action}

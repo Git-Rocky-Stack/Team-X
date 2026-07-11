@@ -7,7 +7,7 @@
 import type { PrivacyTier } from '@team-x/shared-types';
 import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 
-import { Faceplate, SubviewState, Tag } from '@/components/console/index.js';
+import { Faceplate, RecessedWell, SubviewState, Tag } from '@/components/console/index.js';
 import { usePrivacySettings, useSetPrivacy } from '@/hooks/use-settings.js';
 import { cn } from '@/lib/utils.js';
 
@@ -105,11 +105,11 @@ export function PrivacySection() {
 
       {/* Provider availability */}
       {availableProviders.length > 0 && (
-        <div className="divide-y divide-[var(--hairline)] rounded-inset border border-[var(--hairline)]">
+        <RecessedWell className="divide-y divide-[var(--hairline)]">
           {availableProviders.map((p) => (
             <div key={p.id} className="flex items-center justify-between px-4 py-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-body-strong text-foreground truncate">{p.name}</span>
+                <span className="text-body-strong text-[var(--display-fg)] truncate">{p.name}</span>
                 <Tag mono>{p.kind}</Tag>
               </div>
               {p.allowed ? (
@@ -123,7 +123,7 @@ export function PrivacySection() {
               )}
             </div>
           ))}
-        </div>
+        </RecessedWell>
       )}
     </Faceplate>
   );

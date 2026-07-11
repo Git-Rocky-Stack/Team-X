@@ -408,7 +408,10 @@ export function CopilotSidebar() {
 
           <div className="shrink-0 border-t border-[var(--hairline)] px-4 py-4">
             <RecessedWell className="p-4">
-              <label htmlFor="copilot-ask-input" className="text-eyebrow-sm text-silver-mute">
+              <label
+                htmlFor="copilot-ask-input"
+                className="text-eyebrow-sm text-[var(--display-fg-mute)]"
+              >
                 Ask the copilot
               </label>
               <div className="mt-2 flex items-start gap-3">

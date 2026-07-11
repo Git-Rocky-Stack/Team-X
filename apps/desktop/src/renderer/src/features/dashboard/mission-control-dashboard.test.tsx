@@ -56,6 +56,7 @@ describe('MissionControlDashboard renderer shell', () => {
     expect(missionControlSrc).toContain('useRuntimeOperations(companyId)');
     expect(missionControlSrc).toContain('summarizeRuntimeOperationsForDashboard(');
     expect(missionControlSrc).toContain('CopilotDashboardWidget');
+    expect(missionControlSrc).toContain('ProactiveControls');
   });
 
   it('isolates panel-local empty and error states with retry hooks', () => {

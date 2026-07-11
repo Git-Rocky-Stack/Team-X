@@ -14,54 +14,13 @@ This project lives under `Strategia-Enhanced-App/` and inherits rules from:
 
 **Always read `DESIGN.md` before making any visual or UI decisions.** It is the canonical source of truth (created 2026-06-10 via `/design-consultation`, Rocky-approved): the Command Console direction — Carbon Pro chassis (brushed black aluminum, four-layer raised-hardware depth, hex bolts, phosphor LCD wells, functional VU meters), armed-red `#AA2024` as LIVE/command authority (dual-form rule: steady = live, blinking = unacknowledged), stencil word-lamps + annunciator rail, Archivo / Public Sans / Departure Mono / Iosevka, dual-shift theming (Night Ops + Day Shift silver, displays stay dark in both). All font choices, colors, spacing, depth recipes, and motion envelopes are defined there. Do not deviate without explicit user approval. In QA mode, flag any code that doesn't match DESIGN.md.
 
-**Transition state (amended 2026-06-10, sweep Q3):** the aesthetic sweep is staged (see `docs/superpowers/specs/2026-06-10-renderer-aesthetic-sweep-design.md`). The **foundation is global**: once sweep Phase 1 lands, Carbon Pro tokens, fonts, and the restyled shadcn primitives apply app-wide — including unswept screens. The no-mixing rule applies to **composition, not tokens**: a swept screen uses the DESIGN.md console vocabulary (faceplates, wells, lamps, stripes) exclusively; an unswept screen keeps its legacy composition (`.mission-*`, `.brand-selected`, status-badge family — retinted to Carbon tokens) until its phase sweeps it. Never mix the two composition families on one screen.
+**Sweep complete (2026-07-10, Phase 8):** every renderer surface composes from the DESIGN.md console vocabulary (faceplates, wells, lamps, stripes, caps). The legacy composition families — the mission primitive library, the chooser-selection recipe and its tier variants, and the LED status-badge family — are deleted from the codebase. Do not reintroduce them; source-pin guards across the cluster-sweep tests enforce their absence.
 
-## Design system reminders (LEGACY — shipped code, superseded by DESIGN.md per-screen at sweep time)
+## Reusable visual primitives (in `apps/desktop/src/renderer/src/styles/globals.css`)
 
-- **Accent color:** `#FFAA2024` (Strategia red)
-- **Theme:** dark by default, light mode available
-- **Grid:** 8-point (4px fine)
-- **Typography:** Inter (UI) + JetBrains Mono (code/streams); 1.2 headings, 1.5–1.6 body, 65–75ch max
-- **Icons:** Lucide React
-- **Charts:** Recharts
-- **Motion:** 150–300 ms feedback, 300–500 ms transitions, ease-out in, ease-in out
-- **A11y:** WCAG 2.1 AA minimum, AAA for critical text; keyboard-navigable; 44 px touch targets
-- **States:** every interactive element — hover, focus, loading, error, empty, disabled
+When you reach for an existing pattern, **use the existing class — do not reinvent it inline**. New visual primitives belong in `globals.css` (console recipes section), not scattered across feature files. The full recipe vocabulary (caps, wells, LCDs, lamp/tag families) is documented in DESIGN.md.
 
-### Reusable visual primitives (in `apps/desktop/src/renderer/src/styles/globals.css`)
-
-When you reach for one of the patterns below, **use the existing class — do not reinvent it inline**. New visual primitives belong here, not scattered across feature files.
-
-- **`.brand-selected`** — the active choice in any "select one of N" chooser (mode buttons, preset cards, filter chips, posture selectors, the Board Queue button, etc.). Supplies border, bg, text color, glow, hover, and focus-visible. Pair with `cn()`:
-  ```tsx
-  className={cn(
-    'rounded-lg border px-3 py-3',
-    selected ? 'brand-selected' : 'border-border hover:border-white/20 transition-colors',
-  )}
-  ```
-  Do **not** also apply `border-brand`, `bg-brand/10`, `text-brand`, etc. when this class is on — it owns those properties. Reserved for chooser-card selection only; navigation tabs, list-item highlights, and semantic color codings (e.g. category pills) are out of scope.
-
-  **Color variants** for choosers where color carries semantic meaning — apply alongside `.brand-selected`. The bezel weight, glow shape, hover behavior, and transition stay locked; only the tint changes.
-  - `.brand-selected-green` — Local-only / safe / read-only / approved
-  - `.brand-selected-blue` — Open-source / standard / informational
-  - `.brand-selected-amber` — Caution / proprietary cloud / advanced / pending review
-  ```tsx
-  className={cn('rounded-lg border', selected && `brand-selected ${tier.variant}`)}
-  ```
 - **`.brand-range`** — `<input type="range">` slider styling. Visible rail + brand-red thumb with hover/focus glow. Apply with `className="brand-range"` and nothing else.
-
-### Status badges (LED + label)
-
-All status badges across the renderer share one foundation:
-`text-[10px] px-1.5 py-0 gap-1.5` + a 1.5×1.5px LED span as the first child.
-
-| State | Border | Bg | Text | LED |
-|---|---|---|---|---|
-| All-good / on | `border-green-400/40` | `bg-green-400/10` | `text-green-400` | green, `animate-pulse` |
-| Off / not-running | `border-red-400/40` | `bg-red-500/10` | `text-red-400` | red, solid |
-| Loading / detecting | `border-muted-foreground/30` | `bg-muted/20` | `text-muted-foreground` | grey, `animate-pulse` |
-
-Match this signature when adding a new status badge so the page reads as one family.
 
 ## Key contacts
 

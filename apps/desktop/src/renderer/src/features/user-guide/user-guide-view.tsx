@@ -217,7 +217,7 @@ export function UserGuideView({ company, employees }: UserGuideViewProps) {
             </div>
           </div>
           <RecessedWell className="px-4 py-4">
-            <div className="flex flex-wrap items-center gap-3 text-body text-silver-mute">
+            <div className="flex flex-wrap items-center gap-3 text-body text-[var(--display-fg-mute)]">
               <Rocket className="h-4 w-4 text-[var(--armed-lit)]" />
               Team-X recommends a simple starting sequence:
               <span className="font-medium text-[var(--display-fg)]">provider</span>

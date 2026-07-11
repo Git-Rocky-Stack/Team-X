@@ -155,7 +155,7 @@ export function ThreadMemoryCard({
       </div>
 
       {digestQuery.isLoading || checkpointsQuery.isLoading ? (
-        <RecessedWell className="px-4 py-3 text-caption text-silver-mute">
+        <RecessedWell className="px-4 py-3 text-caption text-[var(--display-fg-mute)]">
           Loading condensed memory for this thread...
         </RecessedWell>
       ) : digestQuery.isError || checkpointsQuery.isError ? (
@@ -169,7 +169,7 @@ export function ThreadMemoryCard({
           </RecessedWell>
 
           {latestResumeHint ? (
-            <RecessedWell className="px-4 py-2.5 text-eyebrow text-silver-mute">
+            <RecessedWell className="px-4 py-2.5 text-eyebrow text-[var(--display-fg-mute)]">
               {latestResumeHint}
             </RecessedWell>
           ) : null}

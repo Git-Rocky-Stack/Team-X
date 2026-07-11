@@ -276,10 +276,10 @@ The first viewport is a poster, and the poster is the company operating live. No
 | **Annunciator alerts** | Dark module rows (both themes) with LED dot + Archivo title + body; GO/HOLD/WARN(blink)/SCOPE variants. |
 | **Agent card** | Raised control: Archivo name + lamp + role + recessed phosphor stream window (Iosevka) + TOK readout + mini-VU + cost. |
 | **Tickets/kanban** | Tickets as raised controls with `TKT-NNNN` (Departure Mono) + lamp; columns on `--carbon-900` interior. |
-| **Tier/selection chips** | Raised caps; selected = LED-tinted (green for Local). Supersedes `.brand-selected` family during the sweep — selection variants map: green=local/safe, scope-cyan=informational, amber=caution, armed-red=brand/command. |
+| **Tier/selection chips** | Raised caps; selected = LED-tinted (green for Local). Superseded the legacy chooser-selection family (deleted v3.4.0) — selection variants map: green=local/safe, scope-cyan=informational, amber=caution, armed-red=brand/command. |
 | **Bat-lever switch** | Recessed track + machined cap thumb; armed-red when on. |
 
-**Status badge migration:** the legacy LED+label badges (`globals.css` status-badge family) are superseded by **lamp tiles** during the aesthetic sweep. Until a screen is swept, existing primitives remain in force — do not mix the two families on one swept screen.
+**Status badges:** the legacy LED+label badge family is deleted (v3.4.0) — status is expressed with **lamp tiles** (stencil word-lamps, 2–6-char labels) everywhere.
 
 ---
 
@@ -350,4 +350,4 @@ Inherited family rules + Team-X specifics. On every UI change, re-validate:
 
 ---
 
-**This document is the source of truth.** All Team-X UI work anchors to the tokens, recipes, and rules defined here. Where Team-X is silent on a pattern, fall back to `Vision-Studio-X-website\DESIGN.md` (the family chassis progenitor) — but Team-X's divergences (armed red, typography, dual-shift, lamp vocabulary) always win inside this repo. Until a screen is touched by the aesthetic sweep, existing shipped primitives remain in force; never mix old and new families on one swept screen.
+**This document is the source of truth.** All Team-X UI work anchors to the tokens, recipes, and rules defined here. Where Team-X is silent on a pattern, fall back to `Vision-Studio-X-website\DESIGN.md` (the family chassis progenitor) — but Team-X's divergences (armed red, typography, dual-shift, lamp vocabulary) always win inside this repo. The aesthetic sweep completed in v3.4.0 — every screen composes from this document's vocabulary.
