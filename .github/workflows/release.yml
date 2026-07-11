@@ -134,7 +134,13 @@ jobs:
           # Ubuntu 24.04 ships FUSE 2 as libfuse2t64; older runners use libfuse2.
           sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2
 
-          APPIMAGE="$(ls release/*/Team-X-*-x64.AppImage 2>/dev/null | head -n1)"
+          # electron-builder expands ${arch} to AppImage-convention `x86_64`
+          # (not `x64`) for this target — the lookup must stay arch-agnostic,
+          # matching the upload/publish globs. find + `|| true` keeps a
+          # no-match from tripping the runner's default `bash -e` before the
+          # guard below can report it (a bare `ls` glob exits 2 and killed
+          # the step silently on the first v3.4.0 run).
+          APPIMAGE="$(find release -maxdepth 2 -type f -name 'Team-X-*.AppImage' 2>/dev/null | head -n1 || true)"
           if [ -z "${APPIMAGE}" ]; then
             echo "::error::No AppImage found under release/*/ — packaging produced none."
             ls -R release/ 2>/dev/null || true
