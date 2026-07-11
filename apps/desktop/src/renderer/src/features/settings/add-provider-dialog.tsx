@@ -5,7 +5,7 @@
  */
 
 import type { PrivacyTier, ProviderKind } from '@team-x/shared-types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button.js';
 import { Dialog } from '@/components/ui/dialog.js';
@@ -116,6 +116,18 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
 
   const kindMeta = KIND_OPTIONS.find((o) => o.value === kind);
 
+  // The panel is hand-rolled (machined-plate, no Radix DialogContent), so
+  // Radix's built-in Escape handling never mounts — without this listener
+  // the dialog is keyboard-inescapable and its scrim blocks the whole app.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onOpenChange(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onOpenChange]);
+
   function resetForm() {
     setName('');
     setKind('anthropic');
@@ -166,7 +178,7 @@ export function AddProviderDialog({ open, onOpenChange }: AddProviderDialogProps
           className="fixed inset-0 bg-[var(--scrim)]"
           onClick={() => onOpenChange(false)}
           onKeyDown={() => {
-            /* no-op: backdrop dismiss is pointer-only; keyboard dismiss is handled by the dialog */
+            /* no-op: backdrop dismiss is pointer-only; keyboard dismiss is the window Escape listener above */
           }}
           role="presentation"
         />

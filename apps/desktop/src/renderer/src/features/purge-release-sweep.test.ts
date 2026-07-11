@@ -95,3 +95,11 @@ describe('small polish items (Wave C)', () => {
     expect(src).toContain('title={value}');
   });
 });
+
+describe('add-provider dialog keyboard escape (Wave D finding)', () => {
+  it('closes on Escape despite the hand-rolled panel (no Radix DialogContent)', () => {
+    const src = readSrc('settings/add-provider-dialog.tsx');
+    expect(src).toContain("if (event.key === 'Escape') onOpenChange(false);");
+    expect(src).toContain("window.addEventListener('keydown', onKeyDown);");
+  });
+});
