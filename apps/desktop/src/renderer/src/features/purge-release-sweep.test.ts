@@ -32,3 +32,19 @@ describe('mission-shell purge (Wave B)', () => {
     expect(existsSync(join(featuresDir, 'mission/mission-shell.test.tsx'))).toBe(false);
   });
 });
+
+describe('globals.css legacy purge (Wave B)', () => {
+  const css = readFileSync(join(featuresDir, '../styles/globals.css'), 'utf8');
+
+  it('carries none of the retired families, even in comments', () => {
+    expect(css).not.toContain('.mission-');
+    expect(css).not.toContain('brand-selected');
+    expect(css).not.toContain('--mission-red');
+  });
+
+  it('renames the channel alias to console vocabulary in both shifts', () => {
+    expect(css).toContain('--armed-hsl: 358 68% 40%');
+    expect(css).toContain('--armed-hsl: 358 75% 51%');
+    expect(css).toContain('hsl(var(--armed-hsl) / 0.58)');
+  });
+});

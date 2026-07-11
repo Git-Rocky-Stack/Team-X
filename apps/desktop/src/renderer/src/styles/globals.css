@@ -48,7 +48,7 @@
     --border: 60 2% 68%; /* #B0B0AC */
     --input: 60 2% 68%;
     --ring: 0 0% 16%; /* #2A2A2A day focus */
-    --mission-red: 358 68% 40%; /* legacy alias → armed (purged Phase 8) */
+    --armed-hsl: 358 68% 40%; /* armed as HSL channels — for alpha-composed consumers (brand-range, scrollbar) */
 
     /* Carbon ramp + text ramp (raw hex; flip per shift) */
     --carbon-950: #c8c8c4;
@@ -153,9 +153,9 @@
     --ease-led: cubic-bezier(0.2, 0.7, 0.3, 1);
     --ease-vu: cubic-bezier(0.2, 0.85, 0.15, 1);
 
-    /* Scrollbar thumb family — composes with the per-shift --mission-red */
-    --scrollbar-thumb: hsl(var(--mission-red) / 0.58);
-    --scrollbar-thumb-hover: hsl(var(--mission-red) / 0.82);
+    /* Scrollbar thumb family — composes with the per-shift --armed-hsl */
+    --scrollbar-thumb: hsl(var(--armed-hsl) / 0.58);
+    --scrollbar-thumb-hover: hsl(var(--armed-hsl) / 0.82);
   }
 
   .dark {
@@ -181,7 +181,7 @@
     --border: 0 0% 15%; /* #262626 */
     --input: 0 0% 15%;
     --ring: 0 0% 90%; /* #E6E6E6 chrome focus */
-    --mission-red: 358 75% 51%; /* legacy alias → armed-lit (purged Phase 8) */
+    --armed-hsl: 358 75% 51%; /* armed-lit as HSL channels — Night Ops override */
 
     --carbon-950: #050505;
     --carbon-900: #0d0d0d;
@@ -349,20 +349,20 @@
     height: 14px;
     width: 14px;
     border-radius: 9999px;
-    background: hsl(var(--mission-red));
+    background: hsl(var(--armed-hsl));
     border: 2px solid #000000;
-    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.6), 0 0 8px hsl(var(--mission-red) / 0.55);
+    box-shadow: 0 0 0 1px hsl(var(--armed-hsl) / 0.6), 0 0 8px hsl(var(--armed-hsl) / 0.55);
     margin-top: -4px;
     transition: transform 120ms ease-out, box-shadow 120ms ease-out;
   }
 
   .brand-range:hover::-webkit-slider-thumb {
     transform: scale(1.15);
-    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.85), 0 0 12px hsl(var(--mission-red) / 0.75);
+    box-shadow: 0 0 0 1px hsl(var(--armed-hsl) / 0.85), 0 0 12px hsl(var(--armed-hsl) / 0.75);
   }
 
   .brand-range:focus-visible::-webkit-slider-thumb {
-    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 12px hsl(var(--mission-red) / 0.8);
+    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 12px hsl(var(--armed-hsl) / 0.8);
   }
 
   .brand-range::-moz-range-track {
@@ -375,91 +375,16 @@
   .brand-range::-moz-range-progress {
     height: 6px;
     border-radius: 9999px;
-    background: hsl(var(--mission-red) / 0.85);
+    background: hsl(var(--armed-hsl) / 0.85);
   }
 
   .brand-range::-moz-range-thumb {
     height: 14px;
     width: 14px;
     border-radius: 9999px;
-    background: hsl(var(--mission-red));
+    background: hsl(var(--armed-hsl));
     border: 2px solid #000000;
-    box-shadow: 0 0 0 1px hsl(var(--mission-red) / 0.6), 0 0 8px hsl(var(--mission-red) / 0.55);
-  }
-
-  /*
-   * Selected-state primitive — applied to the active choice in any
-   * "select one of N" chooser: mode buttons, preset cards, filter chips,
-   * posture selectors, the Board Queue button, etc. Single source of
-   * truth for the selected visual language.
-   *
-   * Usage:
-   *   className={cn(structuralClasses, selected && 'brand-selected')}
-   *
-   * Do NOT also apply conflicting utility classes (e.g. border-brand,
-   * bg-brand/10, text-brand) when this class is on — it supplies all
-   * of them. Pair it against an unselected hover treatment, e.g.:
-   *
-   *   className={cn(
-   *     'rounded-lg border ...',
-   *     selected ? 'brand-selected' : 'border-border hover:border-white/20',
-   *   )}
-   *
-   * This class is reserved for chooser-card selection. Navigation tabs,
-   * list-item highlights, and semantic color codings (e.g. category
-   * pills) follow their own patterns and are not in scope.
-   */
-  .brand-selected {
-    /* Default tone — Strategia red. Color variants below override the
-     * three HSL channels to retint without re-declaring the shape. */
-    --bs-h: 358;
-    --bs-s: 68%;
-    --bs-l: 40%;
-
-    border-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l));
-    background-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.15);
-    color: hsl(var(--foreground));
-    box-shadow: 0 0 0 1px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.5), 0 0 12px
-      hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.25);
-    transition: background-color 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms
-      ease-out;
-  }
-
-  .brand-selected:hover {
-    background-color: hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.22);
-    box-shadow: 0 0 0 1px hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.7), 0 0 16px
-      hsl(var(--bs-h) var(--bs-s) var(--bs-l) / 0.4);
-  }
-
-  .brand-selected:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-
-  /*
-   * Color variants — apply ALONGSIDE .brand-selected when the chooser
-   * carries semantic color meaning (e.g. privacy tiers).
-   *   className="brand-selected brand-selected-amber"
-   *
-   * Each variant only re-tints the HSL channels; the bezel weight, glow
-   * shape, hover behavior, and transition stay locked to the base.
-   */
-  .brand-selected-green {
-    --bs-h: 142;
-    --bs-s: 71%;
-    --bs-l: 45%;
-  }
-
-  .brand-selected-blue {
-    --bs-h: 217;
-    --bs-s: 91%;
-    --bs-l: 60%;
-  }
-
-  .brand-selected-amber {
-    --bs-h: 38;
-    --bs-s: 92%;
-    --bs-l: 50%;
+    box-shadow: 0 0 0 1px hsl(var(--armed-hsl) / 0.6), 0 0 8px hsl(var(--armed-hsl) / 0.55);
   }
 }
 
@@ -580,92 +505,6 @@
     font-weight: 750;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-  }
-
-  .mission-app-shell {
-    background-image: radial-gradient(circle at top left, var(--armed-soft), transparent 26%),
-      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background)) 100%);
-  }
-
-  .mission-shell {
-    background-color: hsl(var(--background));
-  }
-
-  .mission-grid {
-    background-image: linear-gradient(to right, hsl(var(--border) / 0.14) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--border) / 0.14) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
-
-  .mission-hero {
-    background-color: hsl(var(--card));
-    box-shadow: 0 24px 80px -56px hsl(var(--foreground) / 0.78);
-  }
-
-  .mission-panel {
-    background-color: hsl(var(--card)) !important;
-    box-shadow: 0 20px 48px -42px hsl(var(--foreground) / 0.85);
-  }
-
-  .mission-chrome-panel {
-    background-color: hsl(var(--card)) !important;
-    box-shadow: 0 28px 80px -58px hsl(var(--foreground) / 0.9);
-  }
-
-  .mission-control-row {
-    background-color: hsl(var(--card)) !important;
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-metric-tile {
-    background-color: hsl(var(--card));
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-pill {
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-segmented-button {
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-icon-button {
-    background-color: hsl(var(--background));
-  }
-
-  .mission-inset-surface {
-    background-color: hsl(var(--card));
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-sheet-header {
-    background-color: hsl(var(--background));
-  }
-
-  .mission-state-block {
-    background-color: hsl(var(--background));
-  }
-
-  .mission-workspace-trigger {
-    background-color: hsl(var(--card)) !important;
-    box-shadow: 0 20px 50px -42px hsl(var(--foreground) / 0.85);
-  }
-
-  .mission-select {
-    @apply rounded-md border border-border bg-card text-foreground outline-none transition-colors;
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
-  }
-
-  .mission-select:hover {
-    border-color: hsl(var(--foreground) / 0.22);
-    background-color: hsl(var(--card));
-  }
-
-  .mission-select:focus {
-    border-color: hsl(var(--mission-red) / 0.78);
-    box-shadow: 0 0 0 2px hsl(var(--mission-red) / 0.24), inset 0 1px 0
-      hsl(var(--foreground) / 0.04);
   }
 
   /* ================================================================
@@ -939,7 +778,7 @@
     transform: translateY(1px);
   }
 
-  /* Chooser-selection caps — the swept replacement for `.brand-selected`.
+  /* Chooser-selection caps — the swept replacement for the legacy chooser-selection recipe (retired v3.4.0).
      Apply ON TOP of `.cap` (compound selectors so they out-rank `.dark .cap`).
      Armed-red is the default (brand/command); tint variants follow the LED
      semantic map via the shift-varying --tag-* tokens (AA on the silver Day
