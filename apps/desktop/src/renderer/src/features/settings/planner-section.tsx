@@ -19,8 +19,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { Faceplate, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { usePlannerSettings, useSetPlanner } from '@/hooks/use-settings.js';
 
 function clamp(value: number, min: number, max: number): number {
@@ -49,21 +49,29 @@ export function PlannerSection() {
 
   if (isLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="Planner" serial="GUARDRAILS" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Task Planner</h2>
-        <Skeleton className="h-48 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading task planner settings…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (isError || !data) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Planner" serial="GUARDRAILS" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Task Planner</h2>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          Failed to load task planner settings.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load task planner settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -87,7 +95,7 @@ export function PlannerSection() {
   const { maxTickets, maxDepth, escalationThreshold } = PLANNER_SETTINGS_CLAMPS;
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="Planner" serial="GUARDRAILS" bodyClassName="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">Task Planner</h2>
@@ -97,14 +105,14 @@ export function PlannerSection() {
       </div>
 
       {/* Description */}
-      <p className="text-body-sm text-muted-foreground mt-1">
+      <p className="text-caption text-silver-mute">
         Guardrails for the write-side agentic tools that decompose projects into tickets, delegate
         subtasks, and review deliverables. Tighter caps reduce blast radius; wider caps allow larger
         plans.
       </p>
 
       {/* Knobs */}
-      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-4">
+      <div className="space-y-4">
         {/* Max tickets */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
@@ -186,7 +194,7 @@ export function PlannerSection() {
             value={draft.approvalLevel}
             onChange={(e) => commitLevel(e.target.value as PlannerApprovalLevel)}
             disabled={setPlanner.isPending}
-            className="h-8 w-full rounded-md border border-border bg-background px-3 text-code-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="well-input h-8 w-full px-3 text-code-sm"
           >
             {PLANNER_APPROVAL_LEVELS.map((level) => (
               <option key={level} value={level}>
@@ -251,10 +259,10 @@ export function PlannerSection() {
 
       {/* Save error banner */}
       {setPlanner.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <span className="min-w-0 truncate">Failed to save: {String(setPlanner.error)}</span>
         </div>
       )}
-    </section>
+    </Faceplate>
   );
 }

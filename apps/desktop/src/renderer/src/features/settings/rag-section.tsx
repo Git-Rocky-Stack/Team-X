@@ -15,10 +15,10 @@ import type { SettingsGetRagConfigResponse } from '@team-x/shared-types';
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge.js';
+import { Faceplate, LampTile, MetricTile, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
+import { Switch } from '@/components/ui/switch.js';
 import {
   useDeleteRag,
   useRagConfig,
@@ -91,22 +91,31 @@ export function RagSection() {
 
   if (configLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
-        <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
-        <Skeleton className="h-48 rounded-lg" />
+      <section aria-busy="true">
+        <Faceplate kicker="Retrieval" serial="RAG" bodyClassName="space-y-3">
+          <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
+          <SubviewState
+            lampLabel="SYNC"
+            lampTone="hold"
+            title="Loading RAG configuration…"
+            className="min-h-0 p-6"
+          />
+        </Faceplate>
       </section>
     );
   }
 
   if (configError || !config) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Retrieval" serial="RAG" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
-        <div className="flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          Failed to load RAG configuration.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load RAG configuration."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -150,7 +159,7 @@ export function RagSection() {
   const hasCompany = !!companyId;
 
   return (
-    <section className="space-y-3">
+    <Faceplate kicker="Retrieval" serial="RAG" bodyClassName="space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
         <h2 className="text-h2 text-foreground">RAG (Retrieval-Augmented Generation)</h2>
@@ -159,33 +168,15 @@ export function RagSection() {
         )}
         <span className="ml-auto">
           {enabled ? (
-            <Badge
-              variant="outline"
-              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
-              />
-              Enabled
-            </Badge>
+            <LampTile small label="ON" tone="go" />
           ) : (
-            <Badge
-              variant="outline"
-              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
-              />
-              Disabled
-            </Badge>
+            <LampTile small label="OFF" tone="nogo" />
           )}
         </span>
       </div>
 
       {/* Master toggle */}
-      <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-surface-50 p-4">
+      <div className="flex items-start justify-between gap-4 rounded-inset border border-[var(--hairline)] p-4">
         <div className="min-w-0 flex-1">
           <label
             htmlFor="rag-enabled-toggle"
@@ -197,35 +188,18 @@ export function RagSection() {
             Injects relevant context from past messages, tickets, and meetings into agent prompts.
           </p>
         </div>
-        <button
+        <Switch
           id="rag-enabled-toggle"
-          type="button"
-          role="switch"
-          aria-checked={enabled}
           aria-label="Enable RAG"
-          onClick={handleToggle}
+          checked={enabled}
+          onCheckedChange={() => handleToggle()}
           disabled={setConfig.isPending}
-          className={`
-            relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-            focus-visible:ring-offset-2 focus-visible:ring-offset-background
-            disabled:cursor-not-allowed disabled:opacity-50
-            ${enabled ? 'bg-brand' : 'bg-surface-100 border border-border'}
-          `}
-        >
-          <span
-            aria-hidden="true"
-            className={`
-              inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow transition-transform
-              ${enabled ? 'translate-x-5' : 'translate-x-1'}
-            `}
-          />
-        </button>
+        />
       </div>
 
       {/* Embedding provider */}
       <div
-        className={`rounded-lg border border-border bg-surface-50 p-4 space-y-3 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
+        className={`rounded-inset border border-[var(--hairline)] p-4 space-y-3 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
         aria-disabled={disabledKnobs}
       >
         <h3 className="text-h3 text-foreground">Embedding Provider</h3>
@@ -299,7 +273,7 @@ export function RagSection() {
 
       {/* Retrieval knobs */}
       <div
-        className={`rounded-lg border border-border bg-surface-50 p-4 space-y-4 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
+        className={`rounded-inset border border-[var(--hairline)] p-4 space-y-4 transition-opacity ${disabledKnobs ? 'opacity-60' : ''}`}
         aria-disabled={disabledKnobs}
       >
         <h3 className="text-h3 text-foreground">Retrieval</h3>
@@ -405,82 +379,55 @@ export function RagSection() {
 
       {/* Save error banner */}
       {setConfig.isError && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
+        <div className="flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span className="min-w-0 truncate">Failed to save: {String(setConfig.error)}</span>
         </div>
       )}
 
       {/* Stats card */}
-      <div className="rounded-lg border border-border bg-surface-50 p-4">
+      <div className="rounded-inset border border-[var(--hairline)] p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-h3 text-foreground">Index Stats</h3>
           {statsLoading && !stats ? (
-            <Badge
-              variant="outline"
-              className="border-muted-foreground/30 bg-muted/20 text-muted-foreground text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse"
-              />
-              Detecting…
-            </Badge>
+            <LampTile small label="SYNC" tone="hold" />
           ) : stats?.enabled ? (
-            <Badge
-              variant="outline"
-              className="border-green-400/40 bg-green-400/10 text-green-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.85)] animate-pulse"
-              />
-              Indexing Active
-            </Badge>
+            <LampTile small label="GO" tone="go" />
           ) : (
-            <Badge
-              variant="outline"
-              className="border-red-400/40 bg-red-500/10 text-red-400 text-[10px] px-1.5 py-0 gap-1.5"
-            >
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.85)]"
-              />
-              Indexing Offline
-            </Badge>
+            <LampTile small label="OFF" tone="nogo" />
           )}
         </div>
         {!hasCompany ? (
-          <p className="text-caption text-muted-foreground">
-            Select a company to view index stats.
-          </p>
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
+            title="Select a company to view index stats."
+            className="min-h-0 p-6"
+          />
         ) : statsLoading ? (
-          <div className="flex items-center gap-2 text-caption text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Loading stats…
-          </div>
+          <SubviewState
+            lampLabel="SYNC"
+            lampTone="hold"
+            title="Loading stats…"
+            className="min-h-0 p-6"
+          />
         ) : stats ? (
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-eyebrow-sm text-muted-foreground">Chunks Indexed</p>
-              <p className="text-body-strong text-foreground tabular-nums mt-0.5">
-                {stats.embeddingCount.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-eyebrow-sm text-muted-foreground">Last Indexed</p>
-              <p className="text-body-strong text-foreground mt-0.5">
-                {formatRelative(stats.lastIndexedAt)}
-              </p>
-            </div>
+            <MetricTile label="Chunks Indexed" value={stats.embeddingCount.toLocaleString()} />
+            <MetricTile label="Last Indexed" value={formatRelative(stats.lastIndexedAt)} />
           </div>
         ) : (
-          <p className="text-caption text-muted-foreground">No stats available.</p>
+          <SubviewState
+            lampLabel="STBY"
+            lampTone="off"
+            title="No stats available."
+            className="min-h-0 p-6"
+          />
         )}
       </div>
 
       {/* Action buttons */}
-      <div className="rounded-lg border border-border bg-surface-50 p-4 space-y-2">
+      <div className="rounded-inset border border-[var(--hairline)] p-4 space-y-2">
         <h3 className="text-h3 text-foreground">Maintenance</h3>
         <p className="text-caption text-muted-foreground">
           Rebuild re-indexes every eligible source. Delete wipes all embeddings without re-indexing.
@@ -497,7 +444,7 @@ export function RagSection() {
           </div>
           {confirmAction === 'rebuild' ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-caption text-amber-400 mr-1">Rebuild all?</span>
+              <span className="text-caption text-[var(--led-hold)] mr-1">Rebuild all?</span>
               <Button
                 size="sm"
                 variant="destructive"
@@ -538,7 +485,7 @@ export function RagSection() {
         </div>
 
         {/* Delete row */}
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--hairline)]">
           <div className="min-w-0 flex-1">
             <p className="text-body-strong text-foreground">Delete All Embeddings</p>
             <p className="text-caption text-muted-foreground">
@@ -547,7 +494,7 @@ export function RagSection() {
           </div>
           {confirmAction === 'delete' ? (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-caption text-red-400 mr-1">Delete all?</span>
+              <span className="text-caption text-[var(--led-nogo)] mr-1">Delete all?</span>
               <Button
                 size="sm"
                 variant="destructive"
@@ -589,31 +536,31 @@ export function RagSection() {
 
         {/* Action feedback banners */}
         {rebuildFeedback && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
+          <div className="mt-2 flex items-center gap-2 rounded-inset border border-[var(--led-go-edge)] bg-[var(--go-soft)] px-3 py-2 text-body text-[var(--led-go)]">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             {rebuildFeedback}
           </div>
         )}
         {rebuildRag.isError && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
+          <div className="mt-2 flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">Rebuild failed: {String(rebuildRag.error)}</span>
           </div>
         )}
         {deleteFeedback && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-green-500/10 px-3 py-2 text-body text-green-400">
+          <div className="mt-2 flex items-center gap-2 rounded-inset border border-[var(--led-go-edge)] bg-[var(--go-soft)] px-3 py-2 text-body text-[var(--led-go)]">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             {deleteFeedback}
           </div>
         )}
         {deleteRag.isError && (
-          <div className="mt-2 flex items-center gap-2 rounded bg-red-500/10 px-3 py-2 text-body text-red-400">
+          <div className="mt-2 flex items-center gap-2 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 truncate">Delete failed: {String(deleteRag.error)}</span>
           </div>
         )}
       </div>
-    </section>
+    </Faceplate>
   );
 }
 

@@ -100,14 +100,13 @@ describe('PermissionsSection component', () => {
       expect(permissionsSectionSrc).toContain('name="preset"');
     });
 
-    it('highlights selected preset with the brand-selected primitive', () => {
-      // The active-state visual is owned by the `.brand-selected` reusable
-      // primitive defined in `apps/desktop/src/renderer/src/styles/globals.css`
-      // (the canonical "select one of N" chooser style per CLAUDE.md). Pin the
-      // class name here so accidental drift back to the old `border-primary
-      // bg-primary/5` literal — or any other ad-hoc selection styling — fails
-      // CI before reaching review.
-      expect(permissionsSectionSrc).toContain("'brand-selected'");
+    it('highlights the selected preset with the armed console chassis', () => {
+      // The active-state visual moved from the legacy chooser primitive to the
+      // console armed chassis (armed-red = LIVE per DESIGN.md) during the Phase
+      // 7b aesthetic sweep. Pin the token pair here so accidental drift back to
+      // the old selection styling — or any other ad-hoc highlight — fails CI
+      // before reaching review.
+      expect(permissionsSectionSrc).toContain('border-[var(--armed-edge)] bg-[var(--armed-soft)]');
     });
 
     it('calls applyPreset when preset is selected', () => {
@@ -239,10 +238,13 @@ describe('PermissionsSection component', () => {
       expect(permissionsSectionSrc).not.toContain("from '@team-x/shared-types'");
     });
 
-    it('imports required UI components', () => {
-      expect(permissionsSectionSrc).toContain('@/components/ui/badge.js');
+    it('imports required UI + console components', () => {
+      // Post-7b: shadcn Card + Badge retired in favour of the console barrel
+      // (Faceplate / SubviewState / Tag). Button, Input, and Switch remain the
+      // Phase-1 restyled primitives.
+      expect(permissionsSectionSrc).toContain('@/components/console/index.js');
       expect(permissionsSectionSrc).toContain('@/components/ui/button.js');
-      expect(permissionsSectionSrc).toContain('@/components/ui/card.js');
+      expect(permissionsSectionSrc).toContain('@/components/ui/input.js');
       expect(permissionsSectionSrc).toContain('@/components/ui/switch.js');
     });
 

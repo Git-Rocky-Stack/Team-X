@@ -28,6 +28,7 @@ import { RagSection } from './rag-section.js';
 import { RuntimeSection } from './runtime-section.js';
 import { UpdaterSection } from './updater-section.js';
 
+import { Faceplate } from '@/components/console/index.js';
 import { ErrorBoundary } from '@/components/error-boundary.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -46,12 +47,14 @@ export function SettingsView() {
   }, [focusSection, setFocusSection]);
 
   return (
-    <div className="amoled-menu-surface flex h-full flex-col bg-black">
+    <div className="flex h-full flex-col bg-background">
       <div className="border-b border-border px-4 py-4">
-        <h1 className="text-h1 text-foreground">Settings</h1>
-        <p className="text-body-sm text-muted-foreground mt-1">
-          Manage providers, API keys, and system preferences.
-        </p>
+        <Faceplate kicker="System console" serial="SETTINGS" bodyClassName="space-y-1">
+          <h1 className="text-h1 text-foreground">Settings</h1>
+          <p className="text-caption text-silver-mute">
+            Manage providers, API keys, and system preferences.
+          </p>
+        </Faceplate>
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-6">
         <ErrorBoundary componentName="UpdaterSection">

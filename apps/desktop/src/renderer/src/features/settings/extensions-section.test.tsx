@@ -76,14 +76,21 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Remove');
   });
 
-  it('keeps active authority permission badges visibly color-coded on AMOLED settings', () => {
-    expect(extensionsSectionSrc).toContain('function permissionBadgeClass(');
-    expect(extensionsSectionSrc).toContain('border-brand-500/65 bg-brand-900/75 text-red-50');
-    expect(extensionsSectionSrc).toContain('border-red-500/55 bg-red-950/70 text-red-100');
-    expect(extensionsSectionSrc).toContain('border-amber-500/55 bg-amber-950/70 text-amber-100');
+  it('color-codes active authority permissions with distinct console status lamps', () => {
+    // Permission is a tri-state STATUS, so it rides the console annunciator
+    // LampTile (a Badge/Tag is neutral — status must be a lamp). Three distinct
+    // lamps preserve the original's at-a-glance coding: allow = GO (green),
+    // deny = NO-GO (red), prompt = HOLD (the original amber, which a red `warn`
+    // would have erased). The hand-rolled permissionBadgeClass is retired.
     expect(extensionsSectionSrc).toContain(
-      '<Badge variant="outline" className={permissionBadgeClass(grant.permission)}>',
+      'const PERMISSION_TONE: Record<AuthorityPermission, LampTone>',
     );
+    expect(extensionsSectionSrc).toContain("allow: 'go',");
+    expect(extensionsSectionSrc).toContain("deny: 'nogo',");
+    expect(extensionsSectionSrc).toContain("prompt: 'hold',");
+    expect(extensionsSectionSrc).toContain('tone={PERMISSION_TONE[grant.permission]}');
+    expect(extensionsSectionSrc).not.toContain('permissionBadgeClass');
+    expect(extensionsSectionSrc).not.toContain('bg-brand-900');
   });
 
   it('does not mount the removed marketplace or simplified permission components', () => {

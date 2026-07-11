@@ -23,8 +23,7 @@ interface GrantAuthorityDialogProps {
   initialResourceKind?: AuthorityResourceKind;
 }
 
-const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+const selectClass = 'well-input flex h-10 w-full px-3 py-2 text-body';
 
 const COMMON_CAPABILITIES = [
   'browse',
@@ -271,7 +270,7 @@ export function GrantAuthorityDialog({
           ) : null}
 
           {createGrant.isError && (
-            <p className="text-body text-destructive">
+            <p className="text-body text-[var(--led-nogo)]">
               Failed to save authority grant. Check the scope and resource, then try again.
             </p>
           )}

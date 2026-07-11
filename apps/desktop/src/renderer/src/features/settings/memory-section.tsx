@@ -9,9 +9,8 @@ import { useEffect, useState } from 'react';
 
 import { useMemorySettings, useSetMemorySettings } from '../../hooks/use-settings.js';
 
-import { Button } from '@/components/ui/button.js';
+import { Faceplate, RecessedWell, SubviewState } from '@/components/console/index.js';
 import { Input } from '@/components/ui/input.js';
-import { Skeleton } from '@/components/ui/skeleton.js';
 import { cn } from '@/lib/utils.js';
 
 function clamp(value: number, min: number, max: number): number {
@@ -30,21 +29,29 @@ export function MemorySection() {
 
   if (isLoading || !draft) {
     return (
-      <section className="space-y-3" aria-busy="true">
+      <Faceplate kicker="Memory" serial="LONG-RUN" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
-        <Skeleton className="h-40 rounded-lg" />
-      </section>
+        <SubviewState
+          lampLabel="SYNC"
+          lampTone="hold"
+          title="Loading long-run memory…"
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
   if (isError || !data) {
     return (
-      <section className="space-y-3">
+      <Faceplate kicker="Memory" serial="LONG-RUN" bodyClassName="space-y-3">
         <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
-        <div className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-body text-red-400">
-          Failed to load long-run memory settings.
-        </div>
-      </section>
+        <SubviewState
+          lampLabel="NO-GO"
+          lampTone="nogo"
+          title="Failed to load long-run memory settings."
+          className="min-h-0 p-6"
+        />
+      </Faceplate>
     );
   }
 
@@ -60,47 +67,50 @@ export function MemorySection() {
   }
 
   return (
-    <section className="space-y-3" data-settings-memory="">
-      <div className="flex items-center gap-2">
-        <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
-        {setMemory.isPending && (
-          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
-        )}
-      </div>
+    <section data-settings-memory="">
+      <Faceplate kicker="Memory" serial="LONG-RUN" bodyClassName="space-y-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-h2 text-foreground">Long-Run Memory</h2>
+          {setMemory.isPending && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label="Saving" />
+          )}
+        </div>
 
-      <p className="text-body-sm text-muted-foreground mt-1">
-        These defaults shape how Team-X condenses long threads into digests, how much recent
-        conversation it prioritizes, and how deep the checkpoint trail stays visible in the operator
-        memory surface.
-      </p>
+        <p className="text-body-sm text-muted-foreground">
+          These defaults shape how Team-X condenses long threads into digests, how much recent
+          conversation it prioritizes, and how deep the checkpoint trail stays visible in the
+          operator memory surface.
+        </p>
 
-      <div className="space-y-4 rounded-lg border border-border bg-surface-50 p-4">
+        {/* Default pack budget — headline envelope readout + armed chooser */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-label text-muted-foreground">Default pack budget</span>
-            <span className="text-code-sm tabular-nums text-foreground">
+          <span className="text-label text-muted-foreground">Default pack budget</span>
+          <RecessedWell className="flex items-baseline justify-between gap-3 rounded-inset px-3 py-2">
+            <span className="text-numeric tabular-nums text-[var(--display-fg)]">
               {draft.defaultTargetTokenBudget.toLocaleString()}
             </span>
-          </div>
+            <span className="text-eyebrow-sm text-silver-mute">tokens</span>
+          </RecessedWell>
           <div className="flex flex-wrap gap-2">
-            {MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.map((budget) => (
-              <Button
-                key={budget}
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'text-button-sm',
-                  draft.defaultTargetTokenBudget === budget
-                    ? 'brand-selected'
-                    : 'border-white/10 bg-black/10 hover:bg-black/20',
-                )}
-                disabled={setMemory.isPending}
-                onClick={() => commit('defaultTargetTokenBudget', budget)}
-              >
-                {budget.toLocaleString()}
-              </Button>
-            ))}
+            {MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.map((budget) => {
+              const isActive = draft.defaultTargetTokenBudget === budget;
+              return (
+                <button
+                  key={budget}
+                  type="button"
+                  disabled={setMemory.isPending}
+                  onClick={() => commit('defaultTargetTokenBudget', budget)}
+                  className={cn(
+                    'rounded-md border px-2.5 py-1 text-button-sm tabular-nums transition-colors',
+                    isActive
+                      ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
+                      : 'border-[var(--hairline)] bg-transparent text-muted-foreground hover:border-[var(--hairline-strong)]',
+                  )}
+                >
+                  {budget.toLocaleString()}
+                </button>
+              );
+            })}
           </div>
           <p className="text-caption text-muted-foreground/70">
             Autonomy &gt; Memory starts from this token envelope before any per-session override.
@@ -197,13 +207,13 @@ export function MemorySection() {
             {MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.max}).
           </p>
         </div>
-      </div>
 
-      {setMemory.isError && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-body text-red-400">
-          <span className="min-w-0 truncate">Failed to save: {String(setMemory.error)}</span>
-        </div>
-      )}
+        {setMemory.isError && (
+          <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
+            <span className="min-w-0 truncate">Failed to save: {String(setMemory.error)}</span>
+          </div>
+        )}
+      </Faceplate>
     </section>
   );
 }
