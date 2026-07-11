@@ -545,7 +545,10 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                     </>
                   ) : (
                     <>
-                      <Eye className="h-4 w-4 shrink-0 text-[var(--display-fg-mute)]" aria-hidden="true" />
+                      <Eye
+                        className="h-4 w-4 shrink-0 text-[var(--display-fg-mute)]"
+                        aria-hidden="true"
+                      />
                       <span className="text-caption text-[var(--display-fg-mute)]">
                         Copilot transcript is read only in the drawer.
                       </span>

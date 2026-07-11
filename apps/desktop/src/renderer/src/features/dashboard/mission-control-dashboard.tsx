@@ -822,13 +822,17 @@ export function MissionControlDashboard({
                   <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {commandRows.length}
                   </span>
-                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">recent commands</span>
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">
+                    recent commands
+                  </span>
                 </RecessedWell>
                 <RecessedWell className="flex items-center gap-2 px-3 py-1.5">
                   <span className="font-data text-label tabular-nums text-[var(--display-fg)]">
                     {tickets.length}
                   </span>
-                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">tracked tickets</span>
+                  <span className="text-eyebrow-sm text-[var(--display-fg-mute)]">
+                    tracked tickets
+                  </span>
                 </RecessedWell>
                 <RecessedWell
                   className="flex items-center gap-2 px-3 py-1.5"
