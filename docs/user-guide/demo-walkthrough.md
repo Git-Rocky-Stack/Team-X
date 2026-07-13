@@ -86,7 +86,7 @@ filesystem vault under `%APPDATA%/Team-X/` (Windows) or
 
 ## Versioning
 
-This walkthrough is current as of **Team-X v3.2.1+**. Every feature
+This walkthrough is current as of **Team-X v3.4.0**. Every feature
 referenced here ships in the current release and is covered by
 Playwright E2E tests. Future releases may change UI paths; this
 page updates in lockstep.

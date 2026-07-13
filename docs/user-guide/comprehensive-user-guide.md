@@ -5005,4 +5005,4 @@ or with the deterministic slash commands:
 **Version**: 1.0
 **Last Updated**: 2026-07-03
 **Product Phase**: Phase 6
-**Release**: Current as of v3.2.1+ (2026-07)
+**Release**: Current as of v3.4.0 (2026-07)

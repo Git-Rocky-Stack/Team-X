@@ -113,18 +113,21 @@ Team-X charges nothing; there is nothing to refund on the Team-X side. Refund qu
 
 ### Is my data secure?
 
-Yes. Team-X implements enterprise-grade security:
+Team-X is local-first. There is no Team-X server and no Team-X staff with access to your data, because nothing about your work leaves your machine unless you choose to call a cloud provider. The real posture:
 
-- **Encryption:** All data encrypted at rest (AES-256) and in transit (TLS 1.3)
-- **Zero-knowledge architecture:** Your data is not accessible to Team-X staff
-- **No training on your data:** AI providers do not use your conversations for training (with Anthropic and OpenAI enterprise endpoints)
-- **Audit trail:** Every action logged in Audit Trail for compliance
+- **Local-first by default:** workspace data, tickets, messages, and files all live on your own machine, in a local SQLite database and a filesystem vault.
+- **Zero phone-home:** no analytics, no telemetry, no crash reporting, and no automatic update checks. Nothing about your usage is sent anywhere.
+- **Secrets in the OS keychain:** provider API keys are stored in your operating system's keychain via keytar, never in plaintext config files.
+- **Privacy-tier filtering:** the provider router lets you restrict which provider tiers (Local, Open-Source Cloud, Proprietary Cloud) your agents may use, so sensitive work can be pinned to local models.
+- **Append-only audit log:** every action is recorded in a local, filterable audit log you can review and export.
+
+What leaves your machine is exactly what you send to whichever LLM provider you configure, governed by that provider's own data policy. Run local Ollama models to keep everything on-device.
 
 ### Where is my data stored?
 
-- **Local storage:** Workspace data, tickets, and configurations stored locally on your device
-- **Cloud sync:** Optional cloud backup (encrypted) for disaster recovery
-- **AI providers:** Only conversation context sent to providers (nothing stored locally on their servers)
+- **On your device:** workspace data, tickets, configurations, and deliverables are stored locally, metadata in a SQLite database and files as blobs in a filesystem vault.
+- **Backups are local archives:** the built-in backup writes a signed archive (SQLite database plus vault files plus a manifest) to a location you pick. Team-X hosts no remote backup and syncs nothing to any server, because there is no Team-X server to sync to.
+- **LLM providers:** only the conversation context needed for a given turn is sent to whichever provider you have configured. Team-X itself stores nothing off your machine.
 
 ### Can I use Team-X offline?
 
@@ -136,22 +139,26 @@ Yes. Team-X implements enterprise-grade security:
 
 ### Does Team-X access my code?
 
-**No.** Team-X employees only access files you explicitly authorize:
+Team-X employees only touch files through the authority matrix you control:
 
-- **Explicit file access:** You approve each file read/write operation
-- **Approval workflow:** Write-side operations require confirmation
-- **Sandboxed execution:** Employees work in isolated environments
-- **Audit log:** All file operations logged and reviewable
+- **Authority matrix:** each capability and path is granted allow, deny, or prompt; nothing is assumed.
+- **Approval workflow:** write-side operations pass through a confirmation gate before they run.
+- **Process isolation:** the renderer runs with context isolation on and Node access off, and MCP tool servers run in separate child processes, not in the main app.
+- **Audit log:** every file operation is recorded in the append-only audit log and is reviewable and exportable.
 
-### Is Team-X SOC 2 compliant?
+### Does Team-X hold any compliance certifications?
 
-SOC 2 Type II compliance is **in progress** (expected Q2 2026). Current security posture:
+No. Team-X claims no compliance certifications of any kind. It is an open-source, MIT-licensed, local-first desktop application, not a hosted service, so there is no Team-X back-end to certify and no Team-X operator holding your data.
 
-- **Encryption:** AES-256 at rest, TLS 1.3 in transit
-- **Access controls:** Role-based access control (RBAC)
-- **Audit logging:** Comprehensive event logging
-- **Penetration testing:** Quarterly third-party testing
-- **Vulnerability scanning:** Continuous automated scanning
+The honest security boundary is your own machine plus the third-party LLM providers you choose to call:
+
+- your data lives locally in SQLite plus a filesystem vault;
+- provider API keys live in the OS keychain via keytar;
+- the app is zero phone-home (no analytics, telemetry, crash reporting, or auto-update checks);
+- privacy-tier filtering lets you keep sensitive work on local models;
+- a local append-only audit log records every action.
+
+If you need formal compliance guarantees, they come from the LLM provider you route to, under that provider's terms, not from Team-X.
 
 ---
 
@@ -169,23 +176,18 @@ Employees are AI agents with **curated roles**: specialized personas with skills
 
 ### How many employees can I hire?
 
-| Tier | Employee Quota |
-|------|----------------|
-| Free | 3 employees |
-| Basic | 10 employees |
-| Pro | 25 employees |
-| Enterprise | 50+ employees |
+**As many as you want.** Team-X is free and MIT-licensed; there are no tiers, no quotas, and no per-seat gate. Hire one employee or a hundred, across as many workspaces as you like.
 
-**Idle employees cost nothing**; you only pay when they work on tickets.
+**Idle employees cost nothing**; the only bill you ever see is the provider's, and only when an employee actually works a ticket.
 
 ### Can I customize employee roles?
 
-**Partial customization:**
+Yes, at two levels:
 
-- **What you can customize:** Name, preferred provider, runtime, personality tweaks
-- **What you cannot customize:** Core role skills (these are curated for quality)
+- **Per employee:** adjust the name, preferred provider, runtime profile, and personality on any hire.
+- **Custom role packs:** roles are plain Markdown files with YAML frontmatter, so you can author or import your own role packs alongside the curated Strategia pack. Custom roles are available to every user; there is no paid tier and no gate on them.
 
-For fully custom employees, consider creating **custom roles** (Enterprise feature).
+The curated role pack is a starting point, not a ceiling.
 
 ### Can employees collaborate?
 
@@ -303,25 +305,35 @@ Yes. From the Agent Runs Panel:
 
 ### What providers does Team-X support?
 
-**Supported providers:**
+Nine, spanning all three privacy tiers. The tier shown is each provider's default; you can change it per provider in Settings.
 
-| Provider | Models | Use Case |
-|----------|--------|----------|
-| **Anthropic** | Claude Opus 4.7, Sonnet 4.6, Haiku 4.5 | Complex reasoning, code |
-| **OpenAI** | GPT-4o, GPT-4o-mini | Balanced speed/quality, fast tasks |
-| **Ollama** | LLaMA 3.1, Mistral, others | Local, free, privacy-sensitive |
+| Provider | Default privacy tier | Notes |
+|----------|----------------------|-------|
+| **Ollama** | Local | On-device models; no bill, nothing leaves your machine |
+| **Anthropic** | Proprietary Cloud | Frontier reasoning and code |
+| **OpenAI** | Proprietary Cloud | Balanced speed and quality |
+| **Google Gemini** | Proprietary Cloud | Gemini model family |
+| **Groq** | Open-Source Cloud | Very low latency on open models |
+| **OpenRouter** | Proprietary Cloud | Broad multi-model gateway |
+| **Together AI** | Open-Source Cloud | Open-model hosting |
+| **Fireworks AI** | Open-Source Cloud | Open-model hosting |
+| **Any OpenAI-compatible endpoint** | You choose | Point Team-X at your own or a self-hosted server |
+
+You pick the specific model per employee inside each provider; Team-X does not pin you to a fixed model list, so newer models work as providers ship them.
 
 ### How do I choose a provider?
 
 **Provider selection guide:**
 
-| Task | Recommended Provider | Why |
-|------|---------------------|-----|
-| Complex architecture, code reviews | Anthropic Claude Opus | Best reasoning |
-| Standard development tasks | Anthropic Claude Sonnet | Good balance |
-| Simple tasks, high volume | OpenAI GPT-4o-mini | Fast, inexpensive |
-| Sensitive data | Ollama local | No data leaves device |
-| Cost-sensitive projects | Ollama local | Free |
+| Task | Reach for | Why |
+|------|-----------|-----|
+| Complex architecture, code review | A frontier proprietary-cloud model (Anthropic, OpenAI, or Google top tier) | Strongest reasoning |
+| Standard development tasks | A balanced mid-tier cloud model | Good quality-to-cost ratio |
+| Simple, high-volume tasks | A fast, efficient cloud model, or a local Ollama model | Low latency and low cost |
+| Sensitive data | Ollama local | Nothing leaves your device |
+| Cost-sensitive projects | Ollama local | No provider bill at all |
+
+The privacy tier matters as much as the model: pin sensitive work to Local, and let routine or public work reach Open-Source or Proprietary Cloud as your budget allows.
 
 ### Can I switch providers mid-ticket?
 
@@ -333,13 +345,15 @@ Yes, but not recommended. **Provider switching:**
 
 ### What if a provider is down?
 
-Team-X implements **automatic failover** (if configured):
+Team-X does not silently fail over between providers mid-run. If the provider a run is using errors out or times out, the run surfaces the error instead of quietly switching accounts, so you always know which provider actually did the work and got billed.
 
-1. **Primary provider fails** (timeout, error)
-2. **Backup provider takes over**
-3. **Agent continues** with minimal interruption
+To stay resilient, keep more than one provider configured:
 
-**Configure failover:** Settings → Providers → Failover Configuration
+1. When Team-X dispatches autonomous work, its provider router picks among your **enabled** providers by policy order and privacy tier.
+2. If the chosen provider is down, the run reports the error rather than continuing on a different one.
+3. Retry the run, or switch that employee to another configured provider, and it proceeds normally.
+
+Configure and enable your providers in **Settings > AI Providers**; a local Ollama provider makes a good always-available backstop.
 
 ---
 
@@ -468,7 +482,7 @@ a different issue; please open a ticket with the full terminal output and your
 **Prevent future stuck runs:**
 - Set **timeout policies** in Autonomy → Runtimes
 - Enable **automatic cancellation** after X minutes
-- Use **provider failover** for critical tickets
+- Keep a second provider configured (a local Ollama backstop works well) so you can switch a stuck employee over
 
 ### Files not saving. What do I do?
 
@@ -571,7 +585,7 @@ Use the built-in backup tool:
 
 1. Open **Settings → Data → Create Backup**
 2. Team-X writes a signed archive (SQLite DB + vault files + manifest) to disk
-3. Save the archive anywhere: external drive, cloud sync folder, encrypted bundle
+3. Save the archive anywhere: external drive, a synced folder of your choice, or an encrypted bundle
 
 To restore on a new machine: install Team-X, then **Settings → Data → Restore from Backup** and point at the archive. Manifest validation catches tampering or corruption.
 
@@ -624,4 +638,4 @@ Have an idea for improving Team-X? We'd love to hear it:
 
 ---
 
-*Last updated: 2026-05-03*
+*Last updated: 2026-07-12*
