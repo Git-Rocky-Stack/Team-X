@@ -146,7 +146,8 @@ export function VuMeter({
       aria-valuenow={pct}
       aria-valuetext={variant === 'progress' ? `${pct}% complete` : `${pct}% — ${zoneWord} zone`}
       className={cn(
-        'flex gap-[2px]',
+        // AMP 2026-07-18: 1.5px cadence so the strip reads as one lit window.
+        'flex gap-[1.5px]',
         orientation === 'horizontal'
           ? 'h-[14px] items-stretch'
           : 'h-[72px] w-[14px] flex-col-reverse',

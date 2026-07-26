@@ -524,17 +524,26 @@
   .faceplate {
     position: relative;
     border-radius: var(--r-card);
-    background: radial-gradient(
-        ellipse 80% 60% at 30% -10%,
-        rgba(255, 255, 255, 0.55) 0%,
-        transparent 60%
-      ), linear-gradient(180deg, #f5f5f3 0%, #eaeae7 35%, #e0e0dc 70%, #d8d8d4 100%);
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    /* AMP 2026-07-18 (brutalist-maximalist depth pass, ported from
+       Team-X-Website for site<->app lockstep; see Decisions Log 2026-07-26).
+       Directional brush grain across the anodized plate, a top raking light, a
+       soft base vignette, and a deeper multi-radius cast so the plate floats
+       off the chassis. Same silver palette, amplified only. */
+    background: repeating-linear-gradient(
+        107deg,
+        rgba(0, 0, 0, 0.02) 0 1px,
+        rgba(0, 0, 0, 0) 1px 3px,
+        rgba(255, 255, 255, 0.5) 3px 4px
+      ), radial-gradient(ellipse 90% 70% at 28% -12%, rgba(255, 255, 255, 0.7) 0%, transparent 62%),
+      radial-gradient(ellipse 130% 80% at 50% 118%, rgba(0, 0, 0, 0.08) 0%, transparent 60%),
+      linear-gradient(180deg, #f6f6f4 0%, #ebebe8 35%, #e0e0dc 70%, #d6d6d2 100%);
+    border: 1px solid rgba(0, 0, 0, 0.13);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 -1px 0 rgba(0, 0, 0, 0.16),
-      inset 1px 0 0 rgba(255, 255, 255, 0.5), inset -1px 0 0 rgba(0, 0, 0, 0.08),
-      0 1px 0 rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.16),
-      0 12px 28px rgba(0, 0, 0, 0.14), 0 40px 80px rgba(0, 0, 0, 0.1);
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+      inset 1px 0 0 rgba(255, 255, 255, 0.55), inset -1px 0 0 rgba(0, 0, 0, 0.1),
+      0 1px 0 rgba(0, 0, 0, 0.22), 0 2px 4px rgba(0, 0, 0, 0.16),
+      0 12px 28px rgba(0, 0, 0, 0.16), 0 24px 48px rgba(0, 0, 0, 0.13),
+      0 44px 88px rgba(0, 0, 0, 0.12);
   }
   .faceplate::before {
     /* edge-light strip */
@@ -556,42 +565,49 @@
     pointer-events: none;
   }
   .faceplate::after {
-    /* top-right key light */
+    /* top-right key light — AMP 2026-07-18: broader specular catch (140→180). */
     content: "";
     position: absolute;
     top: 0;
     right: 0;
-    width: 140px;
-    height: 60px;
-    background: radial-gradient(ellipse at 80% 0%, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+    width: 180px;
+    height: 80px;
+    background: radial-gradient(ellipse at 82% 0%, rgba(255, 255, 255, 0.5) 0%, transparent 72%);
     pointer-events: none;
     border-radius: var(--r-card);
   }
   .dark .faceplate {
-    background: radial-gradient(
-        ellipse 80% 60% at 30% -10%,
-        rgba(255, 255, 255, 0.04) 0%,
-        transparent 60%
-      ), linear-gradient(180deg, #1c1c1c 0%, #151515 35%, #101010 70%, #0c0c0c 100%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    /* AMP 2026-07-18 — Night Ops brushed-black amplification (see .faceplate). */
+    background: repeating-linear-gradient(
+        107deg,
+        rgba(255, 255, 255, 0.015) 0 1px,
+        rgba(255, 255, 255, 0) 1px 3px,
+        rgba(0, 0, 0, 0.03) 3px 4px
+      ), radial-gradient(ellipse 90% 70% at 28% -12%, rgba(255, 255, 255, 0.06) 0%, transparent 62%),
+      radial-gradient(ellipse 130% 80% at 50% 118%, rgba(0, 0, 0, 0.22) 0%, transparent 60%),
+      linear-gradient(180deg, #1e1e1e 0%, #161616 35%, #101010 70%, #0b0b0b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.7),
-      inset 1px 0 0 rgba(255, 255, 255, 0.025), inset -1px 0 0 rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.75),
+      inset 1px 0 0 rgba(255, 255, 255, 0.04), inset -1px 0 0 rgba(0, 0, 0, 0.5),
       0 1px 0 rgba(0, 0, 0, 0.9), 0 2px 4px rgba(0, 0, 0, 0.7),
-      0 12px 28px rgba(0, 0, 0, 0.55), 0 40px 80px rgba(0, 0, 0, 0.4);
+      0 12px 28px rgba(0, 0, 0, 0.55), 0 24px 48px rgba(0, 0, 0, 0.45),
+      0 44px 88px rgba(0, 0, 0, 0.45);
   }
   .dark .faceplate::before {
+    /* AMP 2026-07-18: brighter milled top-edge chamfer catch. */
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(230, 230, 230, 0.18) 20%,
-      rgba(230, 230, 230, 0.32) 50%,
-      rgba(230, 230, 230, 0.18) 80%,
+      rgba(235, 235, 235, 0.24) 20%,
+      rgba(235, 235, 235, 0.44) 50%,
+      rgba(235, 235, 235, 0.24) 80%,
       transparent 100%
     );
   }
   .dark .faceplate::after {
-    background: radial-gradient(ellipse at 80% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    /* AMP 2026-07-18: stronger Night key light. */
+    background: radial-gradient(ellipse at 82% 0%, rgba(255, 255, 255, 0.075) 0%, transparent 72%);
   }
 
   /* Faceplate-lite — Card/Dialog surfaces (no edge-light pseudo, lighter throw) */
@@ -622,11 +638,13 @@
   /* Layer 2 — recessed well (DISPLAY SURFACE: identical both shifts) */
   .well {
     border-radius: var(--r-card);
-    background: linear-gradient(180deg, #080808 0%, #0a0a0a 100%);
-    border: 1px solid rgba(0, 0, 0, 0.7);
+    /* AMP 2026-07-18: deeper carve so recessed wells read as milled deeper. */
+    background: linear-gradient(180deg, #070707 0%, #0a0a0a 100%);
+    border: 1px solid rgba(0, 0, 0, 0.78);
     box-shadow:
-      inset 0 2px 4px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.03),
-      inset 1px 0 2px rgba(0, 0, 0, 0.5), inset -1px 0 2px rgba(0, 0, 0, 0.5);
+      inset 0 2px 6px rgba(0, 0, 0, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.035),
+      inset 1px 0 3px rgba(0, 0, 0, 0.6), inset -1px 0 3px rgba(0, 0, 0, 0.6),
+      inset 0 10px 18px rgba(0, 0, 0, 0.32);
   }
 
   /* Recessed input well — form fields (light text BOTH shifts per DESIGN.md) */
@@ -650,26 +668,32 @@
   /* Layer 3 — machined cap (neutral raised control) */
   .cap {
     border-radius: var(--r-control);
+    /* AMP 2026-07-18: convex cap highlight + added mid cast layer (the app's
+       unified .cap carries both the raised-control convex and button roles the
+       website split across .control and .btn). */
     background: radial-gradient(
-        ellipse 80% 50% at 50% 0%,
-        rgba(255, 255, 255, 0.7) 0%,
-        transparent 60%
-      ), linear-gradient(180deg, #f7f7f5 0%, #e7e7e4 60%, #dbdbd7 100%);
-    border: 1px solid rgba(0, 0, 0, 0.14);
+        ellipse 90% 60% at 50% -8%,
+        rgba(255, 255, 255, 0.75) 0%,
+        transparent 58%
+      ), linear-gradient(180deg, #f8f8f6 0%, #e9e9e6 60%, #dcdcd8 100%);
+    border: 1px solid rgba(0, 0, 0, 0.11);
     color: #2e2e2c;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
-      2px rgba(0, 0, 0, 0.25), 0 4px 8px rgba(0, 0, 0, 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px
+      2px rgba(0, 0, 0, 0.22), 0 4px 8px rgba(0, 0, 0, 0.13), 0 10px 20px rgba(0, 0, 0, 0.1);
   }
   .dark .cap {
+    /* AMP 2026-07-18: convex cap highlight + added mid cast layer. */
     background: radial-gradient(
-        ellipse 80% 50% at 50% 0%,
-        rgba(255, 255, 255, 0.07) 0%,
-        transparent 60%
-      ), linear-gradient(180deg, #222222 0%, #181818 60%, #121212 100%);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+        ellipse 90% 60% at 50% -8%,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 58%
+      ), linear-gradient(180deg, #212121 0%, #181818 60%, #111111 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--silver-bright);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 4px 8px rgba(0, 0, 0, 0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.65), 0 1px
+      2px rgba(0, 0, 0, 0.85), 0 4px 8px rgba(0, 0, 0, 0.55), 0 10px 20px rgba(0, 0, 0, 0.4);
   }
   .cap:hover {
     filter: brightness(1.04);
@@ -720,10 +744,12 @@
       ), linear-gradient(180deg, #c8333a 0%, #aa2024 55%, #7f171a 100%);
     border: 1px solid var(--armed-deep);
     color: #fff3f0;
+    /* AMP 2026-07-18: wider two-stage armed bloom (within the existing red). */
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.35),
       0 0 0 1px rgba(170, 32, 36, 0.4), 0 1px 2px rgba(0, 0, 0, 0.7),
-      0 4px 12px rgba(0, 0, 0, 0.5), 0 0 24px var(--armed-glow);
+      0 4px 12px rgba(0, 0, 0, 0.5), 0 0 24px var(--armed-glow),
+      0 0 44px rgba(224, 37, 43, 0.14);
     text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
   }
   .cap-armed:hover {
@@ -778,6 +804,47 @@
   }
   .cap-chrome:active {
     transform: translateY(1px);
+  }
+
+  /* AMP 2026-07-18 (Decisions Log 2026-07-26): hover specular glint — a
+     one-shot light-catch sweeping across the machined face, the metal analog
+     of the hover brightness lift + 1px press travel (DESIGN.md §Motion). It is
+     an ANIMATION, not a transition, so caps keep their mechanical snap (the
+     no-transition cap doctrine holds); reduced motion suppresses it (see the
+     media block below). Applies to the raised metal/armed CTAs — mirrors the
+     website's .btn:not(.btn-ghost) set = .cap / .cap-armed / .cap-chrome; the
+     recessed-tint .cap-warn and flat nav tiles are excluded. Box-shadow blooms
+     draw outside the border box, so overflow:hidden never clips a cap's glow;
+     disabled caps set pointer-events:none, so :hover never fires there. */
+  .cap,
+  .cap-armed,
+  .cap-chrome {
+    position: relative;
+    overflow: hidden;
+  }
+  .cap::after,
+  .cap-armed::after,
+  .cap-chrome::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -60%;
+    width: 45%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.14) 50%,
+      transparent 100%
+    );
+    transform: skewX(-18deg);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .cap:hover::after,
+  .cap-armed:hover::after,
+  .cap-chrome:hover::after {
+    animation: cap-glint 0.5s var(--ease-snap);
   }
 
   /* Chooser-selection caps — the swept replacement for the legacy chooser-selection recipe (retired v3.4.0).
@@ -861,24 +928,28 @@
     padding: 0 44px; /* clears 20px corner bolts */
     z-index: 5;
     border-radius: var(--r-card) var(--r-card) 0 0;
+    /* AMP 2026-07-18: deeper machine-brush grain + brighter top edge. */
     background: repeating-linear-gradient(
         90deg,
-        rgba(0, 0, 0, 0.035) 0 1px,
-        rgba(0, 0, 0, 0.012) 1px 2px,
-        rgba(255, 255, 255, 0.45) 2px 3px
-      ), linear-gradient(180deg, #f0f0ed 0%, #e0e0dc 55%, #d5d5d1 100%);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(255, 255, 255, 0.4);
+        rgba(0, 0, 0, 0.05) 0 1px,
+        rgba(0, 0, 0, 0.015) 1px 2px,
+        rgba(255, 255, 255, 0.55) 2px 3px
+      ), linear-gradient(180deg, #f1f1ee 0%, #e0e0dc 55%, #d3d3cf 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 0, 0, 0.1), 0 1px 0
+      rgba(255, 255, 255, 0.5);
   }
   .dark .stripe {
+    /* AMP 2026-07-18: deeper brush grain + brighter top edge + seam. */
     background: repeating-linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.035) 0 1px,
-        rgba(255, 255, 255, 0.012) 1px 2px,
-        rgba(0, 0, 0, 0.06) 2px 3px
-      ), linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 55%, #181818 100%);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.8);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 0 rgba(255, 255, 255, 0.03);
+        rgba(255, 255, 255, 0.05) 0 1px,
+        rgba(255, 255, 255, 0.015) 1px 2px,
+        rgba(0, 0, 0, 0.08) 2px 3px
+      ), linear-gradient(180deg, #2d2d2d 0%, #202020 55%, #171717 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.85);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px 0
+      rgba(255, 255, 255, 0.04);
   }
 
   /* Hex socket cap bolt — 3-layer machined (outer hex + Allen socket) */
@@ -887,23 +958,25 @@
     width: 20px;
     height: 20px;
     z-index: 7;
+    /* AMP 2026-07-18: brighter machined head + tighter seat. */
     background: radial-gradient(
         circle at 50% 50%,
-        transparent 62%,
-        rgba(0, 0, 0, 0.06) 68%,
-        transparent 75%
+        transparent 60%,
+        rgba(0, 0, 0, 0.08) 67%,
+        transparent 76%
       ),
       radial-gradient(
-        circle at 28% 22%,
+        circle at 30% 24%,
         #ffffff 0%,
-        #dcdcd8 12%,
-        #b4b4b0 30%,
+        #e0e0dc 12%,
+        #b6b6b2 30%,
         #8e8e8a 55%,
-        #62625e 80%,
-        #44443f 100%
+        #5e5e5a 80%,
+        #40403c 100%
       );
     clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25))
+      drop-shadow(0 0 1px rgba(0, 0, 0, 0.35));
   }
   .hex::after {
     content: "";
@@ -913,22 +986,24 @@
     clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
   }
   .dark .hex {
+    /* AMP 2026-07-18: brighter machined head highlight + tighter seat. */
     background: radial-gradient(
         circle at 50% 50%,
-        transparent 62%,
-        rgba(255, 255, 255, 0.04) 68%,
-        transparent 75%
+        transparent 60%,
+        rgba(255, 255, 255, 0.06) 67%,
+        transparent 76%
       ),
       radial-gradient(
-        circle at 28% 22%,
-        #a4a4a4 0%,
-        #7c7c7c 12%,
-        #525252 30%,
-        #323232 55%,
-        #181818 80%,
-        #0a0a0a 100%
+        circle at 30% 24%,
+        #b4b4b4 0%,
+        #868686 12%,
+        #565656 30%,
+        #333333 55%,
+        #171717 80%,
+        #070707 100%
       );
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7));
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.7))
+      drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
   }
   .dark .hex::after {
     background: radial-gradient(circle at 72% 78%, #1c1c1c 0%, #0a0a0a 35%, #000000 100%);
@@ -968,8 +1043,12 @@
     background: linear-gradient(180deg, #1f1f1f 0%, #161616 60%, #111111 100%);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: #5a5a5a; /* unlit graphite — literal: lamp caps never invert */
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 3px 6px rgba(0, 0, 0, 0.45);
+    /* AMP 2026-07-18: deeper convex cap + per-color backlit halo via
+       --lamp-glow (lit variants set the color; unlit stays haloless). */
+    --lamp-glow: transparent;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.65), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 3px 6px rgba(0, 0, 0, 0.45), 0 0 14px var(--lamp-glow);
     user-select: none;
   }
   .lamp-sm {
@@ -978,41 +1057,51 @@
     font-size: 8.5px;
     padding: 0 7px;
   }
+  /* AMP 2026-07-18: each lit lamp gets a backlit halo (--lamp-glow) + a
+     two-stage text bloom so annunciator tiles read as genuinely lit hardware. */
   .lamp-go {
     color: var(--led-go);
-    background: linear-gradient(180deg, rgba(65, 226, 94, 0.14), rgba(65, 226, 94, 0.05)),
+    background: linear-gradient(180deg, rgba(65, 226, 94, 0.16), rgba(65, 226, 94, 0.05)),
       linear-gradient(180deg, #1c1f1c, #121412);
     border-color: var(--led-go-edge);
-    text-shadow: 0 0 8px rgba(65, 226, 94, 0.6);
+    text-shadow: 0 0 8px rgba(65, 226, 94, 0.7), 0 0 16px rgba(65, 226, 94, 0.3);
+    --lamp-glow: rgba(65, 226, 94, 0.22);
   }
   .lamp-hold {
     color: var(--led-hold);
-    background: linear-gradient(180deg, rgba(255, 176, 0, 0.13), rgba(255, 176, 0, 0.04)),
+    background: linear-gradient(180deg, rgba(255, 176, 0, 0.15), rgba(255, 176, 0, 0.04)),
       linear-gradient(180deg, #201d14, #141210);
     border-color: var(--led-hold-edge);
-    text-shadow: 0 0 8px rgba(255, 176, 0, 0.55);
+    text-shadow: 0 0 8px rgba(255, 176, 0, 0.65), 0 0 16px rgba(255, 176, 0, 0.28);
+    --lamp-glow: rgba(255, 176, 0, 0.2);
   }
   .lamp-exec {
     color: var(--led-scope);
-    background: linear-gradient(180deg, rgba(88, 196, 188, 0.12), rgba(88, 196, 188, 0.04)),
+    background: linear-gradient(180deg, rgba(88, 196, 188, 0.14), rgba(88, 196, 188, 0.04)),
       linear-gradient(180deg, #161e1d, #101413);
     border-color: var(--led-scope-edge);
-    text-shadow: 0 0 8px rgba(88, 196, 188, 0.5);
+    text-shadow: 0 0 8px rgba(88, 196, 188, 0.6), 0 0 16px rgba(88, 196, 188, 0.26);
+    --lamp-glow: rgba(88, 196, 188, 0.18);
   }
   .lamp-armed {
     color: #fff3f0;
     background: linear-gradient(180deg, #c8333a 0%, #aa2024 55%, #7f171a 100%);
     border-color: var(--armed-deep);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px
-      2px rgba(0, 0, 0, 0.8), 0 0 18px var(--armed-glow);
-    text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+    /* AMP 2026-07-18: stronger two-stage armed backlit halo. */
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.5), 0 1px
+      2px rgba(0, 0, 0, 0.8), 0 0 22px var(--armed-glow), 0 0 40px rgba(224, 37, 43, 0.18);
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
   }
   .lamp-warn {
     color: var(--led-warn);
-    background: linear-gradient(180deg, rgba(255, 68, 56, 0.14), rgba(255, 68, 56, 0.04)),
+    background: linear-gradient(180deg, rgba(255, 68, 56, 0.16), rgba(255, 68, 56, 0.04)),
       linear-gradient(180deg, #241412, #140f0e);
     border-color: var(--led-warn-edge);
-    text-shadow: 0 0 8px rgba(255, 68, 56, 0.6);
+    /* AMP 2026-07-18: halo + two-stage bloom only — the 1Hz blink stays
+       component-applied via .animate-lamp-blink (never a CSS animation here). */
+    text-shadow: 0 0 8px rgba(255, 68, 56, 0.7), 0 0 16px rgba(255, 68, 56, 0.3);
+    --lamp-glow: rgba(255, 68, 56, 0.22);
   }
   /* NO-GO — steady fault/fail (terminal error, failed run). The settled-fault
      counterpart to the blink-only .lamp-warn: deeper, desaturated red, softer
@@ -1021,10 +1110,11 @@
      failed / stopped" wears NO-GO. (DESIGN.md dual-form red rule.) */
   .lamp-nogo {
     color: var(--led-nogo);
-    background: linear-gradient(180deg, rgba(200, 69, 62, 0.13), rgba(200, 69, 62, 0.04)),
+    background: linear-gradient(180deg, rgba(200, 69, 62, 0.16), rgba(200, 69, 62, 0.04)),
       linear-gradient(180deg, #20120f, #130d0c);
     border-color: var(--led-nogo-edge);
-    text-shadow: 0 0 7px rgba(200, 69, 62, 0.5);
+    text-shadow: 0 0 8px rgba(200, 69, 62, 0.65), 0 0 16px rgba(200, 69, 62, 0.3);
+    --lamp-glow: rgba(200, 69, 62, 0.2);
   }
 
   /*
@@ -1042,44 +1132,58 @@
   /* LCD — recessed phosphor window (DISPLAY: identical both shifts) */
   .lcd {
     font-family: "Departure Mono", ui-monospace, monospace;
-    background: linear-gradient(180deg, var(--display-bg-top), var(--display-bg-bottom));
+    /* AMP 2026-07-18: faint cover-glass sheen (top layer, behind the phosphor
+       text) + deeper recess + two-stage phosphor bloom. The well stays
+       void-black in both shifts (displays-stay-dark) — the sheen rides on top
+       of the --display-bg-* tokens, it does not lighten the ground. */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0) 22%),
+      linear-gradient(180deg, var(--display-bg-top), var(--display-bg-bottom));
     border: 1px solid var(--display-border);
     border-radius: var(--r-card);
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 -1px
+      0 rgba(255, 255, 255, 0.03);
     padding: 8px 12px;
     color: var(--phosphor);
-    text-shadow: 0 0 7px rgba(65, 226, 94, 0.5);
+    text-shadow: 0 0 6px rgba(65, 226, 94, 0.6), 0 0 14px rgba(65, 226, 94, 0.3);
   }
   .lcd .lcd-dim {
     color: var(--phosphor-dim);
     text-shadow: none;
   }
   .lcd-amber {
+    /* AMP 2026-07-18: two-stage phosphor bloom. */
     color: var(--led-hold);
-    text-shadow: 0 0 7px rgba(255, 176, 0, 0.45);
+    text-shadow: 0 0 6px rgba(255, 176, 0, 0.55), 0 0 14px rgba(255, 176, 0, 0.28);
   }
   .lcd-red {
+    /* AMP 2026-07-18: two-stage phosphor bloom (within the armed red). */
     color: var(--armed-lit);
-    text-shadow: 0 0 8px var(--armed-glow);
+    text-shadow: 0 0 7px rgba(224, 37, 43, 0.6), 0 0 15px rgba(224, 37, 43, 0.3);
   }
 
   /* VU meter segments (DISPLAY: unlit segments dark both shifts) */
   .vu-seg {
-    background: #151515;
-    border-radius: 1px;
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.7);
+    /* AMP 2026-07-18: glossier unlit segment + 1.5px radius so the strip reads
+       as one lit window; the glow eases on/off with the level (pure CSS, no
+       rAF; reduced motion zeroes the transition — see the media block). */
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+    border-radius: 1.5px;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+    transition: box-shadow 180ms var(--ease-vu), filter 180ms var(--ease-vu);
   }
+  /* AMP 2026-07-18: phosphor segments get a glossy top core + a two-stage glow
+     (tight core + wide bloom) so lit segments bleed into a continuous ramp. */
   .vu-seg-g {
-    background: var(--led-go);
-    box-shadow: 0 0 5px rgba(65, 226, 94, 0.55);
+    background: linear-gradient(180deg, #b6f7c4 0%, var(--led-go) 45%, #2fae47 100%);
+    box-shadow: 0 0 4px rgba(65, 226, 94, 0.7), 0 0 9px rgba(65, 226, 94, 0.4);
   }
   .vu-seg-a {
-    background: var(--led-hold);
-    box-shadow: 0 0 5px rgba(255, 176, 0, 0.5);
+    background: linear-gradient(180deg, #ffe0a0 0%, var(--led-hold) 45%, #c88a00 100%);
+    box-shadow: 0 0 4px rgba(255, 176, 0, 0.65), 0 0 9px rgba(255, 176, 0, 0.38);
   }
   .vu-seg-r {
-    background: var(--led-warn);
-    box-shadow: 0 0 6px rgba(255, 68, 56, 0.55);
+    background: linear-gradient(180deg, #ff9d95 0%, var(--led-warn) 45%, #c8322a 100%);
+    box-shadow: 0 0 5px rgba(255, 68, 56, 0.7), 0 0 11px rgba(255, 68, 56, 0.42);
   }
 
   /* Bat-lever switch track/thumb (track is a dark recessed well both shifts) */
@@ -1151,6 +1255,22 @@
   }
 }
 
+/* AMP 2026-07-18: machined-cap hover glint keyframe (see the cap-glint rules
+   in @layer components). Top-level so it is not subject to cascade layers. */
+@keyframes cap-glint {
+  0% {
+    left: -60%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    left: 120%;
+    opacity: 0;
+  }
+}
+
 /* Respect reduced-motion preferences — all console animation collapses;
    states stay legible by color + form (lamp components render a visible
    UNACK affix under reduced motion — see LampTile). */
@@ -1161,5 +1281,16 @@
   .animate-lamp-blink,
   .animate-vu-tip {
     animation: none;
+  }
+  /* AMP 2026-07-18: the cap glint is a raw :hover animation (not an .animate-*
+     utility), and the amplified .vu-seg carries a box-shadow/filter transition
+     — neither is caught by the class list above, so suppress them explicitly. */
+  .cap:hover::after,
+  .cap-armed:hover::after,
+  .cap-chrome:hover::after {
+    animation: none;
+  }
+  .vu-seg {
+    transition: none;
   }
 }
