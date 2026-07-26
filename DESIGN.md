@@ -137,6 +137,22 @@ Same geometry and shadow structure; surfaces re-skin to brushed natural aluminum
    Full set of day re-skins lives in the approved preview file. */
 ```
 
+### Amplified depth + instrument gloss (2026-07-26, ported from the website)
+
+The recipes above are the **structural reference** — layer physics, palette, and geometry. On 2026-07-26 the shipped recipes were **amplified** (the "brutalist-maximalist" gloss pass) to match the enrichment first shipped on Team-X-Website (2026-07-18), so app and site stay in visual lockstep. No new colors, no neon — the same tokens, pushed harder:
+
+- **Faceplate**: directional brush grain, a top raking light, a soft base vignette, and a deeper multi-radius cast (both shifts).
+- **Well**: deeper carve (`inset 0 10px 18px`).
+- **Cap**: convex crown highlight (`at 50% -8%`) + a mid-cast layer (`0 10px 20px`); the app's unified `.cap` absorbs both the raised-control and button amplifications the website split across `.control` and `.btn`.
+- **Hex bolt**: brighter machined head + a tighter countersunk seat.
+- **Lamp**: a per-color backlit halo (`--lamp-glow`) + a two-stage text bloom; the 1Hz warn blink stays component-applied (`.animate-lamp-blink`), never a CSS animation on the recipe.
+- **VU**: glossy top-core segment fills + a two-stage glow + an analog brightness/opacity tip flicker (the `vu-tip` keyframe lives in `tailwind.config.ts`).
+- **LCD**: a faint cover-glass sheen + deeper recess + a two-stage phosphor bloom — the well stays void-black.
+- **Armed caps/lamps**: a wider two-stage bloom, all within the existing armed red.
+- **Hover cap-glint**: a one-shot specular light-catch across `.cap` / `.cap-armed` / `.cap-chrome` (mirrors the website's `.btn:not(.btn-ghost)` set; recessed-tint `.cap-warn` and nav tiles excluded). It is an **animation, not a transition**, so caps keep their mechanical snap; reduced motion suppresses it.
+
+Byte-exact values carry an `AMP 2026-07-18` marker in `apps/desktop/src/renderer/src/styles/globals.css` (and `tailwind.config.ts` for `vu-tip`). **Displays stay dark** in both shifts and **reduced motion is honored** (the glint and the VU box-shadow transition are both suppressed). Deliberately unchanged: `.plate` (the Card/Dialog faceplate-lite keeps its lighter throw), and the VU zone model stays 3-zone `g/a/r` — the website's 4-zone `g/y/o/r` remains a separate pre-existing difference, not part of this gloss pass.
+
 ### The displays-stay-dark rule (canonical, both themes)
 
 **LCD wells, token-stream viewports, VU meter windows, and lamp-tile caps remain void-black in BOTH shifts** — exactly like silver hardware keeps black displays and black buttons. Recessed wells (Layer 2) never invert. This keeps phosphor glow and lamp legibility identical across themes and is what makes Day Shift read as real silver gear rather than an auto-inverted dark theme.
@@ -347,6 +363,7 @@ Inherited family rules + Team-X specifics. On every UI change, re-validate:
 | 2026-06-10 | Website mirror mandate | Rocky: the app design translates directly to the Team-X website so the two mirror exactly — same model as Vision Studio ↔ Vision-Studio-X-website. |
 | 2026-06-16 | Steady **NO-GO** tone added (`--led-nogo` `#C8453E`) | Phase 3 design review found steady `--led-warn` used for terminal faults app-wide, violating the blink-only rule, while the system had no steady fault tone. Resolution: a dedicated steady NO-GO red (deeper/desaturated than the hot blinking warn, distinct from the armed crimson) for already-failed/terminal faults; blinking `--led-warn` stays reserved for the AnnunciatorRail's unacknowledged alerts. Hex is provisional and tunable. |
 | 2026-06-16 | Focus ring = armed-red (was documented chrome) | Phase 3 design review surfaced a doc-vs-impl gap: the shipped (and tested) renderer uses an armed-red focus ring (`ring-brand/60`) on flat interactive surfaces, while DESIGN.md said chrome. Rocky's call: reconcile the doc to brand-red. Armed-red is now the default focus voice; machined caps keep a neutral `--ring` outline (Night chrome / Day graphite) for box-shadow-stack survival and contrast against red/warn cap fills. Documentation-only; no code change. |
+| 2026-07-26 | Brutalist-maximalist depth + instrument gloss amplification | Rocky's direction: "amplify the existing Command Console language — no neon, no color changes." Shipped first on Team-X-Website (2026-07-18), now ported **upstream** so app and site stay in visual lockstep (Website Mirror Mandate — the app remains the source of truth, now carrying the amplified baseline). Same tokens and palette, enriched: faceplate directional grain + raking light + base vignette + deeper multi-radius cast; deeper well carve; convex cap crown + mid-cast; brighter/tighter hex; backlit lamp halos (`--lamp-glow`) + two-stage bloom; glossy VU fills + analog tip flicker; cover-glass LCD sheen + two-stage phosphor bloom; wider two-stage armed blooms; hover cap-glint (an animation, not a transition — the snap doctrine holds). Displays stay dark; reduced motion honored. `.plate` (Card/Dialog) left at its lighter throw; VU stays 3-zone `g/a/r` (the site's 4-zone `g/y/o/r` is a separate pre-existing difference). Values marked `AMP 2026-07-18` in `globals.css` / `tailwind.config.ts`. See the "Amplified depth + instrument gloss" subsection under the depth system. |
 
 ---
 

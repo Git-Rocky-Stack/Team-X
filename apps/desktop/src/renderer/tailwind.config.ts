@@ -198,7 +198,13 @@ export default {
           '0%, 49%': { filter: 'brightness(1.25)', opacity: '1' },
           '50%, 100%': { opacity: '0.22', textShadow: 'none' },
         },
-        'vu-tip': { '0%': { opacity: '1' }, '100%': { opacity: '0.25' } },
+        // AMP 2026-07-18: smooth ballistic tip flicker (brightness + slight
+        // opacity), not a hard opacity strobe, so the boundary segment reads
+        // analog. Mirrors the Team-X-Website @keyframes vutip.
+        'vu-tip': {
+          '0%': { filter: 'brightness(1.18)', opacity: '1' },
+          '100%': { filter: 'brightness(0.82)', opacity: '0.74' },
+        },
       },
       animation: {
         'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
