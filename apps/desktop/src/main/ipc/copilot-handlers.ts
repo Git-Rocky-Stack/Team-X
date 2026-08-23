@@ -23,9 +23,9 @@
  *                            on the bus so the renderer React Query
  *                            cache invalidates and the audit trail
  *                            captures the dismissal.
- *   - `copilot.ask`        — T5 stub. Throws `COPILOT_ASK_NOT_IMPLEMENTED`
- *                            until T6 wires the agentic-loop round-trip.
- *                            The IPC slot + TeamXApi shape are final so
+ *   - `copilot.ask`        — starts an agentic run against the
+ *                            system-copilot employee. The IPC slot +
+ *                            TeamXApi shape are final so
  *                            T6 is purely additive.
  *   - `copilot.configure`  — test-only manual-tick. Feature-flagged via
  *                            `isTestMode()` — production callers get a
@@ -165,8 +165,8 @@ export interface CopilotHandlerSettingsRepo {
 
 /**
  * Agentic-loop entry point — mirrors the shape `CommandService` already
- * uses for `agenticLoopStart`. T5 wires a **stub** that throws; T6
- * replaces it with the real call into `AgenticLoopService.start`.
+ * uses for `agenticLoopStart`. The composition root binds this to
+ * `AgenticLoopService.start` with `employeeId = system-copilot`.
  */
 export type CopilotAgenticLoopStart = (req: {
   companyId: string;
@@ -194,10 +194,11 @@ export interface CopilotHandlersDeps {
    */
   now?: () => number;
   /**
-   * Agentic-loop entry point for `copilot.ask`. T5 wires a **stub**
-   * closure that throws — T6 swaps it for the real call via the
-   * composition root. Keeping the dep on the factory surface means T6
-   * lands without touching this file.
+   * Agentic-loop entry point for `copilot.ask`. Bound by the composition
+   * root (`main/index.ts`) to `AgenticLoopService.start`. Optional only so
+   * unit tests can construct the handler surface without an orchestrator;
+   * production always supplies it, and `ask` refuses rather than
+   * fabricating a runId when it is absent.
    */
   agenticLoopStart?: CopilotAgenticLoopStart;
   /**
@@ -607,15 +608,13 @@ export function buildCopilotHandlers(deps: CopilotHandlersDeps): CopilotHandlers
         throw new Error('copilot.ask: text is required');
       }
 
-      // T5 stub: the IPC slot is registered + typed, but the agentic
-      // round-trip lands in T6. Until then, callers receive a clear
-      // error rather than a synthetic runId that would mislead the
-      // palette's step-stream hook. The composition root leaves
-      // `agenticLoopStart` unset in T5; T6 wires it to
-      // `AgenticLoopService.start` with `employeeId = system-copilot`.
+      // Production always binds `agenticLoopStart`; only a unit-test
+      // harness can reach this branch. Fail loudly rather than returning a
+      // synthetic runId, which would mislead the palette's step-stream hook
+      // into waiting on a run that does not exist.
       if (deps.agenticLoopStart === undefined) {
         throw new Error(
-          'copilot.ask: not implemented — T6 wires AgenticLoopService.start with system-copilot',
+          'copilot.ask: agenticLoopStart dep is unwired — the composition root must bind AgenticLoopService.start with system-copilot',
         );
       }
 

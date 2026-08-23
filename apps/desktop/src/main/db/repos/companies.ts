@@ -18,7 +18,7 @@
  * accessors land in later tasks alongside the first consumers.
  */
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
@@ -328,39 +328,24 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
       });
     },
 
-    /**
-     * Sync the company's default provider preference to all employees who
-     * don't have an explicit providerPref set. This is called when the
-     * company's defaultProviderId is changed.
-     *
-     * Returns the count of employees that were updated.
-     */
-    syncProviderToEmployees(companyId: string, providerId: string | null): number {
-      if (providerId === null || providerId.trim().length === 0) {
-        // Clearing the company default - remove providerPref from employees
-        // who only have it because of the old company default
-        const result = db
-          .update(employees)
-          .set({ providerPref: null })
-          .where(
-            and(
-              eq(employees.companyId, companyId),
-              // Only clear if the employee's providerPref matches what we're clearing
-              // This is a heuristic - we can't know for sure which were auto-set
-              // For now, we'll just clear all and let them fall back to defaults
-            ),
-          )
-          .run() as unknown as { changes: number };
-        return result.changes;
-      }
-
-      // Set the company default for employees without explicit providerPref
-      const result = db
-        .update(employees)
-        .set({ providerPref: providerId })
-        .where(and(eq(employees.companyId, companyId), eq(employees.providerPref, '')))
-        .run() as unknown as { changes: number };
-      return result.changes;
-    },
+    // NOTE (audit F8): `syncProviderToEmployees` used to live here and was
+    // removed rather than repaired. It was unreachable (zero callers) and
+    // wrong in both directions:
+    //
+    //   - the clear path's `and(...)` had a comment where its second
+    //     predicate should have been, so it wiped `providerPref` for EVERY
+    //     employee in the company — destroying explicit per-employee
+    //     choices, not just inherited ones;
+    //   - the set path matched `eq(providerPref, '')`, but the column is
+    //     nullable and `employees.create` writes `?? null`, so the empty
+    //     string never occurs and the update matched zero rows.
+    //
+    // It was also the wrong design: company-default inheritance is resolved
+    // lazily at read time by `provider-factory.pickConfigured`
+    // (employee.providerPref -> company.settings.defaultProviderId ->
+    // built-in fallbacks). Eagerly stamping the company default onto
+    // employee rows would convert "inherits from company" into "explicitly
+    // pinned", so a later change to the company default would silently stop
+    // reaching those employees.
   };
 }
