@@ -1648,6 +1648,25 @@ app
                 .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
           },
           llmComplete,
+          // Audit F5 — the seven Settings → Enhanced AI switches used to be
+          // write-only: `settings.getEnhancedAiConfig` / `setEnhancedAiConfig`
+          // were the only readers of these rows, so every toggle persisted a
+          // value that nothing consumed. Reading them through a closure means
+          // the per-call gates (memory, knowledge graph, streaming, chunking,
+          // planning) pick up a change immediately; query expansion and
+          // tracing are baked into the pipeline at construction and take
+          // effect on the next launch.
+          features: () => ({
+            queryExpansionEnabled: settingsRepo.get<boolean>('query_expansion_enabled', true),
+            semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
+            longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
+            knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
+            planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
+            planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
+            streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
+            tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
+            tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
+          }),
         });
         console.log('[enhanced-ai] service ready — Phase 2 & 3 features available');
       } catch (err) {
