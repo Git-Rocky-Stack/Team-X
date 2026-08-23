@@ -485,13 +485,24 @@ export async function semanticChunk(
     currentLength += segmentLength + 1; // +1 for space
   }
 
-  // Don't forget the last chunk
+  // Flush whatever remains.
+  //
+  // `minChunkTokens` is a MERGE threshold, not a discard threshold. Gating
+  // this branch on `tokens >= minChunkTokens` with no fallback silently threw
+  // away every document shorter than the minimum (~200 chars at the default
+  // of 50 tokens) and every short trailing fragment of a longer one — the
+  // caller saw an empty chunk list and indexed nothing, with no error. Short
+  // tickets, chat messages and notes are exactly the content a workspace
+  // indexes most, so the loss was both large and invisible.
   if (currentSegments.length > 0) {
     const content = currentSegments.join(' ').trim();
     if (content.length > 0) {
       const tokens = counter.count(content);
+      const previous = chunks[chunks.length - 1];
 
-      if (tokens >= opts.minChunkTokens) {
+      if (tokens >= opts.minChunkTokens || previous === undefined) {
+        // Either it stands on its own, or it is the whole document — an
+        // undersized document still has to be indexed.
         chunks.push({
           content,
           tokens,
@@ -507,6 +518,12 @@ export async function semanticChunk(
             hasHeading: false,
           },
         });
+      } else {
+        // Undersized tail with a predecessor: merge so the text survives.
+        const merged = `${previous.content} ${content}`.trim();
+        previous.content = merged;
+        previous.tokens = counter.count(merged);
+        previous.endPos = previous.startPos + merged.length;
       }
     }
   }
