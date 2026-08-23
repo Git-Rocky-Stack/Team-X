@@ -128,4 +128,106 @@ describe('SecretsStore', () => {
       await expect(secrets.deleteApiKey('')).rejects.toThrow(/providerId is required/);
     });
   });
+  // -------------------------------------------------------------------------
+  // Endpoint auth headers (localGguf.endpoint.*)
+  //
+  // `local_model_endpoints.auth_header_key_ref` stores a *reference*, never the
+  // secret. The reachability probe needs the real header value, so the keychain
+  // gains an `endpoint:<ref>` namespace alongside `provider:<id>`. The two must
+  // not be able to collide or read each other's entries.
+  // -------------------------------------------------------------------------
+  describe('endpoint auth headers', () => {
+    it('returns null for a reference with no stored header', async () => {
+      const secrets = new SecretsStore();
+      expect(await secrets.getEndpointAuthHeader('bench-rig')).toBeNull();
+    });
+
+    it('round-trips a stored header value', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setEndpointAuthHeader('bench-rig', 'Bearer lan-token-123');
+      expect(await secrets.getEndpointAuthHeader('bench-rig')).toBe('Bearer lan-token-123');
+    });
+
+    it('stores under a "team-x" service + "endpoint:<ref>" account', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setEndpointAuthHeader('bench-rig', 'Bearer x');
+      expect(store.get('team-x:endpoint:bench-rig')).toBe('Bearer x');
+    });
+
+    it('does not collide with a provider key of the same name', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setApiKey('bench-rig', 'sk-provider');
+      await secrets.setEndpointAuthHeader('bench-rig', 'Bearer endpoint');
+      expect(await secrets.getApiKey('bench-rig')).toBe('sk-provider');
+      expect(await secrets.getEndpointAuthHeader('bench-rig')).toBe('Bearer endpoint');
+    });
+
+    it('deletes a stored header and reports whether one existed', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setEndpointAuthHeader('bench-rig', 'Bearer x');
+      await expect(secrets.deleteEndpointAuthHeader('bench-rig')).resolves.toBe(true);
+      expect(await secrets.getEndpointAuthHeader('bench-rig')).toBeNull();
+      await expect(secrets.deleteEndpointAuthHeader('bench-rig')).resolves.toBe(false);
+    });
+
+    it('rejects an empty reference rather than writing under a bare "endpoint:" key', async () => {
+      const secrets = new SecretsStore();
+      await expect(secrets.getEndpointAuthHeader('')).rejects.toThrow(/keyRef is required/);
+      await expect(secrets.setEndpointAuthHeader('  ', 'v')).rejects.toThrow(/keyRef is required/);
+      await expect(secrets.deleteEndpointAuthHeader('')).rejects.toThrow(/keyRef is required/);
+      expect(store.size).toBe(0);
+    });
+  });
+  // -------------------------------------------------------------------------
+  // Hugging Face token (localGguf.hf.*)
+  //
+  // `LocalGgufRuntimeSettings.hfTokenKeyRef` names a keychain entry, never the
+  // token. The HF browser needs the real token for gated repos and for the
+  // higher authenticated rate limit.
+  // -------------------------------------------------------------------------
+  describe('Hugging Face tokens', () => {
+    it('returns null for a reference with no stored token', async () => {
+      const secrets = new SecretsStore();
+      expect(await secrets.getHfToken('default')).toBeNull();
+    });
+
+    it('round-trips a stored token', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setHfToken('default', 'hf_abc123');
+      expect(await secrets.getHfToken('default')).toBe('hf_abc123');
+    });
+
+    it('stores under a "team-x" service + "hf:<ref>" account', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setHfToken('default', 'hf_abc123');
+      expect(store.get('team-x:hf:default')).toBe('hf_abc123');
+    });
+
+    it('shares no namespace with provider keys or endpoint headers', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setApiKey('default', 'sk-provider');
+      await secrets.setEndpointAuthHeader('default', 'Bearer endpoint');
+      await secrets.setHfToken('default', 'hf_token');
+
+      expect(await secrets.getApiKey('default')).toBe('sk-provider');
+      expect(await secrets.getEndpointAuthHeader('default')).toBe('Bearer endpoint');
+      expect(await secrets.getHfToken('default')).toBe('hf_token');
+    });
+
+    it('deletes a stored token and reports whether one existed', async () => {
+      const secrets = new SecretsStore();
+      await secrets.setHfToken('default', 'hf_abc123');
+      await expect(secrets.deleteHfToken('default')).resolves.toBe(true);
+      expect(await secrets.getHfToken('default')).toBeNull();
+      await expect(secrets.deleteHfToken('default')).resolves.toBe(false);
+    });
+
+    it('rejects an empty reference rather than writing under a bare "hf:" key', async () => {
+      const secrets = new SecretsStore();
+      await expect(secrets.getHfToken('')).rejects.toThrow(/keyRef is required/);
+      await expect(secrets.setHfToken(' ', 'v')).rejects.toThrow(/keyRef is required/);
+      await expect(secrets.deleteHfToken('')).rejects.toThrow(/keyRef is required/);
+      expect(store.size).toBe(0);
+    });
+  });
 });
