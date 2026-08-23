@@ -11,7 +11,7 @@
 // nvidia.test.ts, rocm.test.ts, vulkan.test.ts).
 
 export { parseSystemProfiler, type SystemProfilerParseResult } from './metal.js';
-export { parseNvidiaSmiCsv, type NvidiaCsvParseResult } from './nvidia.js';
+export { parseNvidiaSmiCsv, parseNvidiaMemoryUsed, type NvidiaCsvParseResult } from './nvidia.js';
 export { parseRocminfo, type RocmParseResult } from './rocm.js';
 export { parseVulkaninfo, type VulkaninfoParseResult } from './vulkan.js';
 export { probeCpu, type CpuProbeResult } from './cpu.js';

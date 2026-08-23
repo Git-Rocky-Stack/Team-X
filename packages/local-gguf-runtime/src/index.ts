@@ -13,6 +13,13 @@ export * from './runtime/port-allocator.js';
 export * from './runtime/auto-tune.js';
 export * from './runtime/server-lifecycle.js';
 export * from './gpu-probe/probe.js';
+// Named rather than `export *` so the nvidia module's internals stay private
+// and a future addition there cannot silently widen the package surface.
+export {
+  parseNvidiaMemoryUsed,
+  sampleNvidiaVramMb,
+  type ProbeNvidiaDeps,
+} from './gpu-probe/nvidia.js';
 export * from './gpu-probe/ranking.js';
 export * from './pool/lru-pool.js';
 export * from './pool/auto-swap.js';

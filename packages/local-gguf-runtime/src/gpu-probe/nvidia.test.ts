@@ -1,6 +1,12 @@
 // packages/local-gguf-runtime/src/gpu-probe/nvidia.test.ts
 import { describe, expect, it } from 'vitest';
-import { type ProbeNvidiaDeps, parseNvidiaSmiCsv, probeNvidia } from './nvidia';
+import {
+  type ProbeNvidiaDeps,
+  parseNvidiaMemoryUsed,
+  parseNvidiaSmiCsv,
+  probeNvidia,
+  sampleNvidiaVramMb,
+} from './nvidia';
 
 describe('parseNvidiaSmiCsv', () => {
   it('parses a single-GPU CSV line', () => {
@@ -91,5 +97,73 @@ describe('probeNvidia', () => {
     };
     const result = await probeNvidia(deps);
     expect(result.available).toBe(false);
+  });
+});
+
+describe('parseNvidiaMemoryUsed', () => {
+  it('reads the used-memory figure for a single GPU', () => {
+    expect(parseNvidiaMemoryUsed('5312')).toBe(5312);
+  });
+
+  it('sums across GPUs, because a model can be split over several', () => {
+    expect(parseNvidiaMemoryUsed('5312\n4100')).toBe(9412);
+  });
+
+  it('tolerates the unit suffix when nounits is not in effect', () => {
+    expect(parseNvidiaMemoryUsed('5312 MiB\n4100 MiB')).toBe(9412);
+  });
+
+  it('tolerates blank lines and surrounding whitespace', () => {
+    expect(parseNvidiaMemoryUsed('\n  5312  \n\n  4100 \n')).toBe(9412);
+  });
+
+  it('returns null for empty output rather than reporting zero bytes in use', () => {
+    // Zero would be a measurement; null is the truth when nothing was read.
+    expect(parseNvidiaMemoryUsed('')).toBeNull();
+  });
+
+  it('returns null when no line is a number', () => {
+    expect(parseNvidiaMemoryUsed('N/A\n[Not Supported]')).toBeNull();
+  });
+
+  it('ignores unparseable lines but keeps the ones that are numbers', () => {
+    expect(parseNvidiaMemoryUsed('5312\n[Not Supported]')).toBe(5312);
+  });
+});
+
+describe('sampleNvidiaVramMb', () => {
+  it('queries nvidia-smi for used memory in plain megabytes', async () => {
+    const calls: Array<{ cmd: string; args: string[] }> = [];
+    const deps: ProbeNvidiaDeps = {
+      runCommand: async (cmd, args) => {
+        calls.push({ cmd, args });
+        return { stdout: '5312', stderr: '', exitCode: 0 };
+      },
+      timeoutMs: 3000,
+    };
+
+    await expect(sampleNvidiaVramMb(deps)).resolves.toBe(5312);
+    expect(calls[0]?.cmd).toBe('nvidia-smi');
+    expect(calls[0]?.args).toContain('--query-gpu=memory.used');
+    expect(calls[0]?.args).toContain('--format=csv,noheader,nounits');
+  });
+
+  it('returns null on a non-zero exit code', async () => {
+    const deps: ProbeNvidiaDeps = {
+      runCommand: async () => ({ stdout: '', stderr: 'not found', exitCode: 127 }),
+      timeoutMs: 3000,
+    };
+    await expect(sampleNvidiaVramMb(deps)).resolves.toBeNull();
+  });
+
+  it('returns null when nvidia-smi is absent, rather than throwing into the caller', async () => {
+    // The benchmark run must survive a machine with no NVIDIA tooling.
+    const deps: ProbeNvidiaDeps = {
+      runCommand: async () => {
+        throw new Error('spawn nvidia-smi ENOENT');
+      },
+      timeoutMs: 3000,
+    };
+    await expect(sampleNvidiaVramMb(deps)).resolves.toBeNull();
   });
 });
