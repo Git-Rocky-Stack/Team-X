@@ -164,6 +164,7 @@ import {
   type ResolveProvider,
   type ResolveTools,
   buildOrchestrator,
+  createProactiveDispatcher,
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
@@ -1875,6 +1876,14 @@ app
           if (!proactiveTriggerServiceInstance) return false;
           return proactiveTriggerServiceInstance.isEnabled(companyId);
         },
+        getState: (companyId) => {
+          // Before the instance comes online nothing has been scanned and
+          // nothing is in flight — that is the true state, not a placeholder.
+          if (!proactiveTriggerServiceInstance) {
+            return { activeWork: 0, queuedWork: 0, lastScanAt: null };
+          }
+          return proactiveTriggerServiceInstance.getState(companyId);
+        },
       },
       // Event bus — used by `companies.archive` to emit `company.archived`
       // so renderer caches invalidate (architectural invariant #11).
@@ -2190,12 +2199,12 @@ app
         // system-agent, delegate+review for Management/Supervisor/Lead/
         // system-agent. ICs receive an empty write-side array.
 
-        // Conservative workload provider — open-ticket count is a real
-        // repo lookup; in-meeting + completion-history are stubbed for
-        // T3 and tightened in M33 (per agentic-tools-write.ts §T3 notes
-        // and Phase 5 follow-ups). Conservative defaults still produce
-        // a deterministic workload score; emptier inboxes still rank
-        // higher, which is the load-balancing intent.
+        // Workload provider — every signal is a real repo lookup:
+        // open-ticket count here, in-meeting and completion-history in the
+        // Track 2 block below. All three degrade to conservative defaults
+        // on a repo error rather than aborting the agentic loop, so an
+        // emptier inbox still ranks higher, which is the load-balancing
+        // intent.
         const workload: WriteSideWorkloadProvider = {
           openTicketCount: (eid) => {
             try {
@@ -2681,6 +2690,77 @@ app
       settingsRepo: {
         getProactive: () => settingsRepo.getProactive(),
       },
+      // ---- Governed proactive dispatch (audit F3) ----------------------
+      //
+      // `scanForWork` used to synthesize `proactive-thread-*` /
+      // `proactive-msg-*` ids for rows that were never inserted and call
+      // `orchestrator.enqueueChat` directly, which meant proactive work
+      // bypassed budget admission entirely. `createProactiveDispatcher`
+      // already implemented the correct path (thread + trigger-message
+      // creation, `budgetGovernance.assertExecutionAllowed`, pause
+      // re-check, `proactive.*` lifecycle events) and was fully tested,
+      // but had never been instantiated. It is now the only dispatch
+      // route — the dep is required, so there is no ungoverned fallback.
+      dispatcher: createProactiveDispatcher({
+        orchestrator: {
+          enqueueChat: async (args) => {
+            if (!orchestrator) {
+              throw new Error('[proactive] orchestrator not available for enqueueChat');
+            }
+            await orchestrator.enqueueChat(args);
+          },
+          isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+        },
+        threadsRepo: {
+          create: (input) =>
+            threadsRepo.create({
+              companyId: input.companyId,
+              kind: input.kind as Parameters<typeof threadsRepo.create>[0]['kind'],
+              createdBy: input.createdBy,
+            }),
+          getById: (id) => {
+            const row = threadsRepo.getById(id);
+            return row ? { companyId: row.companyId, kind: row.kind } : null;
+          },
+        },
+        messagesRepo: {
+          append: (input) =>
+            messagesRepo.append({
+              threadId: input.threadId,
+              authorId: input.authorId,
+              authorKind: input.authorKind as Parameters<
+                typeof messagesRepo.append
+              >[0]['authorKind'],
+              content: input.content,
+            }),
+        },
+        employeesRepo: {
+          getById: (id) => {
+            const row = employeesRepo.getById(id);
+            if (!row) return null;
+            return { id: row.id, companyId: row.companyId, isSystem: row.isSystem ?? false };
+          },
+        },
+        companiesRepo: {
+          getById: (id) => {
+            const row = companiesRepo.getById(id);
+            return row ? { id: row.id } : null;
+          },
+        },
+        bus: {
+          emit: (input) =>
+            bus.emit({
+              ...input,
+              actorKind: input.actorKind as Parameters<typeof bus.emit>[0]['actorKind'],
+            }),
+        },
+        budgetGovernance: budgetGovernanceServiceInstance,
+        // Audit F6 — the blocked-event payload must carry the operator's
+        // real autonomy posture, not a hardcoded 'balanced'.
+        settingsRepo: {
+          getProactive: () => settingsRepo.getProactive(),
+        },
+      }),
     });
 
     // ---- Copilot analyzer (M33 T4) --------------------------------------

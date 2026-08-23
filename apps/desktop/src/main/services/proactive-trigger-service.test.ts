@@ -17,6 +17,8 @@ import type {
 } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createProactiveDispatcher } from '../orchestrator/proactive-dispatch.js';
+
 import {
   type ProactiveTriggerService,
   type ProactiveTriggerServiceDeps,
@@ -40,6 +42,40 @@ class FakeOrchestrator {
   private nextThreadId = 1;
   private nextMessageId = 1;
 
+  /**
+   * The real orchestrator settles `enqueueChat`'s promise on turn
+   * COMPLETION (orchestrator/index.ts:1819), not on admission. These
+   * controls reproduce that so the in-flight counters can be observed
+   * mid-turn.
+   */
+  private holdCount = 0;
+  private readonly releases: Array<() => void> = [];
+  private startedSignal: (() => void) | null = null;
+  private startedPromise: Promise<void> | null = null;
+  private failNext: string | null = null;
+
+  holdNextTurn(): void {
+    this.holdCount += 1;
+    this.startedPromise = new Promise<void>((resolve) => {
+      this.startedSignal = resolve;
+    });
+  }
+
+  turnStarted(): Promise<void> {
+    return this.startedPromise ?? Promise.resolve();
+  }
+
+  releaseHeldTurns(): void {
+    this.holdCount = 0;
+    while (this.releases.length > 0) {
+      this.releases.pop()?.();
+    }
+  }
+
+  failNextTurn(message: string): void {
+    this.failNext = message;
+  }
+
   async enqueueChat(args: {
     threadId: string;
     employeeId: string;
@@ -51,6 +87,21 @@ class FakeOrchestrator {
       threadId: args.threadId,
       userMessageId: args.userMessageId,
     });
+
+    if (this.failNext !== null) {
+      const message = this.failNext;
+      this.failNext = null;
+      throw new Error(message);
+    }
+
+    if (this.holdCount > 0) {
+      this.holdCount -= 1;
+      this.startedSignal?.();
+      this.startedSignal = null;
+      await new Promise<void>((resolve) => {
+        this.releases.push(resolve);
+      });
+    }
   }
 
   isCompanyPaused(companyId: string): boolean {
@@ -288,6 +339,78 @@ class FakeSettingsRepo {
 // Test fixture
 // ---------------------------------------------------------------------------
 
+/**
+ * Thread / message / budget fakes back the real `createProactiveDispatcher`,
+ * so `scanForWork` is exercised through the same governed path production
+ * uses rather than against a hand-stubbed dispatcher.
+ */
+class FakeThreadsRepo {
+  readonly created: Array<{ id: string; companyId: string; kind: string; createdBy: string }> = [];
+  private next = 1;
+
+  create(input: { companyId: string; kind: string; createdBy: string }): string {
+    const id = `thr-real-${this.next++}`;
+    this.created.push({ id, ...input });
+    return id;
+  }
+
+  getById(id: string): { companyId: string; kind: string } | null {
+    const row = this.created.find((t) => t.id === id);
+    return row ? { companyId: row.companyId, kind: row.kind } : null;
+  }
+}
+
+class FakeMessagesRepo {
+  readonly appended: Array<{
+    id: string;
+    threadId: string;
+    authorId: string;
+    authorKind: string;
+    content: string;
+  }> = [];
+  private next = 1;
+
+  append(input: {
+    threadId: string;
+    authorId: string;
+    authorKind: string;
+    content: string;
+  }): string {
+    const id = `msg-real-${this.next++}`;
+    this.appended.push({ id, ...input });
+    return id;
+  }
+}
+
+class FakeBudgetGovernance {
+  private denial: string | null = null;
+
+  deny(reason: string): void {
+    this.denial = reason;
+  }
+
+  async assertExecutionAllowed(): Promise<{
+    allowed: boolean;
+    policy: { id: string } | null;
+    reason: string | null;
+  }> {
+    if (this.denial !== null) {
+      return { allowed: false, policy: { id: 'policy-1' }, reason: this.denial };
+    }
+    return { allowed: true, policy: null, reason: null };
+  }
+}
+
+class FakeClock {
+  private value = 1_600_000_000_000;
+
+  set(next: number): void {
+    this.value = next;
+  }
+
+  now = (): number => this.value;
+}
+
 interface Fixture {
   orchestrator: FakeOrchestrator;
   agenticLoopService: FakeAgenticLoopService;
@@ -295,6 +418,10 @@ interface Fixture {
   goalsRepo: FakeGoalsRepo;
   ticketsRepo: FakeTicketsRepo;
   employeesRepo: FakeEmployeesRepo;
+  threadsRepo: FakeThreadsRepo;
+  messagesRepo: FakeMessagesRepo;
+  budgetGovernance: FakeBudgetGovernance;
+  clock: FakeClock;
   bus: FakeEventBus;
   settingsRepo: FakeSettingsRepo;
   deps: ProactiveTriggerServiceDeps;
@@ -312,6 +439,10 @@ function buildFixture(): Fixture {
   const employeesRepo = new FakeEmployeesRepo();
   const bus = new FakeEventBus();
   const settingsRepo = new FakeSettingsRepo();
+  const threadsRepo = new FakeThreadsRepo();
+  const messagesRepo = new FakeMessagesRepo();
+  const budgetGovernance = new FakeBudgetGovernance();
+  const clock = new FakeClock();
 
   const companyId = 'co-test';
   const systemAgentId = 'emp-system';
@@ -356,11 +487,40 @@ function buildFixture(): Fixture {
     settingsRepo: {
       getProactive: () => settingsRepo.getProactive(),
     },
+    // The REAL dispatcher, backed by fake repos — `scanForWork` must run
+    // through the same governed path production uses (thread + message
+    // creation, budget admission, pause checks, lifecycle events).
+    dispatcher: createProactiveDispatcher({
+      orchestrator: {
+        enqueueChat: (args) => orchestrator.enqueueChat(args),
+        isCompanyPaused: (id) => orchestrator.isCompanyPaused(id),
+      },
+      threadsRepo: {
+        create: (input) => threadsRepo.create(input),
+        getById: (id) => threadsRepo.getById(id),
+      },
+      messagesRepo: {
+        append: (input) => messagesRepo.append(input),
+      },
+      employeesRepo: {
+        getById: (id) => employeesRepo.getById(id),
+      },
+      companiesRepo: {
+        getById: (id) => (id === companyId ? { id } : null),
+      },
+      bus: {
+        emit: (input) => bus.emit(input),
+      },
+      budgetGovernance: {
+        assertExecutionAllowed: () => budgetGovernance.assertExecutionAllowed(),
+      },
+      now: clock.now,
+    }),
     logger: {
       warn: vi.fn(),
       error: vi.fn(),
     },
-    now: () => Date.now(),
+    now: clock.now,
   };
 
   const service = createProactiveTriggerService(deps);
@@ -372,6 +532,10 @@ function buildFixture(): Fixture {
     goalsRepo,
     ticketsRepo,
     employeesRepo,
+    threadsRepo,
+    messagesRepo,
+    budgetGovernance,
+    clock,
     bus,
     settingsRepo,
     deps,
@@ -803,5 +967,194 @@ describe('proactive-trigger-service', () => {
       // TODO: Add expectation for error events when error handling is implemented
       void errorEvents; // Explicitly mark as intentionally unused for now
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Audit F2 + F3 — governed dispatch and real runtime counters
+//
+// F3: `scanForWork` used to synthesize `proactive-thread-${ticket.id}` /
+//     `proactive-msg-${ticket.id}` ids for rows that were never created, and
+//     called `orchestrator.enqueueChat` directly — bypassing the budget
+//     governance, thread creation and message creation that
+//     `createProactiveDispatcher` already implements and tests.
+//
+// F2: `proactive.getState` returned hardcoded `0 / 0 / null`, which two
+//     shipped surfaces (ProactiveControls and Settings → Extensions) render
+//     as "Active Work", "Queued Work" and "Last Scan" metric tiles.
+// ---------------------------------------------------------------------------
+
+describe('proactive-trigger-service — governed dispatch (F3)', () => {
+  let fixture: Fixture;
+
+  beforeEach(() => {
+    fixture = buildFixture();
+  });
+
+  function seedOpenTicket(id: string): void {
+    fixture.ticketsRepo.setTicket({
+      id,
+      companyId: fixture.companyId,
+      title: `Ticket ${id}`,
+      description: 'needs an owner',
+      status: 'open',
+      assigneeId: null,
+      reporterId: 'user-1',
+      reporterKind: 'user',
+      priority: 'high',
+    });
+  }
+
+  function seedWorker(id: string): void {
+    fixture.employeesRepo.setEmployee({
+      id,
+      companyId: fixture.companyId,
+      name: 'Developer',
+      level: 'ic',
+      isSystem: false,
+      status: 'active',
+    });
+  }
+
+  it('creates a real thread for each dispatch instead of synthesizing an id', async () => {
+    seedWorker('emp-dev-1');
+    seedOpenTicket('ticket-1');
+
+    await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    expect(fixture.threadsRepo.created).toHaveLength(1);
+    const enqueued = fixture.orchestrator.enqueuedChats;
+    expect(enqueued).toHaveLength(1);
+    // The thread handed to the orchestrator must be one the repo actually
+    // created — never a fabricated `proactive-thread-*` string.
+    expect(fixture.threadsRepo.created.map((t) => t.id)).toContain(enqueued[0]?.threadId);
+    expect(enqueued[0]?.threadId).not.toMatch(/^proactive-thread-/);
+  });
+
+  it('appends a real trigger message instead of synthesizing a message id', async () => {
+    seedWorker('emp-dev-1');
+    seedOpenTicket('ticket-1');
+
+    await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    expect(fixture.messagesRepo.appended).toHaveLength(1);
+    const enqueued = fixture.orchestrator.enqueuedChats[0];
+    expect(fixture.messagesRepo.appended.map((m) => m.id)).toContain(enqueued?.userMessageId);
+    expect(enqueued?.userMessageId).not.toMatch(/^proactive-msg-/);
+  });
+
+  it('does not dispatch when budget governance denies execution', async () => {
+    seedWorker('emp-dev-1');
+    seedOpenTicket('ticket-1');
+    fixture.budgetGovernance.deny('Monthly spend cap reached.');
+
+    const result = await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    expect(result.queuedCount).toBe(0);
+    expect(fixture.orchestrator.enqueuedChats).toHaveLength(0);
+    expect(fixture.threadsRepo.created).toHaveLength(0);
+    const blocked = fixture.bus.emitted.filter((e) => e.type === 'proactive.budget_blocked');
+    expect(blocked).toHaveLength(1);
+  });
+});
+
+describe('proactive-trigger-service — runtime state (F2)', () => {
+  let fixture: Fixture;
+
+  beforeEach(() => {
+    fixture = buildFixture();
+  });
+
+  it('reports a null lastScanAt before any scan has run', () => {
+    const state = fixture.service.getState(fixture.companyId);
+    expect(state.lastScanAt).toBeNull();
+    expect(state.activeWork).toBe(0);
+    expect(state.queuedWork).toBe(0);
+  });
+
+  it('records lastScanAt when a scan completes', async () => {
+    fixture.clock.set(1_700_000_000_000);
+
+    await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    expect(fixture.service.getState(fixture.companyId).lastScanAt).toBe(1_700_000_000_000);
+  });
+
+  it('counts in-flight and backlogged proactive work while a scan runs', async () => {
+    fixture.employeesRepo.setEmployee({
+      id: 'emp-dev-1',
+      companyId: fixture.companyId,
+      name: 'Developer',
+      level: 'ic',
+      isSystem: false,
+      status: 'active',
+    });
+    for (const id of ['ticket-1', 'ticket-2', 'ticket-3']) {
+      fixture.ticketsRepo.setTicket({
+        id,
+        companyId: fixture.companyId,
+        title: `Ticket ${id}`,
+        description: 'needs an owner',
+        status: 'open',
+        assigneeId: null,
+        reporterId: 'user-1',
+        reporterKind: 'user',
+        priority: 'high',
+      });
+    }
+
+    // `enqueueChat` resolves on turn COMPLETION, so holding the first turn
+    // open lets us observe the counters mid-scan.
+    fixture.orchestrator.holdNextTurn();
+    const scan = fixture.service.scanForWork({ companyId: fixture.companyId });
+    await fixture.orchestrator.turnStarted();
+
+    const midScan = fixture.service.getState(fixture.companyId);
+    expect(midScan.activeWork).toBe(1);
+    expect(midScan.queuedWork).toBe(2);
+
+    fixture.orchestrator.releaseHeldTurns();
+    await scan;
+
+    const afterScan = fixture.service.getState(fixture.companyId);
+    expect(afterScan.activeWork).toBe(0);
+    expect(afterScan.queuedWork).toBe(0);
+  });
+
+  it('clears in-flight counters when a dispatch throws', async () => {
+    fixture.employeesRepo.setEmployee({
+      id: 'emp-dev-1',
+      companyId: fixture.companyId,
+      name: 'Developer',
+      level: 'ic',
+      isSystem: false,
+      status: 'active',
+    });
+    fixture.ticketsRepo.setTicket({
+      id: 'ticket-1',
+      companyId: fixture.companyId,
+      title: 'Ticket 1',
+      description: 'needs an owner',
+      status: 'open',
+      assigneeId: null,
+      reporterId: 'user-1',
+      reporterKind: 'user',
+      priority: 'high',
+    });
+    fixture.orchestrator.failNextTurn('provider exploded');
+
+    await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    const state = fixture.service.getState(fixture.companyId);
+    expect(state.activeWork).toBe(0);
+    expect(state.queuedWork).toBe(0);
+  });
+
+  it('tracks state per company', async () => {
+    fixture.clock.set(1_700_000_000_000);
+    await fixture.service.scanForWork({ companyId: fixture.companyId });
+
+    expect(fixture.service.getState('co-other').lastScanAt).toBeNull();
+    expect(fixture.service.getState(fixture.companyId).lastScanAt).toBe(1_700_000_000_000);
   });
 });

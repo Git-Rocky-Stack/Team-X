@@ -936,6 +936,12 @@ export interface IpcProactiveTriggerService {
   scanForWork(args: { companyId: string }): Promise<{ queuedCount: number }>;
   setEnabled(args: { companyId: string; enabled: boolean }): void;
   isEnabled(companyId: string): boolean;
+  /** Observed runtime counters backing `proactive.getState` (audit F2). */
+  getState(companyId: string): {
+    activeWork: number;
+    queuedWork: number;
+    lastScanAt: number | null;
+  };
 }
 
 export interface IpcRuntimeProfilesService {
@@ -7960,11 +7966,15 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         throw new Error('[ipc] proactive.getState: proactiveTriggerService dep is required');
       }
       const enabled = proactiveTriggerService.isEnabled(companyId);
+      // Counters come from the service's observed runtime state — the
+      // dashboard tiles that render them ("Active Work", "Queued Work",
+      // "Last Scan") must never show synthesized values.
+      const state = proactiveTriggerService.getState(companyId);
       return {
         enabled,
-        activeWork: 0, // TODO: track active work count
-        queuedWork: 0, // TODO: track queued work count
-        lastScanAt: null, // TODO: track last scan timestamp
+        activeWork: state.activeWork,
+        queuedWork: state.queuedWork,
+        lastScanAt: state.lastScanAt,
       };
     },
 

@@ -65,6 +65,7 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     setEnabled: vi.fn(),
     decomposeGoal: vi.fn().mockResolvedValue(undefined),
     scanForWork: vi.fn().mockResolvedValue({ queuedCount: 0 }),
+    getState: vi.fn(() => ({ activeWork: 0, queuedWork: 0, lastScanAt: null })),
   };
 
   const bus = {
@@ -256,9 +257,19 @@ describe('proactive IPC handlers', () => {
   });
 
   describe('proactive.getState', () => {
-    it('returns current proactive state', async () => {
+    // Audit F2 — this handler used to return `activeWork: 0, queuedWork: 0,
+    // lastScanAt: null` as literals, so the "Active Work" / "Queued Work" /
+    // "Last Scan" tiles in ProactiveControls and Settings → Extensions were
+    // permanently zero no matter what the orchestrator was doing. The
+    // counters must come from the service.
+    it('reports the runtime counters the service observed', async () => {
       const deps = makeDeps();
       deps.proactiveTriggerService.isEnabled.mockReturnValue(true);
+      deps.proactiveTriggerService.getState.mockReturnValue({
+        activeWork: 2,
+        queuedWork: 5,
+        lastScanAt: 1_700_000_000_000,
+      });
       const handlers = asProactiveHandlers(createIpcHandlers(deps));
 
       const result = await handlers.proactiveGetState({
@@ -266,6 +277,27 @@ describe('proactive IPC handlers', () => {
       });
 
       expect(deps.proactiveTriggerService.isEnabled).toHaveBeenCalledWith('company-123');
+      expect(deps.proactiveTriggerService.getState).toHaveBeenCalledWith('company-123');
+      expect(result).toEqual({
+        enabled: true,
+        activeWork: 2,
+        queuedWork: 5,
+        lastScanAt: 1_700_000_000_000,
+      });
+    });
+
+    it('reports an idle company as zeroed with no scan timestamp', async () => {
+      const deps = makeDeps();
+      deps.proactiveTriggerService.isEnabled.mockReturnValue(true);
+      deps.proactiveTriggerService.getState.mockReturnValue({
+        activeWork: 0,
+        queuedWork: 0,
+        lastScanAt: null,
+      });
+      const handlers = asProactiveHandlers(createIpcHandlers(deps));
+
+      const result = await handlers.proactiveGetState({ companyId: 'company-123' });
+
       expect(result).toEqual({
         enabled: true,
         activeWork: 0,

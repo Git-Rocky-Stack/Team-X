@@ -564,3 +564,75 @@ describe('createProactiveDispatcher', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Audit F6 — the `autonomyMode` written into every `proactive.blocked`
+// audit payload was the literal `'balanced'` with a `// TODO: read from
+// settings` beside it. An operator running in `conservative` or
+// `autonomous` mode had their audit trail record a mode they were never in,
+// which makes the blocked-event history unusable as evidence.
+// ---------------------------------------------------------------------------
+
+describe('proactive-dispatch — audit fidelity (F6)', () => {
+  let f: Fixture;
+
+  beforeEach(async () => {
+    f = await buildFixture();
+  });
+
+  afterEach(() => {
+    f.ctx.close();
+  });
+
+  for (const mode of ['conservative', 'balanced', 'autonomous'] as const) {
+    it(`records the real autonomy mode "${mode}" on a pause-blocked event`, async () => {
+      f.orchestratorMock.isCompanyPaused.mockReturnValue(true);
+
+      const dispatcher = createProactiveDispatcher({
+        orchestrator: f.orchestratorMock,
+        threadsRepo: f.threadsRepo,
+        messagesRepo: f.messagesRepo,
+        employeesRepo: f.employeesRepo,
+        companiesRepo: f.companiesRepo,
+        bus: f.bus,
+        budgetGovernance: f.budgetGovernanceMock,
+        settingsRepo: { getProactive: () => ({ enabled: true, autonomyMode: mode }) },
+      });
+
+      await dispatcher.enqueueProactive({
+        companyId: f.companyId,
+        employeeId: f.systemAgentId,
+        trigger: 'work_scan',
+        triggerId: 'ticket-1',
+      });
+
+      const blocked = f.bus.replaySince(0).filter((e) => e.type === 'proactive.blocked');
+      expect(blocked).toHaveLength(1);
+      expect((blocked[0]?.payload as { autonomyMode: string }).autonomyMode).toBe(mode);
+    });
+  }
+
+  it('falls back to balanced when no settings source is wired', async () => {
+    f.orchestratorMock.isCompanyPaused.mockReturnValue(true);
+
+    const dispatcher = createProactiveDispatcher({
+      orchestrator: f.orchestratorMock,
+      threadsRepo: f.threadsRepo,
+      messagesRepo: f.messagesRepo,
+      employeesRepo: f.employeesRepo,
+      companiesRepo: f.companiesRepo,
+      bus: f.bus,
+      budgetGovernance: f.budgetGovernanceMock,
+    });
+
+    await dispatcher.enqueueProactive({
+      companyId: f.companyId,
+      employeeId: f.systemAgentId,
+      trigger: 'work_scan',
+      triggerId: 'ticket-1',
+    });
+
+    const blocked = f.bus.replaySince(0).filter((e) => e.type === 'proactive.blocked');
+    expect((blocked[0]?.payload as { autonomyMode: string }).autonomyMode).toBe('balanced');
+  });
+});

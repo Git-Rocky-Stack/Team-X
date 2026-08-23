@@ -18,6 +18,7 @@
 
 import type {
   EventType,
+  ExtensionsAutonomyMode,
   ProactiveBlockedPayload,
   ProactiveBudgetBlockedPayload,
   ProactiveErrorPayload,
@@ -67,6 +68,17 @@ export interface ProactiveDispatcherDeps {
       actorKind: string;
       payload: T;
     }): unknown;
+  };
+  /**
+   * Real autonomy posture for the workspace. The `proactive.blocked`
+   * audit payload carries `autonomyMode`, and it used to be the literal
+   * `'balanced'` — so an operator running `conservative` or `autonomous`
+   * had their audit trail record a mode they were never in. Optional so
+   * existing callers keep compiling; when absent the payload falls back
+   * to `'balanced'`, matching the settings default.
+   */
+  settingsRepo?: {
+    getProactive(): { enabled: boolean; autonomyMode: ExtensionsAutonomyMode };
   };
   budgetGovernance?: {
     assertExecutionAllowed(args: {
@@ -123,6 +135,24 @@ export interface ProactiveDispatcher {
 
 export function createProactiveDispatcher(deps: ProactiveDispatcherDeps): ProactiveDispatcher {
   const now = deps.now ?? Date.now;
+
+  /**
+   * Read the workspace's real autonomy posture for audit payloads.
+   *
+   * A settings read must never be able to suppress the blocked event
+   * itself — losing the audit record is strictly worse than recording the
+   * default — so a throwing repo degrades to `'balanced'` rather than
+   * propagating.
+   */
+  function resolveAutonomyMode(): ExtensionsAutonomyMode {
+    if (!deps.settingsRepo) return 'balanced';
+    try {
+      return deps.settingsRepo.getProactive().autonomyMode;
+    } catch (err) {
+      console.warn('[proactive-dispatch] failed to read autonomy mode for audit payload', err);
+      return 'balanced';
+    }
+  }
 
   /**
    * Build trigger message content based on trigger type and context.
@@ -204,7 +234,7 @@ export function createProactiveDispatcher(deps: ProactiveDispatcherDeps): Proact
       triggerId,
       reason,
       explanation,
-      autonomyMode: 'balanced', // TODO: read from settings
+      autonomyMode: resolveAutonomyMode(),
       blockedAt: now(),
     };
 
