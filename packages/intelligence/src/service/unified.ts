@@ -466,6 +466,50 @@ Respond with JSON array:
     initialized = true;
   }
 
+  /**
+   * Generate the answer for a query from its retrieved context.
+   *
+   * Grounding rules are stated to the model explicitly: answer from the
+   * supplied context, and say so when the context does not cover the
+   * question. That is what keeps a retrieval-backed answer honest — the
+   * alternative (letting the model fill gaps silently) is how a RAG system
+   * starts inventing citations.
+   *
+   * With no LLM configured there is nothing that can write prose. The
+   * service returns a plainly-labelled digest rather than dressing a
+   * string-concatenation up as a generated answer.
+   */
+  async function generateAnswer(query: string, hits: RetrievalHit[]): Promise<string> {
+    const llm = config.llm;
+    if (!llm) {
+      const digest =
+        hits.length > 0
+          ? hits.map((h, i) => `[${i + 1}] ${h.contentText}`).join('\n')
+          : '(no matching context found)';
+      return `No language model is configured, so this is the retrieved context rather than a generated answer:\n${digest}`;
+    }
+
+    const context =
+      hits.length > 0
+        ? hits
+            .map((h, i) => `[${i + 1}] (source: ${h.sourceType}/${h.sourceId})\n${h.contentText}`)
+            .join('\n\n')
+        : '(no matching context was retrieved)';
+
+    return llm.complete(
+      [
+        'Answer the question using only the context below.',
+        'If the context does not contain the answer, say so plainly instead of guessing.',
+        'Cite the bracketed context numbers you relied on.',
+        '',
+        'Context:',
+        context,
+        '',
+        `Question: ${query}`,
+      ].join('\n'),
+    );
+  }
+
   // Create the service object
   const service: AiService = {
     async initialize() {
@@ -481,7 +525,22 @@ Respond with JSON array:
       const startTime = Date.now();
       let plan: ExecutionPlan | undefined;
 
-      // Async generator for streaming
+      // The result promise is settled by the generator itself rather than by
+      // a second `for await` over the same stream. Iterating one async
+      // generator from two consumers hands each of them a disjoint subset of
+      // the chunks, which silently truncated every answer to roughly half its
+      // characters (audit F13).
+      let settleResult: (value: QueryResult) => void = () => undefined;
+      let failResult: (reason: unknown) => void = () => undefined;
+      const result = new Promise<QueryResult>((resolve, reject) => {
+        settleResult = resolve;
+        failResult = reject;
+      });
+      // A caller that consumes the stream directly and ignores `result` must
+      // not trip an unhandled-rejection warning when generation fails; real
+      // awaiters still observe the rejection.
+      result.catch(() => undefined);
+
       async function* generateStream(): AsyncGenerator<StreamChunk> {
         if (!initialized) {
           throw new Error('Service not initialized. Call initialize() first.');
@@ -505,7 +564,6 @@ Respond with JSON array:
             });
             if (planSpan) tracer?.endSpan(planSpan);
 
-            // Emit plan as metadata
             yield {
               id: `chunk_${Date.now()}`,
               type: 'metadata',
@@ -520,12 +578,9 @@ Respond with JSON array:
           // Retrieval step
           const retrievalSpan = tracer?.startSpan('query.retrieval', { kind: 'client' });
 
-          // Query expansion
           let expandedQuery = query;
           if (queryExpansion) {
-            const entityContext: EntityContext = {
-              companyId,
-            };
+            const entityContext: EntityContext = { companyId };
             const expanded = await queryExpansion.expand(query, entityContext);
             const firstExpansion = expanded.expansions[0];
             if (firstExpansion) {
@@ -533,13 +588,13 @@ Respond with JSON array:
             }
           }
 
-          // RAG retrieval
           const hits = await ragService.retrieve({
             companyId,
             query: expandedQuery,
             topK,
             threshold,
           });
+          stats.rag.totalRetrievals += 1;
 
           if (retrievalSpan) tracer?.endSpan(retrievalSpan);
 
@@ -560,13 +615,21 @@ Respond with JSON array:
             };
           }
 
-          // Generate answer (streaming)
-          const answer = `Based on the retrieved context, here's what I found: ${hits
-            .slice(0, 3)
-            .map((h) => h.contentText.slice(0, 50))
-            .join('; ')}`;
+          // ---- Answer generation ---------------------------------------
+          //
+          // This previously built the "answer" by splicing the first 50
+          // characters off the top three hits into a fixed sentence, while
+          // `config.llm.complete` sat wired and unused. A configured
+          // provider must actually generate the answer; with no provider the
+          // service says so plainly instead of dressing a digest up as one.
+          const generateSpan = tracer?.startSpan('query.generate', { kind: 'client' });
+          let answer: string;
+          try {
+            answer = await generateAnswer(query, hits);
+          } finally {
+            if (generateSpan) tracer?.endSpan(generateSpan);
+          }
 
-          // Stream answer character by character
           const chunkSize = 10;
           for (let i = 0; i < answer.length; i += chunkSize) {
             yield {
@@ -577,7 +640,6 @@ Respond with JSON array:
               index: Math.floor(i / chunkSize),
               timestamp: Date.now(),
             };
-            await new Promise((resolve) => setTimeout(resolve, 10));
           }
 
           // Related entities from knowledge graph
@@ -589,13 +651,27 @@ Respond with JSON array:
               maxResults: 5,
               maxDepth: 2,
             });
+            stats.knowledge.queriesRun += 1;
             related = graphResult.nodes.slice(0, 5).map((n) => ({
               entity: n.label,
               relation: 'related',
             }));
           }
 
-          // Final chunk
+          // Settle BEFORE the terminal yield. Consumers (including
+          // `accumulateStream`) legitimately `break` as soon as they see
+          // `isFinal`, which suspends this generator at that yield forever —
+          // anything after it would never run and `result` would hang.
+          settleResult({
+            answer,
+            context: hits,
+            facts: [],
+            related,
+            plan,
+            timestamp: startTime,
+            latencyMs: Date.now() - startTime,
+          });
+
           yield {
             id: `chunk_${Date.now()}_final`,
             type: 'control',
@@ -609,44 +685,22 @@ Respond with JSON array:
               contextCount: hits.length,
             },
           };
+        } catch (err) {
+          failResult(err);
+          throw err;
         } finally {
           if (span) tracer?.endSpan(span);
         }
       }
 
-      // Return stream and result promise
-      const stream = generateStream();
-      const resultPromise = (async () => {
-        const chunks: StreamChunk[] = [];
-        for await (const chunk of stream) {
-          chunks.push(chunk);
-        }
-        const finalChunk = chunks.find((c) => c.isFinal);
-        const metadata = finalChunk?.metadata as
-          | { relatedEntities?: Array<{ entity: string; relation: string }>; contextCount?: number }
-          | undefined;
-
-        return {
-          answer: chunks
-            .filter((c) => c.type === 'text')
-            .map((c) => c.content)
-            .join(''),
-          context: [],
-          facts: [],
-          related: metadata?.relatedEntities ?? [],
-          plan,
-          timestamp: startTime,
-          latencyMs: Date.now() - startTime,
-        };
-      })();
-
-      return { stream, result: resultPromise };
+      return { stream: generateStream(), result };
     },
 
     async query(companyId, query, options = {}) {
       const { stream, result } = this.queryStream(companyId, query, options);
 
-      // Accumulate stream
+      // Drain the stream exactly once — the generator settles `result` on
+      // its own as it finishes.
       await accumulateStream(stream);
 
       return result;
@@ -813,7 +867,13 @@ Respond with JSON array:
       return result.aggregated;
     },
 
-    getStats(_companyId) {
+    getStats(companyId) {
+      // Graph counts are read from the graph itself rather than reported as
+      // zeros. `getStats` requires a company scope, so a process-wide call
+      // (no companyId) legitimately has nothing to report.
+      const graphStats =
+        knowledge && companyId !== undefined ? knowledge.getStats(companyId) : null;
+
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
@@ -827,9 +887,9 @@ Respond with JSON array:
           avgFreshness: 0.8, // Placeholder
         },
         knowledge: {
-          totalNodes: 0,
-          totalEdges: 0,
-          connectedComponents: 0,
+          totalNodes: graphStats?.totalNodes ?? 0,
+          totalEdges: graphStats?.totalEdges ?? 0,
+          connectedComponents: graphStats?.connectedComponents ?? 0,
         },
         planning: {
           plansCreated: stats.planning.plansCreated,
