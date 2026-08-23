@@ -64,6 +64,7 @@ import {
   createRerankerService,
   createSlotFiller,
 } from '@team-x/intelligence';
+import { runProbeCommand, sampleNvidiaVramMb } from '@team-x/local-gguf-runtime';
 import {
   type StreamContentPart,
   type StreamMessage,
@@ -113,6 +114,8 @@ import {
 } from './db/repos/extensions.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import { createLocalModelAdvancedParamsRepo } from './db/repos/local-model-advanced-params.js';
+import { createLocalModelBenchmarksRepo } from './db/repos/local-model-benchmarks.js';
+import { createLocalModelEndpointsRepo } from './db/repos/local-model-endpoints.js';
 import { createLocalModelWatchFoldersRepo } from './db/repos/local-model-watch-folders.js';
 import { createLocalModelsRepo } from './db/repos/local-models.js';
 import {
@@ -211,6 +214,15 @@ import { type EnhancedAiService, createEnhancedAiService } from './services/enha
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
+import {
+  type BenchmarkService,
+  createBenchmarkService,
+} from './services/local-gguf/benchmark-service.js';
+import {
+  type EndpointService,
+  createEndpointService,
+} from './services/local-gguf/endpoint-service.js';
+import { type HfService, createHfService } from './services/local-gguf/hf-service.js';
 import {
   type LibraryFs,
   type LibraryService,
@@ -656,6 +668,14 @@ let poolServiceInstance: PoolService | null = null;
  * network-share resilience monitors before the SQLite handle closes.
  */
 let libraryServiceInstance: LibraryService | null = null;
+/**
+ * Hugging Face download manager (v3.3.0 Phase 7). Held at module scope so the
+ * will-quit handler can pause every in-flight transfer: `dispose()` aborts the
+ * requests but leaves each `.part` file on disk, so a quit mid-download costs
+ * the user nothing but the seconds since the last byte — the next launch
+ * resumes from the same offset.
+ */
+let hfServiceInstance: HfService | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
@@ -734,6 +754,9 @@ app
     // Phase 3 (library + scanning): folder sources scanned for GGUF files; the
     // LibraryService owns the watcher/monitor lifecycle for each registered row.
     const localModelWatchFoldersRepo = createLocalModelWatchFoldersRepo(db);
+    // Phase 5 (remote LAN endpoints) + Phase 10 (benchmark history).
+    const localModelEndpointsRepo = createLocalModelEndpointsRepo(db);
+    const localModelBenchmarksRepo = createLocalModelBenchmarksRepo(db);
 
     // Adapter: the app settings repo (getRaw → string | null / set → JSON) →
     // the get<T>() | undefined / set<T>() shape the local-gguf accessor expects.
@@ -934,6 +957,51 @@ app
     // call until a method is actually invoked).
     const testMode = isTestMode();
     const secretsStore = new SecretsStore();
+
+    // ── Local & Networked GGUF: endpoints, HF browser, benchmarks ─────────
+    // These three complete the `localGguf.*` surface. Until now their channels
+    // were registered but threw a Phase 1 not-implemented error, so the whole
+    // namespace looked live from the preload bridge while a third of it could
+    // only fail. Constructed here rather than beside the Phase 2/3 services
+    // above because all three need `secretsStore`, which is created at this
+    // point in the boot sequence.
+    const endpointService: EndpointService = createEndpointService({
+      repo: localModelEndpointsRepo,
+      // Read-only slice: the service resolves an endpoint's stored auth header
+      // for its reachability probe and never writes to the keychain.
+      secrets: {
+        getEndpointAuthHeader: (keyRef) => secretsStore.getEndpointAuthHeader(keyRef),
+      },
+    });
+
+    const hfService: HfService = createHfService({
+      // `hfTokenKeyRef` names the keychain entry; the token itself never
+      // touches the settings store. Read per call so rotating it in Settings
+      // takes effect on the next request rather than the next launch.
+      getToken: async () => {
+        const ref = localGgufSettings.get().hfTokenKeyRef;
+        if (!ref) return null;
+        try {
+          return await secretsStore.getHfToken(ref);
+        } catch (err) {
+          console.warn('[main] could not read the Hugging Face token from the keychain', err);
+          return null;
+        }
+      },
+    });
+    hfServiceInstance = hfService;
+
+    const benchmarkService: BenchmarkService = createBenchmarkService({
+      pool: poolService,
+      models: localModelsRepo,
+      benchmarks: localModelBenchmarksRepo,
+      runtime: { getSettings: async () => localGgufSettings.get() },
+      // Real peak-VRAM sampling on NVIDIA hardware; every other backend (and
+      // any box without nvidia-smi) resolves to null, which the benchmark row
+      // records as "not measured" rather than as zero.
+      sampleVramMb: () => sampleNvidiaVramMb({ runCommand: runProbeCommand, timeoutMs: 3000 }),
+    });
+
     const providersService = getProvidersService();
     const runtimeProfilesService = createRuntimeProfilesService({
       runtimeProfilesRepo,
@@ -3201,17 +3269,16 @@ app
         copilotHandlers.configure(req),
     );
 
-    // Local & Networked GGUF Support (v3.3.0). The remaining handlers register
-    // the `localGguf.*` channel surface so the preload bridge has live handlers
-    // to invoke; each still-stubbed handler throws a not-implemented error until
-    // its owning phase lands the real service (endpoint -> P5, hf -> P7,
-    // benchmark -> P10). Phase 2 (runtime/pool) and Phase 3 (library) are now
-    // LIVE: their handlers delegate to the services constructed above.
+    // Local & Networked GGUF Support (v3.3.0) — the whole `localGguf.*` surface
+    // is LIVE. Every handler delegates to a real service: library + runtime +
+    // pool (Phases 2-3), endpoints (Phase 5), the Hugging Face browser and its
+    // resumable download manager (Phase 7), and the benchmark runner
+    // (Phase 10). No channel in this namespace throws not-implemented any more.
     registerLocalGgufLibraryHandlers(ipcMain, { library: libraryService });
     registerLocalGgufRuntimeHandlers(ipcMain, { runtime: runtimeService, pool: poolService });
-    registerLocalGgufHfHandlers(ipcMain);
-    registerLocalGgufBenchmarkHandlers(ipcMain);
-    registerLocalGgufEndpointHandlers(ipcMain);
+    registerLocalGgufHfHandlers(ipcMain, { hf: hfService });
+    registerLocalGgufBenchmarkHandlers(ipcMain, { benchmark: benchmarkService });
+    registerLocalGgufEndpointHandlers(ipcMain, { endpoints: endpointService });
 
     // Pre-warm the GPU probe + persist the active backend / binaries version in
     // the background. Fire-and-forget by design: the probe must never delay
@@ -3413,6 +3480,18 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] local-gguf pool shutdown failed:', err);
+    }
+    // Pause every in-flight Hugging Face download BEFORE the DB close. The
+    // abort leaves each `.part` file intact, so quitting mid-download costs
+    // only the bytes in flight and the next launch resumes from that offset.
+    // Non-fatal: a failure here must never block the quit.
+    try {
+      if (hfServiceInstance !== null) {
+        await hfServiceInstance.dispose();
+        hfServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] local-gguf HF download dispose failed:', err);
     }
     // Tear down the library service's live chokidar folder watchers and
     // network-share resilience monitors BEFORE the DB close: they hold FS
