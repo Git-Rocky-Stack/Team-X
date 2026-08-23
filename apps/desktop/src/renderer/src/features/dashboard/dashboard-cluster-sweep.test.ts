@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,7 +9,6 @@ const read = (file: string) => readFileSync(join(here, file), 'utf8');
 
 const subtabsSrc = read('dashboard-subtabs.tsx');
 const streamSrc = read('stream-view.tsx');
-const cardsSrc = read('cards-view.tsx');
 const employeeCardSrc = read('employee-card.tsx');
 const timelineSrc = read('timeline-view.tsx');
 const floorSrc = read('floor-view.tsx');
@@ -20,7 +19,6 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     for (const src of [
       subtabsSrc,
       streamSrc,
-      cardsSrc,
       employeeCardSrc,
       timelineSrc,
       floorSrc,
@@ -56,10 +54,15 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(streamSrc).not.toContain('text-code-sm leading-relaxed text-foreground/80');
   });
 
-  it('cards view + employee card use console hardware and keep the a11y label', () => {
-    expect(cardsSrc).not.toMatch(/\bbg-black\b/);
-    expect(cardsSrc).not.toContain('text-red-500');
-    expect(cardsSrc).toContain('<RecessedWell');
+  it('keeps the retired CardsView deleted', () => {
+    // The Mission Control subview is rendered by `MissionControlDashboard`;
+    // `CardsView` was retired in its favour (see app/sidenav.tsx) but the file
+    // lingered unmounted. Pin its absence so the sweep cannot silently start
+    // grading dead code again.
+    expect(existsSync(join(here, 'cards-view.tsx'))).toBe(false);
+  });
+
+  it('employee card uses console hardware and keeps the a11y label', () => {
     expect(employeeCardSrc).toContain('${employee.title} — ${statusLabel(displayStatus)}');
     expect(employeeCardSrc).toContain(". Click to ${isSelected ? 'close' : 'open'} chat.");
     expect(employeeCardSrc).toContain('title={statusLabel(displayStatus)}');

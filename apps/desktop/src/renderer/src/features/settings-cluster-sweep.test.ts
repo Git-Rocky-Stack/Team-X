@@ -4,7 +4,7 @@
  * The cross-file legacy-absence guard + amoled-menu-surface recipe check
  * land with the final task (Phase-3 lesson 5: global pins land last).
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -677,26 +677,12 @@ describe('install-skill-dialog sweep', () => {
   });
 });
 
-describe('grant-authority-dialog sweep', () => {
-  const src = readSrc('settings/grant-authority-dialog.tsx');
-
-  it('recomposes the authority selects onto the console-select recipe', () => {
-    expect(src).toContain("'well-input flex h-10 w-full px-3 py-2 text-body'");
-  });
-
-  it('drops the raw select + destructive palette', () => {
-    expect(src).not.toContain('border-input');
-    expect(src).not.toContain('bg-background');
-    expect(src).not.toContain('text-destructive');
-  });
-
-  it('preserves the dialog contract, submit + authority selectors', () => {
-    expect(src).toContain('<DialogTitle>Grant Authority</DialogTitle>');
-    expect(src).toContain('function handleSubmit(');
-    expect(src).toContain('data-authority-scope-kind=""');
-    expect(src).toContain('data-authority-permission=""');
-    expect(src).toContain('data-authority-grant-submit=""');
-    expect(src).toContain('id="authority-capability"');
+describe('grant-authority-dialog removal', () => {
+  it('stays deleted — it had no mount site anywhere in the renderer', () => {
+    // The dialog was never rendered: no import, no JSX use, no route. It was
+    // swept for design compliance purely because it sat in the settings
+    // folder. Pin its absence so it cannot drift back in unmounted.
+    expect(existsSync(join(featuresDir, 'settings/grant-authority-dialog.tsx'))).toBe(false);
   });
 });
 
@@ -723,7 +709,6 @@ describe('settings cluster cross-file legacy absence', () => {
     'settings/add-provider-dialog.tsx',
     'settings/import-mcp-dialog.tsx',
     'settings/install-skill-dialog.tsx',
-    'settings/grant-authority-dialog.tsx',
   ];
 
   it('keeps every swept settings file free of the legacy composition families', () => {

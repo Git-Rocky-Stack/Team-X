@@ -28,7 +28,6 @@ interface TabDef {
   label: string;
   icon: ComponentType<{ className?: string }>;
   view: ActiveView;
-  disabled?: boolean;
 }
 
 const TABS: TabDef[] = [
@@ -88,15 +87,12 @@ export function TopBar() {
                 <button
                   type="button"
                   key={tab.label}
-                  disabled={tab.disabled}
                   onClick={() => setActiveView(tab.view)}
                   className={cn(
                     'nav-tile stencil inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[10.5px]',
                     'transition-all',
                     isActive && 'nav-tile-active',
-                    tab.disabled && 'cursor-not-allowed opacity-40',
                   )}
-                  title={tab.disabled ? 'Coming soon' : undefined}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
