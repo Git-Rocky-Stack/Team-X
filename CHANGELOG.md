@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The local GGUF backend is complete end to end.** Fourteen of the twenty-six
+  `localGguf.*` IPC channels were registered handlers that threw
+  `"not implemented yet (Phase 1 stub)"`. The preload bridge advertised the
+  whole namespace, so the surface looked live while a third of it could only
+  fail at the moment anything reached it. All fourteen now delegate to real
+  services:
+  - **Remote LAN endpoints** (`endpoint.list/add/remove/test/update`) — add an
+    LM Studio, Ollama, llama-server, KoboldCPP or vLLM box on your network,
+    probe it over the OpenAI-compatible `/v1/models` route with a measured
+    latency, and store an optional auth header in the OS keychain. Endpoints
+    are validated as genuinely local-network: loopback, RFC1918, link-local,
+    `.local` mDNS or a bare LAN hostname. A public host is refused rather than
+    stored under a `Local` privacy-tier label it does not deserve.
+  - **Hugging Face browser** (`hf.search/modelCard/startDownload/pauseDownload/
+    resumeDownload/cancelDownload/activeDownloads`) — GGUF-scoped repository
+    search, model cards with real file sizes and a description read from the
+    repo README, and a resumable download manager. Bytes land in a `.part`
+    file and are renamed only once the transfer completes, so an interrupted
+    download is never mistaken for a usable model; resuming continues from the
+    byte offset instead of starting over, and quitting the app pauses rather
+    than discards.
+  - **Benchmark runner** (`benchmark.run/history`) — loads a model through the
+    pool, drives one fixed completion, and records prompt-eval and generation
+    throughput from llama-server's own timings, a wall-clock time-to-first-token,
+    and peak VRAM sampled from `nvidia-smi` where that is available.
+
+  Note this is backend and IPC only. **There is still no model-library UI**, so
+  none of it is reachable from the app yet.
+
 ### Fixed
 
 - **Enhanced AI answered from a simulation layer instead of your model.** The
@@ -83,6 +114,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   been removed rather than repaired.
 
 ### Removed
+
+- **The `localGguf` Phase 1 stub thrower.** With every channel delegating to a
+  real service, the shared `notImplemented()` helper has no callers and is
+  deleted. A source-pin guard keeps it from coming back: a reintroduced stub
+  would still register a handler, so counting channels would not catch it.
 
 - 3,640 lines of unreachable renderer code: the skills and MCP marketplaces,
   the custom skill/MCP install dialogs, the simplified-permissions panel, the

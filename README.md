@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3%2C585%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-3%2C768%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -73,7 +73,7 @@ A full operator console for governed autonomous work (the **Autonomy** tab, 10 s
 - **MCP tool calling** — agents use Model Context Protocol tools via a singleton host with connection pooling and `tools_allowed`/`tools_denied` enforcement
 - **Skills & authority** — install skills from a local folder or GitHub URL, import MCP servers from templates or manual config, and govern everything through authority grants and per-employee permissions
 - **Employee-to-employee messaging** — agents communicate with colleagues via built-in tools, forming collaborative workflows
-- **Local GGUF foundation** *(in development)* — a complete native local-model backend (`@team-x/local-gguf-runtime`: GPU probing across CUDA / ROCm / Vulkan / Metal / CPU, llama.cpp server lifecycle, LRU model pool, GGUF metadata parsing, Hugging Face downloads, folder watching, benchmarking) ships in the codebase today; the model-library UI lands in a future release. Until then, local models run through Ollama
+- **Local GGUF foundation** *(backend complete, no UI yet)* — a native local-model backend ships in the codebase today: GPU probing across CUDA / ROCm / Vulkan / Metal / CPU, llama.cpp server lifecycle, an LRU model pool, GGUF metadata parsing, watched folders, remote LAN endpoints (LM Studio / Ollama / llama-server / KoboldCPP / vLLM, validated as local-network only), a Hugging Face browser with resumable pause/resume downloads, and a benchmark runner that records only measured figures. All 26 `localGguf.*` IPC channels are live and delegate to real services. **There is no model-library UI yet**, so none of this is reachable from the app — it lands in a future release. Until then, local models run through Ollama
 
 ### Intelligence Layer
 
@@ -151,7 +151,8 @@ Team-X/
       services/             Vault, backup, MCP host, providers, updater,
                             rag-indexer, command-service, agentic-loop,
                             copilot-analyzer, routine-service, budgets,
-                            local-gguf (library / pool / runtime), heartbeat
+                            local-gguf (library / pool / runtime / endpoints /
+                            hf-downloads / benchmarks), heartbeat
     src/preload/            Context-isolated bridge (TeamXApi)
     src/renderer/           React 19 + Tailwind + shadcn/ui on the
                             Command Console design system (DESIGN.md)
@@ -173,7 +174,7 @@ Team-X/
                             NLU (classifier, entity resolver, slot filler),
                             agentic loop (ReAct scheduler, tool registry)
     local-gguf-runtime/     GPU probe, llama.cpp lifecycle, LRU pool,
-                            GGUF parser, HF hub client, benchmark runner
+                            GGUF parser, folder watcher, auto-tune
   role-packs/
     strategia-official/
       roles/                57 curated F10 roles across user + system levels
@@ -213,7 +214,7 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
-| Unit tests | Vitest (3,585 tests / 302 files) |
+| Unit tests | Vitest (3,768 tests / 307 files) |
 | E2E tests | Playwright (19 specs / 26 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
@@ -307,7 +308,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **3,585 unit tests** across 302 files and **19 Playwright E2E specs** (26 cases):
+Team-X ships with **3,768 unit tests** across 307 files and **19 Playwright E2E specs** (26 cases):
 
 | Spec | Coverage |
 |------|----------|
