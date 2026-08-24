@@ -39,6 +39,7 @@ function makeFakeLibrary() {
     listBySourceType: [{ id: 'm2' }] as unknown as LocalModel[],
     addFile: { id: 'm3' } as unknown as LocalModel,
     addFolder: { id: 'f1' } as unknown as WatchFolder,
+    listFolders: [{ id: 'f1' }] as unknown as WatchFolder[],
     removeModel: undefined,
     removeFolder: undefined,
     scanFolder: { addedCount: 2, removedCount: 1 },
@@ -53,6 +54,7 @@ function makeFakeLibrary() {
     listBySourceType: vi.fn().mockResolvedValue(sentinels.listBySourceType),
     addFile: vi.fn().mockResolvedValue(sentinels.addFile),
     addFolder: vi.fn().mockResolvedValue(sentinels.addFolder),
+    listFolders: vi.fn().mockResolvedValue(sentinels.listFolders),
     removeModel: vi.fn().mockResolvedValue(sentinels.removeModel),
     removeFolder: vi.fn().mockResolvedValue(sentinels.removeFolder),
     scanFolder: vi.fn().mockResolvedValue(sentinels.scanFolder),
@@ -71,7 +73,7 @@ describe('localGguf library IPC handlers (Phase 3 - LibraryService delegations)'
     const { library } = makeFakeLibrary();
     registerLocalGgufLibraryHandlers(f.ipc, { library });
     expect(f.channels().sort()).toEqual([...LOCAL_GGUF_LIBRARY_CHANNELS].sort());
-    expect(f.channels()).toHaveLength(12);
+    expect(f.channels()).toHaveLength(13);
   });
 
   it('localGguf.library.list -> library.list() and returns its result', async () => {
@@ -196,5 +198,31 @@ describe('localGguf library IPC handlers (Phase 3 - LibraryService delegations)'
     const result = await f.invoke('localGguf.library.resetAdvanced', 'm');
     expect(mocks.resetAdvanced).toHaveBeenCalledWith('m');
     expect(result).toBe(sentinels.resetAdvanced);
+  });
+});
+
+describe('localGguf library IPC handlers — watch folders', () => {
+  it('library.listFolders returns the service result', async () => {
+    const f = makeFakeIpc();
+    const { library, mocks, sentinels } = makeFakeLibrary();
+    registerLocalGgufLibraryHandlers(f.ipc, { library });
+
+    await expect(f.invoke('localGguf.library.listFolders')).resolves.toBe(sentinels.listFolders);
+    expect(mocks.listFolders).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes the id that removeFolder and scanFolder consume', async () => {
+    // Before this channel existed both were unreachable: each takes a folder
+    // id and nothing in the surface could produce one.
+    const f = makeFakeIpc();
+    const { library, mocks } = makeFakeLibrary();
+    registerLocalGgufLibraryHandlers(f.ipc, { library });
+
+    const folders = (await f.invoke('localGguf.library.listFolders')) as Array<{ id: string }>;
+    await f.invoke('localGguf.library.scanFolder', folders[0]?.id);
+    await f.invoke('localGguf.library.removeFolder', folders[0]?.id);
+
+    expect(mocks.scanFolder).toHaveBeenCalledWith('f1');
+    expect(mocks.removeFolder).toHaveBeenCalledWith('f1');
   });
 });

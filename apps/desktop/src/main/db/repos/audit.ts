@@ -34,7 +34,10 @@ export interface AuditStats {
 type AuditDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createAuditRepo<TRunResult>(db: AuditDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     /**
      * Filtered, paginated event listing for the audit log.
      * Supports filtering by event type, actor, and date range.
@@ -103,7 +106,7 @@ export function createAuditRepo<TRunResult>(db: AuditDb<TRunResult>) {
      * Export events as JSON string (for file save).
      */
     exportJson(filter: AuditFilter): string {
-      const rows = this.list({ ...filter, limit: 10000 });
+      const rows = impl.list({ ...filter, limit: 10000 });
       return JSON.stringify(rows, null, 2);
     },
 
@@ -111,7 +114,7 @@ export function createAuditRepo<TRunResult>(db: AuditDb<TRunResult>) {
      * Export events as CSV string (for file save).
      */
     exportCsv(filter: AuditFilter): string {
-      const rows = this.list({ ...filter, limit: 10000 });
+      const rows = impl.list({ ...filter, limit: 10000 });
       const header = 'id,companyId,actorId,actorKind,eventType,createdAt,payload';
       const lines = rows.map((r) => {
         const payload = r.payloadJson.replace(/"/g, '""');
@@ -132,4 +135,5 @@ export function createAuditRepo<TRunResult>(db: AuditDb<TRunResult>) {
       return [...new Set(rows.map((r) => r.eventType))].sort();
     },
   };
+  return impl;
 }

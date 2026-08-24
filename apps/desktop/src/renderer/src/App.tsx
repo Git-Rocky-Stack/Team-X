@@ -16,6 +16,7 @@ import { StreamView } from './features/dashboard/stream-view.js';
 import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
 import { MeetingsView } from './features/meetings/meetings-view.js';
+import { ModelsView } from './features/models/models-view.js';
 import { OrgChartView } from './features/orgchart/org-chart-view.js';
 import { ProjectsView } from './features/projects/projects-view.js';
 import { SettingsView } from './features/settings/settings-view.js';
@@ -185,6 +186,12 @@ export default function App() {
         return <TelemetryView />;
       case 'audit':
         return <AuditView companyId={companyId} employees={employees} />;
+      case 'models':
+        return (
+          <ErrorBoundary componentName="ModelsView">
+            <ModelsView />
+          </ErrorBoundary>
+        );
       case 'user-guide':
         return <UserGuideView company={activeCompany} employees={employees} />;
       case 'settings':

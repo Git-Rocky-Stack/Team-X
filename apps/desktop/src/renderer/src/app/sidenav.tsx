@@ -50,17 +50,17 @@ function EmployeeItem({ employee }: { employee: Employee }) {
   const displayStatus = liveState?.status ?? employee.status;
   const isSelected = selectedId === employee.id;
 
-  // aria-label format mirrors `EmployeeCard` (features/dashboard/employee-card.tsx):
-  // `{name}, {title} — {status}. Click to open|close chat.`
+  // aria-label format: `{name}, {title} — {status}. Click to open|close chat.`
   // Two reasons:
   //   1. Accessibility — screen-reader users hear name + title + state in
   //      one announcement instead of three orphaned text fragments.
   //   2. Stable e2e anchor — smoke / rag-flow / ticket-flow specs all pin
   //      `button[aria-label^="{name}, {title}"]` per the convention
-  //      documented in `e2e/smoke.spec.ts` header. The dashboard
-  //      `CardsView` was retired in favor of `MissionControlDashboard`
-  //      (ops stats, no per-employee cards), so the sidenav rail is the
-  //      surviving carrier of that contract.
+  //      documented in `e2e/smoke.spec.ts` header. The dashboard `CardsView`
+  //      was retired in favor of `MissionControlDashboard` (ops stats, no
+  //      per-employee cards), and the `EmployeeCard` that once shared this
+  //      format was deleted as an orphan, so the sidenav rail is now the
+  //      sole carrier of that contract.
   const ariaLabel = `${employee.name}, ${employee.title} — ${statusLabel(displayStatus)}. Click to ${
     isSelected ? 'close' : 'open'
   } chat.`;

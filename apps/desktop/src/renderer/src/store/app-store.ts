@@ -50,6 +50,7 @@ export type ActiveView =
   | 'files'
   | 'telemetry'
   | 'audit'
+  | 'models'
   | 'user-guide'
   | 'settings';
 
@@ -62,6 +63,9 @@ export type SettingsSectionFocus =
 
 /** Dashboard inner subview tabs. */
 export type DashboardSubview = 'cards' | 'timeline' | 'stream' | 'floor' | 'commands';
+
+/** Sub-tabs of the Models view (local GGUF subsystem). */
+export type ModelsPanel = 'library' | 'discover' | 'endpoints' | 'runtime';
 
 /** Projects inner subview tabs. */
 export type ProjectsSubview = 'kanban' | 'goals' | 'schedule';
@@ -87,6 +91,12 @@ export interface AppState {
   activeView: ActiveView;
   /** Which dashboard subview is showing (Cards/Timeline/Stream/Floor). */
   dashboardSubview: DashboardSubview;
+  /**
+   * Selected Models sub-tab. Held here rather than in the view so that
+   * navigating away and back does not drop the operator part-way through
+   * configuring hardware — same reasoning as `dashboardSubview`.
+   */
+  modelsPanel: ModelsPanel;
   /** The employee whose chat drawer is open, or null when closed. */
   selectedEmployeeId: string | null;
   /** Whether the chat drawer is visible. */
@@ -149,6 +159,7 @@ export interface AppState {
   setActiveView: (view: ActiveView) => void;
   setCopilotSidebarOpen: (open: boolean) => void;
   setDashboardSubview: (subview: DashboardSubview) => void;
+  setModelsPanel: (panel: ModelsPanel) => void;
   setProjectsSubview: (subview: ProjectsSubview) => void;
   setTelemetrySubview: (subview: TelemetrySubview) => void;
   setAutonomySubview: (subview: AutonomySubview) => void;
@@ -199,6 +210,7 @@ function upsertPendingDirectChats(
 export const useAppStore = create<AppState>((set, get) => ({
   activeView: 'dashboard',
   dashboardSubview: 'cards',
+  modelsPanel: 'library',
   selectedEmployeeId: null,
   chatOpen: false,
   activeThreadId: null,
@@ -234,6 +246,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setDashboardSubview: (subview) => set({ dashboardSubview: subview }),
+  setModelsPanel: (panel) => set({ modelsPanel: panel }),
   setTelemetrySubview: (subview) => set({ telemetrySubview: subview }),
   setAutonomySubview: (subview) => set({ autonomySubview: subview }),
   setAutonomyMemoryThreadId: (threadId) => set({ autonomyMemoryThreadId: threadId }),

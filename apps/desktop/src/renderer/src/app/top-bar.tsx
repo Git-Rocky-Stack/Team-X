@@ -1,4 +1,5 @@
 import {
+  Boxes,
   Building2,
   FileArchive,
   Gauge,
@@ -41,6 +42,7 @@ const TABS: TabDef[] = [
   { label: 'Files', icon: FileArchive, view: 'files' },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
   { label: 'Audit', icon: Shield, view: 'audit' },
+  { label: 'Models', icon: Boxes, view: 'models' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ];
 

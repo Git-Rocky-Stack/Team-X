@@ -56,4 +56,19 @@ describe('mission shell foundation source audit', () => {
     expect(sidenavSrc).not.toContain('border-white/10');
     expect(sidenavSrc).not.toContain('border-brand');
   });
+
+  it('carries the employee aria-label contract the E2E specs select on', () => {
+    // `smoke`, `rag-flow` and `ticket-flow` locate employees by
+    // `button[aria-label^="{name}, {title}"]`. Until 2026-08-23 this format
+    // was pinned in `features/dashboard/dashboard-cluster-sweep.test.ts`
+    // against `employee-card.tsx`. That component was deleted as an orphan,
+    // so the pin moves here — sidenav is the only remaining renderer of the
+    // format, and an unguarded edit here silently breaks three E2E specs.
+    expect(sidenavSrc).toContain(
+      '`${employee.name}, ${employee.title} — ${statusLabel(displayStatus)}. Click to ${',
+    );
+    expect(sidenavSrc).toContain("isSelected ? 'close' : 'open'");
+    expect(sidenavSrc).toContain('} chat.`');
+    expect(sidenavSrc).toContain('aria-label={ariaLabel}');
+  });
 });

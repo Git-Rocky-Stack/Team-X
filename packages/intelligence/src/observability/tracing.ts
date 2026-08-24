@@ -357,7 +357,10 @@ export function createTracer(
     return id.padEnd(16, '0').slice(0, 16) as SpanId;
   }
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: Tracer = {
     getContext() {
       return currentContext;
     },
@@ -409,15 +412,15 @@ export function createTracer(
     },
 
     async startActiveSpan(name, fn, opts = {}) {
-      const span = this.startSpan(name, opts);
+      const span = impl.startSpan(name, opts);
 
       try {
         await fn(span);
-        this.endSpan(span, undefined, { code: 'ok' });
+        impl.endSpan(span, undefined, { code: 'ok' });
         return span;
       } catch (err) {
-        this.recordException(span, err);
-        this.endSpan(span, undefined, { code: 'error', description: String(err) });
+        impl.recordException(span, err);
+        impl.endSpan(span, undefined, { code: 'error', description: String(err) });
         throw err;
       }
     },
@@ -528,7 +531,7 @@ export function createTracer(
 
     injectCarrier(context) {
       return {
-        traceparent: this.injectTraceHeader(context),
+        traceparent: impl.injectTraceHeader(context),
         tracestate: context.vendor
           ? Array.from(context.vendor.entries())
               .map(([k, v]) => `${k}=${v}`)
@@ -540,7 +543,7 @@ export function createTracer(
     extractCarrier(carrier) {
       const traceparent = carrier.traceparent;
       if (traceparent) {
-        const context = this.extractTraceHeader(traceparent);
+        const context = impl.extractTraceHeader(traceparent);
         if (context) {
           // Parse tracestate if present
           const tracestate = carrier.tracestate;
@@ -566,6 +569,7 @@ export function createTracer(
       );
     },
   };
+  return impl;
 }
 
 /**

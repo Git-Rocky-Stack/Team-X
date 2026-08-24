@@ -41,7 +41,10 @@ export interface UpsertEmployeeRuntimeBindingInput {
 type RuntimeProfilesDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createRuntimeProfilesRepo<TRunResult>(db: RuntimeProfilesDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     create(input: CreateRuntimeProfileInput): string {
       const id = nanoid();
       const now = Date.now();
@@ -129,7 +132,7 @@ export function createRuntimeProfilesRepo<TRunResult>(db: RuntimeProfilesDb<TRun
     },
 
     upsertBinding(input: UpsertEmployeeRuntimeBindingInput): EmployeeRuntimeBindingRow {
-      const existing = this.getBinding(input.companyId, input.employeeId);
+      const existing = impl.getBinding(input.companyId, input.employeeId);
       const now = Date.now();
       if (existing) {
         db.update(employeeRuntimeBindings)
@@ -165,6 +168,7 @@ export function createRuntimeProfilesRepo<TRunResult>(db: RuntimeProfilesDb<TRun
         .run();
     },
   };
+  return impl;
 }
 
 export type RuntimeProfilesRepo = ReturnType<typeof createRuntimeProfilesRepo>;

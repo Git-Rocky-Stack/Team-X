@@ -48,6 +48,82 @@ function fakeEmbedding(dim = 4): Buffer {
 }
 
 describe('EmbeddingsRepo', () => {
+  /** Three chunks spread over two sources, so avg chunks/source is 1.5. */
+  function seedTwoSources(): void {
+    const rows = [
+      { id: 'e-a0', sourceId: 'src-a', chunkIndex: 0, sourceType: 'message' as const },
+      { id: 'e-a1', sourceId: 'src-a', chunkIndex: 1, sourceType: 'message' as const },
+      { id: 'e-b0', sourceId: 'src-b', chunkIndex: 0, sourceType: 'vault_file' as const },
+    ];
+    for (const r of rows) {
+      repo.upsert({
+        id: r.id,
+        companyId: 'co-1',
+        sourceType: r.sourceType,
+        sourceId: r.sourceId,
+        chunkIndex: r.chunkIndex,
+        contentText: `text ${r.id}`,
+        embedding: fakeEmbedding(),
+        createdAt: 1000,
+      });
+    }
+  }
+
+  describe('getStats', () => {
+    it('averages chunks over DISTINCT sources, not over rows', () => {
+      seedTwoSources();
+
+      // 3 chunks / 2 distinct source_ids = 1.5.
+      // The previous implementation divided the row count by itself, so this
+      // was always exactly 1 whenever a companyId was supplied.
+      const stats = repo.getStats('co-1');
+      expect(stats.totalEmbeddings).toBe(3);
+      expect(stats.avgChunksPerSource).toBe(1.5);
+      expect(stats.bySourceType).toEqual({ message: 2, vault_file: 1 });
+    });
+
+    it('averages over DISTINCT sources when no company is supplied', () => {
+      seedTwoSources();
+
+      // Previously this branch hardcoded the divisor to 1, so the "average"
+      // was the raw total (3).
+      const stats = repo.getStats();
+      expect(stats.totalEmbeddings).toBe(3);
+      expect(stats.avgChunksPerSource).toBe(1.5);
+    });
+
+    it('returns 0 rather than NaN for an empty set', () => {
+      const stats = repo.getStats('co-1');
+      expect(stats.totalEmbeddings).toBe(0);
+      expect(stats.avgChunksPerSource).toBe(0);
+      expect(Number.isNaN(stats.avgChunksPerSource)).toBe(false);
+    });
+  });
+
+  describe('method binding', () => {
+    it('batchUpsert works when the repo methods are destructured', () => {
+      // `RagRepo` in packages/intelligence takes these by reference, so a
+      // `this`-dependent implementation throws in real use.
+      const { batchUpsert } = repo;
+
+      const ids = batchUpsert([
+        {
+          id: 'e-d0',
+          companyId: 'co-1',
+          sourceType: 'message',
+          sourceId: 'src-d',
+          chunkIndex: 0,
+          contentText: 'detached call',
+          embedding: fakeEmbedding(),
+          createdAt: 1000,
+        },
+      ]);
+
+      expect(ids).toEqual(['e-d0']);
+      expect(repo.getById('e-d0')?.contentText).toBe('detached call');
+    });
+  });
+
   it('upserts a single-chunk embedding', () => {
     const id = repo.upsert({
       id: 'emb-1',

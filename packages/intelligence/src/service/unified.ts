@@ -697,7 +697,9 @@ Respond with JSON array:
     },
 
     async query(companyId, query, options = {}) {
-      const { stream, result } = this.queryStream(companyId, query, options);
+      // Lexical, not receiver-based: `this.queryStream` breaks the moment a
+      // caller destructures `query` off the service or passes it as a callback.
+      const { stream, result } = service.queryStream(companyId, query, options);
 
       // Drain the stream exactly once — the generator settles `result` on
       // its own as it finishes.

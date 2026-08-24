@@ -11,3 +11,5 @@ export * from './copilot.js';
 export * from './capabilities.js';
 export * from './trace.js';
 export * from './local-gguf.js';
+export * from './paperclip.js';
+export * from './private-operator.js';

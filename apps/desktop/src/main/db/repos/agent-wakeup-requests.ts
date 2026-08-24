@@ -44,7 +44,10 @@ export interface UpdateAgentWakeupInput {
 type AgentWakeupRequestsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequestsDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     /**
      * Queue a new agent wakeup request and return its id.
      */
@@ -228,13 +231,13 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
      * Returns the next retry delay in milliseconds, or null if max attempts reached.
      */
     markAsFailedWithRetry(id: string, error: string, maxAttempts = 4): number | null {
-      const existing = this.getById(id);
+      const existing = impl.getById(id);
       if (!existing) return null;
 
       const attemptCount = (existing.attemptCount ?? 0) + 1;
       if (attemptCount >= maxAttempts) {
         // Max attempts reached, mark as permanently failed
-        this.update(id, {
+        impl.update(id, {
           status: 'failed',
           completedAt: Date.now(),
           attemptCount,
@@ -253,7 +256,7 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
       const retryDelay = Math.max(baseDelay + jitter, 60 * 1000); // At least 1 minute
       const nextRetryAt = Date.now() + retryDelay;
 
-      this.update(id, {
+      impl.update(id, {
         status: 'failed',
         completedAt: Date.now(),
         attemptCount,
@@ -378,6 +381,7 @@ export function createAgentWakeupRequestsRepo<TRunResult>(db: AgentWakeupRequest
       return { pending, processing, completed, failed };
     },
   };
+  return impl;
 }
 
 export type AgentWakeupRequestsRepo = ReturnType<typeof createAgentWakeupRequestsRepo>;

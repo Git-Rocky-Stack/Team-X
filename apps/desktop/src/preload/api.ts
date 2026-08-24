@@ -172,8 +172,13 @@ import type {
   OrgchartGetResponse,
   PackThreadContextRequest,
   PackedThreadContext,
+  PaperclipImportBridgePreview,
+  PaperclipPreviewRequest,
   PreviewCompanyPackageImportRequest,
   PreviewCompanyPackageImportResponse,
+  PrivateOperatorAccessPlan,
+  PrivateOperatorAccessRequest,
+  PrivateOperatorMissionControlSnapshot,
   ProactiveDecomposeGoalRequest,
   ProactiveDecomposeGoalResponse,
   ProactiveGetStateRequest,
@@ -206,6 +211,7 @@ import type {
   RuntimeProfileValidation,
   ScheduleItem,
   SelectDirectoryResponse,
+  SelectFileResponse,
   SendChatRequest,
   SendChatResponse,
   SettingsGetAgenticResponse,
@@ -313,6 +319,7 @@ export interface IpcRendererLike {
  */
 const CHANNELS = {
   systemSelectDirectory: 'system.selectDirectory',
+  systemSelectGgufFile: 'system.selectGgufFile',
   companiesList: 'companies.list',
   companiesExportPackage: 'companies.exportPackage',
   companiesPreviewImportPackage: 'companies.previewImportPackage',
@@ -342,6 +349,9 @@ const CHANNELS = {
   runtimeProfilesBindEmployee: 'runtimeProfiles.bindEmployee',
   runtimeProfilesValidate: 'runtimeProfiles.validate',
   runtimeOperationsSnapshot: 'runtimeOperations.snapshot',
+  paperclipPreview: 'paperclip.preview',
+  privateOperatorPlan: 'privateOperator.plan',
+  privateOperatorSnapshot: 'privateOperator.snapshot',
   autonomyDoctorRun: 'autonomyDoctor.run',
   autonomyBenchmarkRun: 'autonomyBenchmark.run',
   agentImprovementList: 'agentImprovement.list',
@@ -530,6 +540,7 @@ const CHANNELS = {
   localGgufLibraryGet: 'localGguf.library.get',
   localGgufLibraryAddFile: 'localGguf.library.addFile',
   localGgufLibraryAddFolder: 'localGguf.library.addFolder',
+  localGgufLibraryListFolders: 'localGguf.library.listFolders',
   localGgufLibraryRemoveModel: 'localGguf.library.removeModel',
   localGgufLibraryRemoveFolder: 'localGguf.library.removeFolder',
   localGgufLibraryScanFolder: 'localGguf.library.scanFolder',
@@ -587,8 +598,23 @@ function telemetryEmployeeStatsRequest(
 export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
   return {
     system: {
-      selectDirectory: () =>
-        ipc.invoke(CHANNELS.systemSelectDirectory) as Promise<SelectDirectoryResponse>,
+      // Forward `options` only when the caller supplied it, so a bare
+      // `selectDirectory()` still crosses the bridge with an empty argument
+      // list rather than an explicit `undefined`. Behaviourally identical —
+      // the handler defaults either way — but it keeps the wire payload
+      // minimal and the channel's no-arg contract intact for the callers that
+      // predate the option.
+      selectDirectory: (options?: { title?: string }) =>
+        (options === undefined
+          ? ipc.invoke(CHANNELS.systemSelectDirectory)
+          : ipc.invoke(
+              CHANNELS.systemSelectDirectory,
+              options,
+            )) as Promise<SelectDirectoryResponse>,
+      selectGgufFile: (options?: { title?: string }) =>
+        (options === undefined
+          ? ipc.invoke(CHANNELS.systemSelectGgufFile)
+          : ipc.invoke(CHANNELS.systemSelectGgufFile, options)) as Promise<SelectFileResponse>,
     },
     companies: {
       list: () => ipc.invoke(CHANNELS.companiesList) as ReturnType<TeamXApi['companies']['list']>,
@@ -673,6 +699,22 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.runtimeOperationsSnapshot, {
           companyId,
         }) as Promise<RuntimeOperationsSnapshot>,
+    },
+    paperclip: {
+      preview: (req: PaperclipPreviewRequest) =>
+        ipc.invoke(CHANNELS.paperclipPreview, req) as Promise<PaperclipImportBridgePreview>,
+    },
+    privateOperator: {
+      // Forwarded verbatim: the main-process handler is the trust boundary and
+      // rebuilds this request field by field, so narrowing it here would only
+      // duplicate that logic on the untrusted side of the bridge.
+      plan: (req: PrivateOperatorAccessRequest) =>
+        ipc.invoke(CHANNELS.privateOperatorPlan, req) as Promise<PrivateOperatorAccessPlan>,
+      snapshot: (req: PrivateOperatorAccessRequest) =>
+        ipc.invoke(
+          CHANNELS.privateOperatorSnapshot,
+          req,
+        ) as Promise<PrivateOperatorMissionControlSnapshot>,
     },
     autonomyDoctor: {
       run: (companyId: string) =>
@@ -1117,6 +1159,10 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         addFolder: (path: string, recursive: boolean) =>
           ipc.invoke(CHANNELS.localGgufLibraryAddFolder, path, recursive) as ReturnType<
             TeamXApi['localGguf']['library']['addFolder']
+          >,
+        listFolders: () =>
+          ipc.invoke(CHANNELS.localGgufLibraryListFolders) as ReturnType<
+            TeamXApi['localGguf']['library']['listFolders']
           >,
         removeModel: (id: string) =>
           ipc.invoke(CHANNELS.localGgufLibraryRemoveModel, id) as ReturnType<

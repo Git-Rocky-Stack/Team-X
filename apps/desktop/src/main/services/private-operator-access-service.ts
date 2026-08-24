@@ -1,72 +1,35 @@
 import type {
-  CompanySharingReadinessSummary,
   OperatorAccessEntry,
-  OperatorInvite,
-  RuntimeOperationsSnapshot,
+  PrivateOperatorAccessAction,
+  PrivateOperatorAccessActionDecision,
+  PrivateOperatorAccessMode,
+  PrivateOperatorAccessPlan,
+  PrivateOperatorAccessRequest,
+  PrivateOperatorAccessStatus,
+  PrivateOperatorMissionControlSnapshot,
 } from '@team-x/shared-types';
+import { PRIVATE_OPERATOR_ACCESS_MODES } from '@team-x/shared-types';
 
 import type { OperatorAccessService } from './operator-access-service.js';
 import type { RuntimeOperationsService } from './runtime-operations-service.js';
 
-export const PRIVATE_OPERATOR_ACCESS_MODES = ['localhost', 'tailscale', 'hosted-bridge'] as const;
-export type PrivateOperatorAccessMode = (typeof PRIVATE_OPERATOR_ACCESS_MODES)[number];
-
-export const PRIVATE_OPERATOR_ACCESS_ACTIONS = [
-  'mission-control.read',
-  'runtime.read',
-  'tickets.read',
-  'artifacts.read',
-  'approvals.review',
-  'runtime.launch',
-  'secrets.write',
-] as const;
-export type PrivateOperatorAccessAction = (typeof PRIVATE_OPERATOR_ACCESS_ACTIONS)[number];
-
-export type PrivateOperatorAccessStatus = 'ready' | 'warning' | 'blocked';
-
-export interface PrivateOperatorAccessRequest {
-  companyId: string;
-  operatorId?: string | null;
-  mode?: PrivateOperatorAccessMode;
-  bindHost?: string;
-  port?: number;
-  allowApprovalActions?: boolean;
-  allowRuntimeActions?: boolean;
-  allowSecretChanges?: boolean;
-}
-
-export interface PrivateOperatorAccessActionDecision {
-  action: PrivateOperatorAccessAction;
-  allowed: boolean;
-  reason: string;
-}
-
-export interface PrivateOperatorAccessPlan {
-  companyId: string;
-  generatedAt: number;
-  mode: PrivateOperatorAccessMode;
-  status: PrivateOperatorAccessStatus;
-  bindHost: string;
-  port: number;
-  operatorId: string | null;
-  operatorRole: OperatorAccessEntry['membership']['role'] | null;
-  exposure: 'localhost-only';
-  guidance: string[];
-  warnings: string[];
-  guardrails: string[];
-  allowedActions: PrivateOperatorAccessActionDecision[];
-  blockedActions: PrivateOperatorAccessActionDecision[];
-}
-
-export interface PrivateOperatorMissionControlSnapshot {
-  companyId: string;
-  generatedAt: number;
-  access: PrivateOperatorAccessPlan;
-  sharingReadiness: CompanySharingReadinessSummary;
-  operators: OperatorAccessEntry[];
-  pendingInvites: OperatorInvite[];
-  runtimeOperations: RuntimeOperationsSnapshot | null;
-}
+// The data contract moved to `@team-x/shared-types/private-operator.ts` when
+// this service was wired to IPC: the renderer renders the plan, so both sides
+// of the boundary need the same shapes. Re-exported here so the service stays
+// the single import site for anything in the main process that consumes it.
+export type {
+  PrivateOperatorAccessAction,
+  PrivateOperatorAccessActionDecision,
+  PrivateOperatorAccessMode,
+  PrivateOperatorAccessPlan,
+  PrivateOperatorAccessRequest,
+  PrivateOperatorAccessStatus,
+  PrivateOperatorMissionControlSnapshot,
+};
+export {
+  PRIVATE_OPERATOR_ACCESS_ACTIONS,
+  PRIVATE_OPERATOR_ACCESS_MODES,
+} from '@team-x/shared-types';
 
 export interface PrivateOperatorAccessServiceDeps {
   operatorAccessService: Pick<

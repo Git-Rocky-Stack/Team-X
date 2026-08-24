@@ -49,6 +49,12 @@ import { BrowserWindow, ipcMain } from 'electron';
 import type { EventBus } from '../orchestrator/event-bus.js';
 
 import type { IpcHandlers } from './handlers.js';
+import { LOCAL_GGUF_BENCHMARK_CHANNELS } from './local-gguf-benchmark-handlers.js';
+import { LOCAL_GGUF_ENDPOINT_CHANNELS } from './local-gguf-endpoint-handlers.js';
+import { LOCAL_GGUF_HF_CHANNELS } from './local-gguf-hf-handlers.js';
+import { LOCAL_GGUF_LIBRARY_CHANNELS } from './local-gguf-library-handlers.js';
+import { LOCAL_GGUF_RUNTIME_CHANNELS } from './local-gguf-runtime-handlers.js';
+import { SYSTEM_DIALOG_CHANNELS } from './system-dialogs.js';
 
 /**
  * Channel names — kept as a const tuple so the matching unregister
@@ -60,7 +66,24 @@ import type { IpcHandlers } from './handlers.js';
  * uses these exact strings.
  */
 const REQUEST_CHANNELS = [
-  'system.selectDirectory',
+  // ── Channels mounted by sibling registrar modules ──────────────────────
+  //
+  // These are registered from the composition root (`index.ts`) against the
+  // same `ipcMain`, not from this file, but `unregisterIpc()` is the only
+  // teardown the app has — so they belong in this list or they leak. They
+  // are spread from each module's own exported tuple rather than re-typed
+  // here: hand-copied strings drift the moment a registrar gains a channel,
+  // which is exactly how `system.selectGgufFile` and the 36 `localGguf.*`
+  // channels came to be mounted with no matching `removeHandler`.
+  //
+  // `system.selectDirectory` arrives via SYSTEM_DIALOG_CHANNELS; it is not
+  // listed separately below.
+  ...SYSTEM_DIALOG_CHANNELS,
+  ...LOCAL_GGUF_LIBRARY_CHANNELS,
+  ...LOCAL_GGUF_RUNTIME_CHANNELS,
+  ...LOCAL_GGUF_HF_CHANNELS,
+  ...LOCAL_GGUF_BENCHMARK_CHANNELS,
+  ...LOCAL_GGUF_ENDPOINT_CHANNELS,
   'companies.list',
   'companies.exportPackage',
   'companies.previewImportPackage',
@@ -264,6 +287,11 @@ const REQUEST_CHANNELS = [
   'rag.stats',
   'rag.rebuildAll',
   'rag.deleteForCompany',
+  // Paperclip import bridge (preview only)
+  'paperclip.preview',
+  // Private operator access (read-only supervision planning)
+  'privateOperator.plan',
+  'privateOperator.snapshot',
   // Enhanced AI (Phase 5 — M32)
   'enhancedAi.stats',
   'enhancedAi.query',

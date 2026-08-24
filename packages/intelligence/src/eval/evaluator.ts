@@ -61,7 +61,10 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
     defaultThreshold = 0.0, // 0.0 = include all results
   } = opts;
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     /**
      * Evaluate retrieval on a single query.
      */
@@ -130,7 +133,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
         for (const chunk of chunks) {
           const results = await Promise.all(
             chunk.map((query) =>
-              this.evaluateQuery(query).catch((err) => {
+              impl.evaluateQuery(query).catch((err) => {
                 console.error(`[eval] Query ${query.id} failed:`, err);
                 return {
                   queryId: query.id,
@@ -152,7 +155,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
         // Serial execution
         for (const query of queries) {
           try {
-            const metrics = await this.evaluateQuery(query);
+            const metrics = await impl.evaluateQuery(query);
             queryMetrics.push(metrics);
           } catch (err) {
             console.error(`[eval] Query ${query.id} failed:`, err);
@@ -302,7 +305,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
       passed: boolean;
       failures: Array<{ metric: string; expected: number; actual: number }>;
     } {
-      const targets = this.getTargets();
+      const targets = impl.getTargets();
       const failures: Array<{ metric: string; expected: number; actual: number }> = [];
 
       const { aggregated } = result;
@@ -361,6 +364,7 @@ export function createRagEvaluator(opts: EvaluatorOptions) {
       };
     },
   };
+  return impl;
 }
 
 export type RagEvaluator = ReturnType<typeof createRagEvaluator>;

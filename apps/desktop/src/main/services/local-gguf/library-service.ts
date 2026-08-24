@@ -151,6 +151,14 @@ export interface LibraryService {
   listBySourceType(sourceType: SourceType): Promise<LocalModel[]>;
   addFile(path: string): Promise<LocalModel>;
   addFolder(path: string, recursive: boolean): Promise<WatchFolder>;
+  /**
+   * Every registered watch folder.
+   *
+   * Without this, `removeFolder` and `scanFolder` are unreachable from any
+   * UI — both take a folder id and nothing else in the contract can produce
+   * one. The rows have always existed; only the way to read them was missing.
+   */
+  listFolders(): Promise<WatchFolder[]>;
   removeFolder(id: string): Promise<void>;
   scanFolder(id: string): Promise<{ addedCount: number; removedCount: number }>;
   removeModel(id: string): Promise<void>;
@@ -465,6 +473,10 @@ export function createLibraryService(deps: LibraryServiceDeps): LibraryService {
       // nothing is persisted in that case.
       const input = await buildInsertInput(path, 'file');
       return deps.models.insert(input);
+    },
+
+    async listFolders(): Promise<WatchFolder[]> {
+      return deps.watchFolders.list();
     },
 
     async addFolder(path: string, recursive: boolean): Promise<WatchFolder> {

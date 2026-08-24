@@ -84,3 +84,87 @@ describe('allocatePort', () => {
     expect(successes / trials).toBeGreaterThanOrEqual(0.95);
   });
 });
+
+/**
+ * Concurrent allocation.
+ *
+ * `allocatePort` picks a random candidate, probes it by binding and then
+ * *closing* the socket, and returns the number. Nothing is held. Two callers
+ * that happen to draw the same candidate therefore both see it as available
+ * and both receive it — the probe cannot detect a port that this process has
+ * already promised to someone else.
+ *
+ * That is not a test-only concern. `pool-service.ts:212` allocates a port and
+ * then spawns a llama-server on it; with `maxConcurrent > 1`, two models
+ * loading at once take that path concurrently, and a collision means one
+ * server fails to bind. Measured collision rate for four concurrent draws over
+ * the default 16,384-port range is ~0.037%.
+ *
+ * These tests pin the reservation that closes it, using a one-port range so
+ * the outcome is decided by the reservation rather than by the draw.
+ */
+describe('allocatePort reservations', () => {
+  it('does not hand out a port it has already handed out', async () => {
+    const opts = { rangeStart: 50100, rangeEnd: 50100, maxAttempts: 5, probe: async () => true };
+    const first = await allocatePort(opts);
+    expect(first).toBe(50100);
+
+    // The only candidate in range is now spoken for. Availability is not the
+    // question — the probe still says yes — so returning it again would mean
+    // two callers hold the same port.
+    await expect(allocatePort(opts)).rejects.toThrowError(PortAllocatorError);
+  });
+
+  it('releases a reservation once the spawn window has passed', async () => {
+    // A reservation covers the gap between "we chose this port" and "the
+    // server bound it". After that the real bind probe is authoritative
+    // again, so holding the number forever would leak the range.
+    let clock = 1_000_000;
+    const opts = {
+      rangeStart: 50101,
+      rangeEnd: 50101,
+      maxAttempts: 5,
+      probe: async () => true,
+      reservationMs: 30_000,
+      now: () => clock,
+    };
+    expect(await allocatePort(opts)).toBe(50101);
+
+    clock += 30_001;
+    expect(await allocatePort(opts)).toBe(50101);
+  });
+
+  it('gives concurrent callers distinct ports across a small range', async () => {
+    // Four callers, four ports, all probing as available: without reservation
+    // this is a birthday draw and repeats are expected. With it, the four
+    // callers must partition the range exactly.
+    const opts = { rangeStart: 50110, rangeEnd: 50113, maxAttempts: 50, probe: async () => true };
+    const ports = await Promise.all([
+      allocatePort(opts),
+      allocatePort(opts),
+      allocatePort(opts),
+      allocatePort(opts),
+    ]);
+    expect(new Set(ports).size).toBe(4);
+    expect([...ports].sort()).toEqual([50110, 50111, 50112, 50113]);
+  });
+
+  it('does not strand a reservation when the probe throws', async () => {
+    // The claim is made before the probe is awaited, so a probe that rejects
+    // leaves a port claimed by a caller that never received it. With a
+    // one-port range that would wedge the range until the TTL expired — up to
+    // a minute of spurious `port-exhausted` for a transient probe error.
+    const boom = {
+      rangeStart: 50120,
+      rangeEnd: 50120,
+      maxAttempts: 1,
+      probe: async () => {
+        throw new Error('probe exploded');
+      },
+    };
+    await expect(allocatePort(boom)).rejects.toThrow('probe exploded');
+
+    const ok = { rangeStart: 50120, rangeEnd: 50120, maxAttempts: 1, probe: async () => true };
+    expect(await allocatePort(ok)).toBe(50120);
+  });
+});

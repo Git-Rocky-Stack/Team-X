@@ -2818,7 +2818,11 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     return [...ticketItems, ...projectItems, ...goalItems];
   }
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver.
+  // `authorityReviewRequest` delegates to `approvalsReview`; written through the
+  // receiver that delegation would break the moment a caller destructured one
+  // handler off this object, which `register.ts` is one refactor away from doing.
+  const impl: IpcHandlers = {
     async companiesList() {
       return companiesRepo.list().map(rowToCompany);
     },
@@ -5742,7 +5746,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (decision !== 'approved' && decision !== 'denied') {
         throw new Error('[ipc] authority.reviewRequest: decision must be approved or denied');
       }
-      return this.approvalsReview({
+      return impl.approvalsReview({
         companyId,
         itemId: requestId,
         kind: 'authority-request',
@@ -7990,4 +7994,5 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return updaterService.downloadAndInstall();
     },
   };
+  return impl;
 }

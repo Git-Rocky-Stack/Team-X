@@ -442,7 +442,10 @@ export function createMetricsDashboard(options: {
     reranker: { status: 'unknown', score: 0, lastCheck: 0, responseTime: null, errorRate: 0 },
   };
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: MetricsDashboard = {
     recordEvaluation(results) {
       currentEvaluation = results;
     },
@@ -765,7 +768,7 @@ export function createMetricsDashboard(options: {
       if (latest) {
         return latest;
       }
-      return this.generateSnapshot();
+      return impl.generateSnapshot();
     },
 
     getTrends(period: 'hour' | 'day' | 'week' | 'month'): TrendSnapshot {
@@ -891,4 +894,5 @@ export function createMetricsDashboard(options: {
       };
     },
   };
+  return impl;
 }

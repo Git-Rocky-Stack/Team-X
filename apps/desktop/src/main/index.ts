@@ -156,8 +156,11 @@ import { registerLocalGgufEndpointHandlers } from './ipc/local-gguf-endpoint-han
 import { registerLocalGgufHfHandlers } from './ipc/local-gguf-hf-handlers.js';
 import { registerLocalGgufLibraryHandlers } from './ipc/local-gguf-library-handlers.js';
 import { registerLocalGgufRuntimeHandlers } from './ipc/local-gguf-runtime-handlers.js';
+import { buildPaperclipHandlers } from './ipc/paperclip-handlers.js';
+import { buildPrivateOperatorHandlers } from './ipc/private-operator-handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
+import { registerSystemDialogHandlers } from './ipc/system-dialogs.js';
 import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
 import { createEventBus } from './orchestrator/event-bus.js';
@@ -239,6 +242,11 @@ import {
   defaultAllowlistPath as mcpDefaultAllowlistPath,
 } from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import {
+  loadPaperclipExportFolder,
+  previewPaperclipImportBridge,
+} from './services/paperclip-import-bridge.js';
+import { createPrivateOperatorAccessService } from './services/private-operator-access-service.js';
 import {
   type ProactiveTriggerService,
   createProactiveTriggerService,
@@ -3124,6 +3132,48 @@ app
       ragHandlers.deleteForCompany(companyId),
     );
 
+    // ---- Paperclip import bridge IPC handler -----------------------------
+    //
+    // Preview only. Converts a Paperclip export folder into a CompanyPackage
+    // plus the same CompanyImportPreview the portability panel already renders,
+    // and writes nothing — committing stays with
+    // `companyPortability.importPackage`, which owns secret binding and the
+    // per-entity plan. Two write paths that can create a workspace would be one
+    // too many.
+    const paperclipHandlers = buildPaperclipHandlers({
+      loadExportFolder: loadPaperclipExportFolder,
+      previewBridge: previewPaperclipImportBridge,
+      appVersion: app.getVersion(),
+    });
+    ipcMain.handle('paperclip.preview', async (_evt, request) =>
+      paperclipHandlers.preview(request),
+    );
+
+    // ---- Private operator access IPC handlers ----------------------------
+    //
+    // Read-only planning for supervising this workspace from a device that is
+    // not the workstation running it. The service is pure: it reads operator
+    // membership and runtime state and returns a decision record — which
+    // actions the requested exposure mode would permit, which it blocks, and
+    // the guardrails that stay true regardless. It opens no listener, so
+    // registering these channels does not put the workspace on a network.
+    //
+    // Registered here rather than through `createIpcHandlers` for the same
+    // reason the rag block above is: two read-only channels backed by a pure
+    // function do not justify growing the `IpcHandlers` DI surface.
+    const privateOperatorHandlers = buildPrivateOperatorHandlers({
+      privateOperatorAccessService: createPrivateOperatorAccessService({
+        operatorAccessService,
+        runtimeOperationsService,
+      }),
+    });
+    ipcMain.handle('privateOperator.plan', async (_evt, request) =>
+      privateOperatorHandlers.plan(request),
+    );
+    ipcMain.handle('privateOperator.snapshot', async (_evt, request) =>
+      privateOperatorHandlers.snapshot(request),
+    );
+
     // ---- Enhanced AI IPC handlers (Phase 5 — M32) ------------------------
     //
     // Exposes semantic chunking, query expansion, long-term memory,
@@ -3149,22 +3199,16 @@ app
     );
     ipcMain.handle('enhancedAi.getStats', async () => enhancedAiHandlers.getStats());
 
-    ipcMain.handle('system.selectDirectory', async (event) => {
-      const owner =
-        BrowserWindow.fromWebContents(event.sender) ??
-        BrowserWindow.getFocusedWindow() ??
-        undefined;
-      const options: Electron.OpenDialogOptions = {
-        title: 'Select skill folder',
-        properties: ['openDirectory', 'createDirectory'],
-      };
-      const result = owner
-        ? await dialog.showOpenDialog(owner, options)
-        : await dialog.showOpenDialog(options);
-      return {
-        canceled: result.canceled,
-        folderPath: result.filePaths[0] ?? null,
-      };
+    // Native pickers. The handlers live in `ipc/system-dialogs.ts` so they are
+    // unit-testable without Electron; the window-owner lookup stays here,
+    // because this is the only layer that knows about BrowserWindow. Parenting
+    // the dialog to the owning window is what makes it modal to Team-X rather
+    // than a stray OS-level sheet.
+    registerSystemDialogHandlers(ipcMain, {
+      showOpenDialog: (options) => {
+        const owner = BrowserWindow.getFocusedWindow() ?? undefined;
+        return owner ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
+      },
     });
 
     // ---- Command palette IPC handlers (Phase 5 — M30 T5, M31 T6) -----------

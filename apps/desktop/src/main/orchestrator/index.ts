@@ -1,22 +1,30 @@
 /**
  * Orchestrator facade — the single public surface the IPC layer talks to.
  *
- * Composes the three Phase 1 primitives:
+ * Composes:
  *
  *   - the event bus (T28) for dashboard fan-out,
- *   - the work queue (T29) for concurrency-capped FIFO dispatch,
+ *   - the in-module dispatcher below (`pending` + `scheduleDispatch`) for
+ *     concurrency-capped FIFO dispatch,
  *   - `runAgent` (T30) for the actual LLM turn.
+ *
+ * The dispatcher is defined here rather than in a standalone queue module.
+ * It is not a generic semaphore: admission depends on per-thread, per-provider
+ * and per-company in-flight accounting plus budget admission, all of which
+ * read state that lives in this closure. A previous standalone
+ * `orchestrator/queue.ts` duplicated only the generic slot/pause/drain half,
+ * was never imported by this file, and was deleted as an orphan.
  *
  * Everything above this file (IPC handlers in T33, preload bridge in T34,
  * the renderer) consumes only the `Orchestrator` interface below. Nothing
- * above reaches into the event bus or work queue directly — the facade is
+ * above reaches into the event bus or the dispatcher directly — the facade is
  * the invariant boundary.
  *
  * Design decisions worth pinning:
  *
  * 1. All per-turn lookups happen INSIDE the queued task, not at
  *    `enqueueChat` call time. That keeps the pause/drain semantics of
- *    the work queue clean: a paused orchestrator genuinely does nothing,
+ *    the dispatcher clean: a paused orchestrator genuinely does nothing,
  *    including no disk reads and no provider picks. It also means
  *    enqueueChat returns immediately and never waits on disk I/O.
  *

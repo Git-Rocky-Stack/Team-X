@@ -187,7 +187,12 @@ Exit criteria:
 
 ### P2.3 Optional Private Operator Web/Mobile Access
 
-Status: shipped as the third P2 strategic differentiator slice.
+Status: **library only — not reachable from the app.** The policy module is
+written and unit-tested, but nothing in the main process constructs it: there
+is no IPC channel, no transport adapter, and no renderer surface. Verified
+2026-08-23 — `createPrivateOperatorAccessService` has zero importers outside
+its own test. This line previously read "shipped as the third P2 strategic
+differentiator slice", which is only true of the code, not of the product.
 
 - Added `createPrivateOperatorAccessService` as the security policy and read-only Mission Control snapshot contract for optional private remote supervision.
 - The policy defaults to localhost-only access, refuses public bind hosts, keeps Tailscale/private tunnel guidance explicit, and returns machine-readable guardrails.
@@ -206,7 +211,13 @@ Exit criteria:
 
 ### P2.4 Paperclip Import Bridge
 
-Status: shipped as the fourth P2 strategic differentiator slice.
+Status: **library only — not reachable from the app.** The mapping functions
+are written and unit-tested, but nothing in the main process calls them: there
+is no `localGguf`-style IPC channel, no preload binding, and no button in
+Settings → Portability. Verified 2026-08-23 — `previewPaperclipImportBridge`
+and `loadPaperclipExportFolder` have zero importers outside their own test.
+This line previously read "shipped as the fourth P2 strategic differentiator
+slice", which is only true of the code, not of the product.
 
 - Added `loadPaperclipExportFolder` for conventional Paperclip export layouts split across company/workspace, agents, adapters, tasks, issues, and skills JSON files.
 - Added `previewPaperclipImportBridge` to map Paperclip exports into Team-X workspace package previews without mutating local state.

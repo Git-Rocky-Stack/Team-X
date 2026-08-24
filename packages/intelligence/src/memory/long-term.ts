@@ -653,7 +653,10 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
   const companyToFacts = new Map<string, Set<string>>();
   const companyToSummaries = new Map<string, Set<string>>();
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: LongTermMemoryRepo = {
     upsertFact(fact) {
       facts.set(fact.id, fact);
 
@@ -688,7 +691,7 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
     },
 
     listFactsByType(companyId, type) {
-      return this.listFactsByCompany(companyId).filter((f) => f.type === type);
+      return impl.listFactsByCompany(companyId).filter((f) => f.type === type);
     },
 
     deleteFact(id) {
@@ -705,7 +708,7 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
       let count = 0;
       for (const [id, fact] of facts) {
         if (fact.expiresAt !== undefined && now > fact.expiresAt) {
-          this.deleteFact(id);
+          impl.deleteFact(id);
           count++;
         }
       }
@@ -760,18 +763,19 @@ export function createInMemoryMemoryRepo(): LongTermMemoryRepo {
       // Delete facts
       const factIds = sourceToFacts.get(sourceId) ?? new Set();
       for (const id of factIds) {
-        if (this.deleteFact(id)) count++;
+        if (impl.deleteFact(id)) count++;
       }
 
       // Delete summaries
       const summaryIds = sourceToSummaries.get(sourceId) ?? new Set();
       for (const id of summaryIds) {
-        if (this.deleteSummary(id)) count++;
+        if (impl.deleteSummary(id)) count++;
       }
 
       return count;
     },
   };
+  return impl;
 }
 
 /**

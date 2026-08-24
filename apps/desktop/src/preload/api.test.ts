@@ -112,6 +112,35 @@ describe('buildTeamXApi', () => {
         { channel: PRELOAD_CHANNELS.systemSelectDirectory, args: [] },
       ]);
     });
+
+    it('forwards a caller-supplied dialog title', async () => {
+      fake.setNextInvokeResult({ canceled: false, folderPath: 'D:/models' });
+      await api.system.selectDirectory({ title: 'Select model folder' });
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: PRELOAD_CHANNELS.systemSelectDirectory,
+          args: [{ title: 'Select model folder' }],
+        },
+      ]);
+    });
+  });
+
+  describe('system.selectGgufFile', () => {
+    it('invokes system.selectGgufFile without request args', async () => {
+      fake.setNextInvokeResult({ canceled: false, filePath: 'D:/models/a.gguf' });
+      await api.system.selectGgufFile();
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.systemSelectGgufFile, args: [] },
+      ]);
+    });
+
+    it('forwards a caller-supplied dialog title', async () => {
+      fake.setNextInvokeResult({ canceled: true, filePath: null });
+      await api.system.selectGgufFile({ title: 'Pick a model' });
+      expect(fake.invokeCalls).toEqual([
+        { channel: PRELOAD_CHANNELS.systemSelectGgufFile, args: [{ title: 'Pick a model' }] },
+      ]);
+    });
   });
 
   describe('employees.list', () => {
@@ -249,6 +278,36 @@ describe('buildTeamXApi', () => {
           args: [{ companyId: 'co-1' }],
         },
       ]);
+    });
+  });
+
+  describe('privateOperator', () => {
+    it('forwards the plan request verbatim on privateOperator.plan', async () => {
+      fake.setNextInvokeResult({ companyId: 'co-1', status: 'ready' });
+      await api.privateOperator.plan({ companyId: 'co-1', mode: 'tailscale' });
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).privateOperatorPlan,
+          args: [{ companyId: 'co-1', mode: 'tailscale' }],
+        },
+      ]);
+    });
+
+    it('forwards the snapshot request verbatim on privateOperator.snapshot', async () => {
+      fake.setNextInvokeResult({ companyId: 'co-1' });
+      await api.privateOperator.snapshot({ companyId: 'co-1', allowApprovalActions: true });
+      expect(fake.invokeCalls).toEqual([
+        {
+          channel: (PRELOAD_CHANNELS as Record<string, string>).privateOperatorSnapshot,
+          args: [{ companyId: 'co-1', allowApprovalActions: true }],
+        },
+      ]);
+    });
+
+    it('passes the main-process response through untouched', async () => {
+      const snapshot = { companyId: 'co-1', generatedAt: 7, operators: [] };
+      fake.setNextInvokeResult(snapshot);
+      await expect(api.privateOperator.snapshot({ companyId: 'co-1' })).resolves.toBe(snapshot);
     });
   });
 

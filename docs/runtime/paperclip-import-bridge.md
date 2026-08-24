@@ -1,5 +1,13 @@
 # Paperclip Import Bridge
 
+> **Status: library only — not reachable from the running app.**
+> `loadPaperclipExportFolder()` and `previewPaperclipImportBridge()` are
+> implemented in `apps/desktop/src/main/services/paperclip-import-bridge.ts`
+> and covered by `paperclip-import-bridge.test.ts`, but nothing else imports
+> them: there is no IPC channel, no preload binding, and no UI. The "Operator
+> Workflow" below describes the intended flow once that wiring lands — it is
+> not something an operator can do today. Verified 2026-08-23.
+
 P2.4 adds a local bridge that maps Paperclip export folders into Team-X workspace package previews. The bridge does not mutate local state directly; it creates the same package/preview contract used by Team-X portability so operators can review the dry-run plan before importing.
 
 ## Supported Inputs
@@ -21,7 +29,7 @@ P2.4 adds a local bridge that maps Paperclip export folders into Team-X workspac
 - Paperclip skills become Team-X skill extensions plus employee skill assignments.
 - Secret-looking adapter values become Team-X runtime `secret_ref` entries so inline secrets are not written into the package.
 
-## Operator Workflow
+## Operator Workflow (intended — requires the IPC + UI wiring described above)
 
 1. Load or paste a Paperclip export folder.
 2. Generate the bridge preview.

@@ -124,7 +124,10 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     /** Get the raw JSON string for a key, or null if not found. */
     getRaw(key: string): string | null {
       const row = db.select().from(settings).where(eq(settings.key, key)).get();
@@ -133,7 +136,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
 
     /** Get a parsed value for a key with a typed fallback. */
     get<T>(key: string, fallback: T): T {
-      const raw = this.getRaw(key);
+      const raw = impl.getRaw(key);
       if (raw === null) return fallback;
       try {
         return JSON.parse(raw) as T;
@@ -173,7 +176,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
       for (const d of SETTING_DEFAULTS) {
         const existing = db.select().from(settings).where(eq(settings.key, d.key)).get();
         if (!existing) {
-          this.set(d.key, d.value);
+          impl.set(d.key, d.value);
           seeded++;
         }
       }
@@ -190,12 +193,12 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      */
     getAgentic(): SettingsGetAgenticResponse {
       return {
-        maxSteps: this.get<number>('agentic_max_steps', AGENTIC_SETTINGS_CLAMPS.maxSteps.default),
-        maxTokens: this.get<number>(
+        maxSteps: impl.get<number>('agentic_max_steps', AGENTIC_SETTINGS_CLAMPS.maxSteps.default),
+        maxTokens: impl.get<number>(
           'agentic_max_tokens',
           AGENTIC_SETTINGS_CLAMPS.maxTokens.default,
         ),
-        timeoutMs: this.get<number>(
+        timeoutMs: impl.get<number>(
           'agentic_timeout_ms',
           AGENTIC_SETTINGS_CLAMPS.timeoutMs.default,
         ),
@@ -220,21 +223,21 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
           throw new Error('[settings] setAgentic: maxSteps must be a finite number');
         }
         const c = AGENTIC_SETTINGS_CLAMPS.maxSteps;
-        this.set('agentic_max_steps', clampInt(req.maxSteps, c.min, c.max));
+        impl.set('agentic_max_steps', clampInt(req.maxSteps, c.min, c.max));
       }
       if (req.maxTokens !== undefined) {
         if (!Number.isFinite(req.maxTokens)) {
           throw new Error('[settings] setAgentic: maxTokens must be a finite number');
         }
         const c = AGENTIC_SETTINGS_CLAMPS.maxTokens;
-        this.set('agentic_max_tokens', clampInt(req.maxTokens, c.min, c.max));
+        impl.set('agentic_max_tokens', clampInt(req.maxTokens, c.min, c.max));
       }
       if (req.timeoutMs !== undefined) {
         if (!Number.isFinite(req.timeoutMs)) {
           throw new Error('[settings] setAgentic: timeoutMs must be a finite number');
         }
         const c = AGENTIC_SETTINGS_CLAMPS.timeoutMs;
-        this.set('agentic_timeout_ms', clampInt(req.timeoutMs, c.min, c.max));
+        impl.set('agentic_timeout_ms', clampInt(req.timeoutMs, c.min, c.max));
       }
     },
 
@@ -247,18 +250,18 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Phase 5 — M32.
      */
     getPlanner(): SettingsGetPlannerResponse {
-      const rawLevel = this.get<string>('planner_approval_level', PLANNER_APPROVAL_LEVEL_DEFAULT);
+      const rawLevel = impl.get<string>('planner_approval_level', PLANNER_APPROVAL_LEVEL_DEFAULT);
       const approvalLevel = (PLANNER_APPROVAL_LEVELS as readonly string[]).includes(rawLevel)
         ? (rawLevel as PlannerApprovalLevel)
         : PLANNER_APPROVAL_LEVEL_DEFAULT;
       return {
-        maxTickets: this.get<number>(
+        maxTickets: impl.get<number>(
           'planner_max_tickets',
           PLANNER_SETTINGS_CLAMPS.maxTickets.default,
         ),
-        maxDepth: this.get<number>('planner_max_depth', PLANNER_SETTINGS_CLAMPS.maxDepth.default),
+        maxDepth: impl.get<number>('planner_max_depth', PLANNER_SETTINGS_CLAMPS.maxDepth.default),
         approvalLevel,
-        escalationThreshold: this.get<number>(
+        escalationThreshold: impl.get<number>(
           'planner_escalation_threshold',
           PLANNER_SETTINGS_CLAMPS.escalationThreshold.default,
         ),
@@ -279,14 +282,14 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
           throw new Error('[settings] setPlanner: maxTickets must be a finite number');
         }
         const c = PLANNER_SETTINGS_CLAMPS.maxTickets;
-        this.set('planner_max_tickets', clampInt(req.maxTickets, c.min, c.max));
+        impl.set('planner_max_tickets', clampInt(req.maxTickets, c.min, c.max));
       }
       if (req.maxDepth !== undefined) {
         if (!Number.isFinite(req.maxDepth)) {
           throw new Error('[settings] setPlanner: maxDepth must be a finite number');
         }
         const c = PLANNER_SETTINGS_CLAMPS.maxDepth;
-        this.set('planner_max_depth', clampInt(req.maxDepth, c.min, c.max));
+        impl.set('planner_max_depth', clampInt(req.maxDepth, c.min, c.max));
       }
       if (req.approvalLevel !== undefined) {
         if (!(PLANNER_APPROVAL_LEVELS as readonly string[]).includes(req.approvalLevel)) {
@@ -294,14 +297,14 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
             `[settings] setPlanner: approvalLevel must be one of ${PLANNER_APPROVAL_LEVELS.join(', ')}`,
           );
         }
-        this.set('planner_approval_level', req.approvalLevel);
+        impl.set('planner_approval_level', req.approvalLevel);
       }
       if (req.escalationThreshold !== undefined) {
         if (!Number.isFinite(req.escalationThreshold)) {
           throw new Error('[settings] setPlanner: escalationThreshold must be a finite number');
         }
         const c = PLANNER_SETTINGS_CLAMPS.escalationThreshold;
-        this.set('planner_escalation_threshold', clampInt(req.escalationThreshold, c.min, c.max));
+        impl.set('planner_escalation_threshold', clampInt(req.escalationThreshold, c.min, c.max));
       }
     },
 
@@ -310,7 +313,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Invalid persisted values fall back to `balanced`.
      */
     getExtensions(): SettingsGetExtensionsResponse {
-      const rawMode = this.get<string>('extensions_autonomy_mode', 'balanced');
+      const rawMode = impl.get<string>('extensions_autonomy_mode', 'balanced');
       const autonomyMode = (EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(rawMode)
         ? (rawMode as SettingsGetExtensionsResponse['autonomyMode'])
         : 'balanced';
@@ -326,7 +329,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
           `[settings] setExtensions: autonomyMode must be one of ${EXTENSIONS_AUTONOMY_MODES.join(', ')}`,
         );
       }
-      this.set('extensions_autonomy_mode', req.autonomyMode);
+      impl.set('extensions_autonomy_mode', req.autonomyMode);
     },
 
     /**
@@ -334,7 +337,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Invalid persisted values fall back to the shared defaults.
      */
     getMemory(): SettingsGetMemoryResponse {
-      const rawBudget = this.get<number>(
+      const rawBudget = impl.get<number>(
         'memory_default_target_token_budget',
         MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1],
       );
@@ -345,11 +348,11 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         : MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1];
       return {
         defaultTargetTokenBudget,
-        recentTurnLimit: this.get<number>(
+        recentTurnLimit: impl.get<number>(
           'memory_recent_turn_limit',
           MEMORY_SETTINGS_CLAMPS.recentTurnLimit.default,
         ),
-        checkpointHistoryLimit: this.get<number>(
+        checkpointHistoryLimit: impl.get<number>(
           'memory_checkpoint_history_limit',
           MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit.default,
         ),
@@ -367,21 +370,21 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
             `[settings] setMemory: defaultTargetTokenBudget must be one of ${MEMORY_TARGET_TOKEN_BUDGET_OPTIONS.join(', ')}`,
           );
         }
-        this.set('memory_default_target_token_budget', req.defaultTargetTokenBudget);
+        impl.set('memory_default_target_token_budget', req.defaultTargetTokenBudget);
       }
       if (req.recentTurnLimit !== undefined) {
         if (!Number.isFinite(req.recentTurnLimit)) {
           throw new Error('[settings] setMemory: recentTurnLimit must be a finite number');
         }
         const c = MEMORY_SETTINGS_CLAMPS.recentTurnLimit;
-        this.set('memory_recent_turn_limit', clampInt(req.recentTurnLimit, c.min, c.max));
+        impl.set('memory_recent_turn_limit', clampInt(req.recentTurnLimit, c.min, c.max));
       }
       if (req.checkpointHistoryLimit !== undefined) {
         if (!Number.isFinite(req.checkpointHistoryLimit)) {
           throw new Error('[settings] setMemory: checkpointHistoryLimit must be a finite number');
         }
         const c = MEMORY_SETTINGS_CLAMPS.checkpointHistoryLimit;
-        this.set(
+        impl.set(
           'memory_checkpoint_history_limit',
           clampInt(req.checkpointHistoryLimit, c.min, c.max),
         );
@@ -403,8 +406,8 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Phase 5 — M33.
      */
     getCopilot(): SettingsGetCopilotResponse {
-      const enabled = this.get<boolean>('copilot_enabled', COPILOT_ENABLED_DEFAULT);
-      const rawInterval = this.get<number>(
+      const enabled = impl.get<boolean>('copilot_enabled', COPILOT_ENABLED_DEFAULT);
+      const rawInterval = impl.get<number>(
         'copilot_interval_minutes',
         COPILOT_SETTINGS_CLAMPS.intervalMinutes.default,
       );
@@ -412,7 +415,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
       const intervalMinutes = Number.isFinite(rawInterval)
         ? clampInt(rawInterval, ic.min, ic.max)
         : ic.default;
-      const rawCategories = this.get<unknown>('copilot_categories', COPILOT_CATEGORIES);
+      const rawCategories = impl.get<unknown>('copilot_categories', COPILOT_CATEGORIES);
       const filtered = Array.isArray(rawCategories)
         ? (rawCategories.filter((x): x is CopilotCategory =>
             (COPILOT_CATEGORIES as readonly string[]).includes(x as string),
@@ -431,7 +434,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Phase 6 — M38.
      */
     getCopilotWeights(): SettingsGetCopilotWeightsResponse {
-      const raw = this.get<unknown>('copilot_category_weights', COPILOT_CATEGORY_WEIGHTS_DEFAULT);
+      const raw = impl.get<unknown>('copilot_category_weights', COPILOT_CATEGORY_WEIGHTS_DEFAULT);
       const weights = { ...COPILOT_CATEGORY_WEIGHTS_DEFAULT };
       if (isPlainRecord(raw)) {
         for (const category of COPILOT_CATEGORIES) {
@@ -460,7 +463,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Phase 6 — M38.
      */
     setCopilotWeights(req: SettingsSetCopilotWeightsRequest): SettingsSetCopilotWeightsResponse {
-      const weights = { ...this.getCopilotWeights().weights };
+      const weights = { ...impl.getCopilotWeights().weights };
       const patch = isPlainRecord(req.weights) ? req.weights : {};
       for (const category of COPILOT_CATEGORIES) {
         const value = patch[category];
@@ -472,7 +475,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
           );
         }
       }
-      this.set('copilot_category_weights', weights);
+      impl.set('copilot_category_weights', weights);
       return { weights };
     },
 
@@ -493,14 +496,14 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      */
     setCopilot(req: SettingsSetCopilotRequest): void {
       if (req.enabled !== undefined) {
-        this.set('copilot_enabled', Boolean(req.enabled));
+        impl.set('copilot_enabled', Boolean(req.enabled));
       }
       if (req.intervalMinutes !== undefined) {
         if (!Number.isFinite(req.intervalMinutes)) {
           throw new Error('[settings] setCopilot: intervalMinutes must be a finite number');
         }
         const c = COPILOT_SETTINGS_CLAMPS.intervalMinutes;
-        this.set('copilot_interval_minutes', clampInt(req.intervalMinutes, c.min, c.max));
+        impl.set('copilot_interval_minutes', clampInt(req.intervalMinutes, c.min, c.max));
       }
       if (req.categories !== undefined) {
         const filtered = req.categories.filter((x): x is CopilotCategory =>
@@ -508,7 +511,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
         );
         const safe: CopilotCategory[] =
           filtered.length === 0 ? (COPILOT_CATEGORIES.slice() as CopilotCategory[]) : filtered;
-        this.set('copilot_categories', safe);
+        impl.set('copilot_categories', safe);
       }
     },
 
@@ -519,8 +522,8 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      * Phase 6 — Proactive Execution System.
      */
     getProactive(): SettingsGetProactiveResponse {
-      const enabled = this.get<boolean>('proactive_enabled', false);
-      const rawMode = this.get<string>('proactive_autonomy_mode', 'balanced');
+      const enabled = impl.get<boolean>('proactive_enabled', false);
+      const rawMode = impl.get<string>('proactive_autonomy_mode', 'balanced');
       const autonomyMode = (EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(rawMode)
         ? (rawMode as SettingsGetProactiveResponse['autonomyMode'])
         : 'balanced';
@@ -536,7 +539,7 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
      */
     setProactive(req: SettingsSetProactiveRequest): void {
       if (req.enabled !== undefined) {
-        this.set('proactive_enabled', Boolean(req.enabled));
+        impl.set('proactive_enabled', Boolean(req.enabled));
       }
       if (req.autonomyMode !== undefined) {
         if (!(EXTENSIONS_AUTONOMY_MODES as readonly string[]).includes(req.autonomyMode)) {
@@ -544,10 +547,11 @@ export function createSettingsRepo<TRunResult>(db: SettingsDb<TRunResult>) {
             `[settings] setProactive: autonomyMode must be one of ${EXTENSIONS_AUTONOMY_MODES.join(', ')}`,
           );
         }
-        this.set('proactive_autonomy_mode', req.autonomyMode);
+        impl.set('proactive_autonomy_mode', req.autonomyMode);
       }
     },
   };
+  return impl;
 }
 
 export type SettingsRepo = ReturnType<typeof createSettingsRepo>;
