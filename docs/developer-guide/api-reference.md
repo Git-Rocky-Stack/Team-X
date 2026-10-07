@@ -11,7 +11,7 @@
 > 1. **MCP servers**: give agents new tools, resources, and prompts via the [Model Context Protocol](https://modelcontextprotocol.io).
 > 2. **Role packs**: extend the curated catalog with your own role specifications.
 >
-> If you need the in-app command surface (Cmd+K, agentic loop, copilot), see the user-guide. If you need the developer CLI, see `docs/user-guide/cli-reference.md`.
+> If you need the in-app command surface (Cmd+K, agentic loop, copilot), see the user-guide. Team-X ships no command-line tool; `docs/user-guide/cli-reference.md` covers the Command Palette and what that means for automation.
 
 ---
 

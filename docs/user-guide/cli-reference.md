@@ -1,24 +1,19 @@
 # CLI Reference
 
-**Command-Line Interface and Command Palette Reference**
+**Command Palette Reference**
 
 ---
 
 ## Overview
 
-Team-X provides two CLI interfaces:
-
-1. **Command Palette**: Natural language commands (primary interface)
-2. **CLI Tool**: Traditional command-line tool for automation and scripting
-
-This guide covers both interfaces.
+Team-X's command surface is the **Command Palette**: natural-language commands typed inside the desktop app. There is no separate command-line tool; see [No command-line tool](#no-command-line-tool) for what that means for automation.
 
 ---
 
 ## Table of Contents
 
 1. [Command Palette Reference](#command-palette-reference)
-2. [Developer CLI (`ai-cli`)](#developer-cli-ai-cli)
+2. [No command-line tool](#no-command-line-tool)
 
 ---
 
@@ -184,43 +179,16 @@ Time scopes:
 
 ---
 
-## Developer CLI (`ai-cli`)
+## No command-line tool
 
-Team-X ships a small developer/inspection CLI called `ai-cli` (bin: `team-x-ai`) in the `@team-x/intelligence` package. It is **not an end-user automation CLI**; ticket, employee, budget, and agent-run management all happen inside the desktop app via the Command Palette (above) or the UI directly. There is no installed `teamx` binary, no hosted REST API, and no `TEAMX_API_KEY` to configure.
+Team-X does not ship a CLI. Ticket, employee, budget, and agent-run management all happen inside the desktop app via the Command Palette (above) or the UI directly.
 
-### What `ai-cli` supports today
-
-| Command | Purpose |
-|---|---|
-| `info` | Show AI-system version, available modules, and key exports |
-| `knowledge` | Inspect the knowledge graph (stats, queries) |
-| `memory` | Inspect long-term memory entries |
-| `eval` | Run RAG evaluation against the golden dataset |
-| `trace` | Export distributed-trace data for offline analysis |
-
-Run `ai-cli <command> --help` for command-specific flags. Output defaults to a human-readable text format; pass `--json` to most commands for machine-readable output.
-
-### Running `ai-cli` from source
-
-There is no published binary yet. Run the CLI directly from a checked-out copy of the repo:
-
-```bash
-git clone https://github.com/Git-Rocky-Stack/Team-X.git
-cd Team-X
-pnpm install --frozen-lockfile
-
-# Run a command directly via tsx
-npx tsx packages/intelligence/src/cli/ai-cli.ts info
-npx tsx packages/intelligence/src/cli/ai-cli.ts knowledge --stats --company acme
-npx tsx packages/intelligence/src/cli/ai-cli.ts memory --company acme --type episodic
-```
-
-### What `ai-cli` does NOT support
-
-- No login, no API key, no `TEAMX_API_KEY` / `TEAMX_WORKSPACE` / `TEAMX_OUTPUT_FORMAT` / `TEAMX_TIMEOUT` environment variables.
-- No `teamx ticket`, `teamx employee`, `teamx budget`, `teamx run`, `teamx workspace` subcommands: those were aspirational and never built.
+- No installed `teamx` binary and no `teamx ticket` / `employee` / `budget` / `run` / `workspace` subcommands.
+- No hosted REST API, no login, and no `TEAMX_API_KEY` / `TEAMX_WORKSPACE` / `TEAMX_OUTPUT_FORMAT` / `TEAMX_TIMEOUT` environment variables.
 - No Python SDK, no PowerShell module, no `Connect-TeamX` / `Get-TeamXWorkspace` / `Get-TeamXBudgetSpend` cmdlets.
 - No `curl https://teamflow-x.com/install-cli.sh | bash` installer. Team-X is local-first and free-and-open-source; there is no hosted service to install against.
+
+An earlier developer inspection tool, `ai-cli` (bin `team-x-ai`), was removed: its `knowledge`, `memory`, `trace` and `eval` commands printed placeholder figures rather than reading any real store, so it could not be trusted for inspection.
 
 ### Need scripted workflows?
 
@@ -232,4 +200,4 @@ For automation beyond what the Command Palette offers, the right extension point
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-10-07*

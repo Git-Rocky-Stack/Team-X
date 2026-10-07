@@ -70,7 +70,7 @@ Two shortcuts unlock most of the intelligence surface:
 - [Troubleshooting](./troubleshooting.md): Fixes for installation, runtime/agent, and provider-connection issues.
 - [Glossary](./glossary.md): Definitions of Team-X terminology and concepts.
 - [Keyboard Shortcuts](./keyboard-shortcuts.md): The complete, authoritative shortcut surface (two global shortcuts plus the palette).
-- [CLI Reference](./cli-reference.md): Reference for both command surfaces: the natural-language palette and the automation CLI.
+- [CLI Reference](./cli-reference.md): Reference for the natural-language Command Palette, and why there is no separate command-line tool.
 - [Migration Guide](./migration-guide.md): Move to Team-X from other AI-workforce tools, PM systems, and freelance platforms.
 - [Accessibility Guide](./accessibility-guide.md): Accessibility features, how to use them, and inclusive-content best practices.
 

@@ -33,7 +33,7 @@ vi.mock('./cpu', () => ({
 import { probeCpu } from './cpu';
 import { probeMetal } from './metal';
 import { probeNvidia } from './nvidia';
-import { probeGpu } from './probe';
+import { probeGpu, runProbeCommand } from './probe';
 import { probeRocm } from './rocm';
 import { probeVulkan } from './vulkan';
 
@@ -171,4 +171,32 @@ describe('probeGpu', () => {
     expect(inv.cpu.cores).toBe(16);
     expect(inv.cpu.ramMb).toBe(32768);
   });
+});
+
+describe('probe timeout', () => {
+  it('hands the caller-chosen timeout to every backend probe', async () => {
+    await probeGpu({ timeoutMs: 750 });
+
+    for (const probe of [mockProbeNvidia, mockProbeRocm, mockProbeVulkan, mockProbeMetal]) {
+      expect(probe.mock.calls[0]?.[0]).toHaveProperty('timeoutMs', 750);
+    }
+  });
+
+  it('defaults the probe timeout to 3 s', async () => {
+    await probeGpu();
+
+    expect(mockProbeNvidia.mock.calls[0]?.[0]).toHaveProperty('timeoutMs', 3000);
+  });
+
+  it('kills a hung probe command at the timeout it is given, not a fixed 3 s', async () => {
+    const start = performance.now();
+    const result = await runProbeCommand(
+      process.execPath,
+      ['-e', 'setTimeout(() => {}, 10_000)'],
+      200,
+    );
+
+    expect(result.exitCode).toBe(-1);
+    expect(performance.now() - start).toBeLessThan(2000);
+  }, 10_000);
 });

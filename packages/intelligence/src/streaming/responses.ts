@@ -83,9 +83,6 @@ export interface StreamOptions {
   /** Enable metadata streaming */
   includeMetadata?: boolean;
 
-  /** Transport type */
-  transport?: 'sse' | 'websocket' | 'callback';
-
   /** Callback for individual chunks */
   onChunk?: (chunk: StreamChunk) => void;
 

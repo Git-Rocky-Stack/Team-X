@@ -150,22 +150,14 @@ export interface SummarizationTrigger {
 
 /**
  * Fact extraction options.
+ *
+ * Only the confidence floor is configurable: which fact types to look for is
+ * decided by the caller's `extractFactsFn` prompt, so per-type switches here
+ * would be accepted and ignored.
  */
 export interface ExtractionOptions {
   /** Minimum confidence for extracted facts (0-1) */
   minConfidence: number;
-
-  /** Whether to extract preferences */
-  extractPreferences: boolean;
-
-  /** Whether to extract relationships */
-  extractRelationships: boolean;
-
-  /** Whether to extract decisions */
-  extractDecisions: boolean;
-
-  /** Custom patterns for fact extraction */
-  customPatterns?: FactExtractionPattern[];
 }
 
 /**
@@ -504,12 +496,7 @@ export function createLongTermMemoryService(options: {
 
   return {
     async extractFacts(text, context) {
-      const extractionOptions = context.options ?? {
-        minConfidence: 0.7,
-        extractPreferences: true,
-        extractRelationships: true,
-        extractDecisions: true,
-      };
+      const extractionOptions = context.options ?? { minConfidence: 0.7 };
 
       // Use LLM-based extraction
       const facts = await options.extractFactsFn(text, {

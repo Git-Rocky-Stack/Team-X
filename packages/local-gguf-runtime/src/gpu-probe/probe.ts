@@ -19,8 +19,11 @@ import { probeNvidia } from './nvidia';
 import { probeRocm } from './rocm';
 import { probeVulkan } from './vulkan';
 
+/** How long a probe tool may run before it is killed, unless the caller says otherwise. */
+export const DEFAULT_PROBE_TIMEOUT_MS = 3000;
+
 /**
- * Spawn a probe tool and collect its output.
+ * Spawn a probe tool and collect its output, killing it after `timeoutMs`.
  *
  * Exported because BenchmarkService's VRAM sampler needs the same bounded,
  * timeout-guarded spawn as the probes themselves — duplicating it in the
@@ -30,6 +33,7 @@ import { probeVulkan } from './vulkan';
 export async function runProbeCommand(
   cmd: string,
   args: string[],
+  timeoutMs: number = DEFAULT_PROBE_TIMEOUT_MS,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve) => {
     const proc = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -50,7 +54,7 @@ export async function runProbeCommand(
     // on exitCode === null avoids that ambiguity.
     const timer = setTimeout(() => {
       if (proc.exitCode === null) proc.kill('SIGKILL');
-    }, 3000);
+    }, timeoutMs);
     proc.on('exit', (code) => {
       clearTimeout(timer);
       resolve({ stdout, stderr, exitCode: code ?? -1 });
@@ -62,9 +66,15 @@ export async function runProbeCommand(
   });
 }
 
-export async function probeGpu(): Promise<GpuInventory> {
+export async function probeGpu(options: { timeoutMs?: number } = {}): Promise<GpuInventory> {
   const cpuResult = probeCpu();
-  const deps = { runCommand: runProbeCommand, timeoutMs: 3000 };
+  const timeoutMs = options.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
+  // The probes call `runCommand(cmd, args)`; bind the timeout here so the
+  // `timeoutMs` they are handed is the one that actually kills the tool.
+  const deps = {
+    runCommand: (cmd: string, args: string[]) => runProbeCommand(cmd, args, timeoutMs),
+    timeoutMs,
+  };
   const [nvidia, rocm, vulkan, metal] = await Promise.all([
     probeNvidia(deps),
     probeRocm(deps),

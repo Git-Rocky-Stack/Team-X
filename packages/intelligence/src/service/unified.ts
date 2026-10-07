@@ -98,7 +98,6 @@ export interface AiServiceConfig {
     topK?: number;
     threshold?: number;
     cacheTtl?: number;
-    enableRerank?: boolean;
     enableExpansion?: boolean;
   };
 
@@ -116,6 +115,7 @@ export interface AiServiceConfig {
       minTimeSpan?: number;
     };
     factExtraction?: {
+      /** Extracted facts below this confidence (0-1) are dropped. Default 0.7. */
       minConfidence?: number;
     };
   };
@@ -124,18 +124,22 @@ export interface AiServiceConfig {
   knowledge?: {
     /** Storage for graph nodes and edges. Defaults to an in-memory store. */
     repo?: KnowledgeGraphRepo;
-    enableInference?: boolean;
   };
 
   /** Planning configuration */
   planning?: {
     enablePlanning?: boolean;
+    /**
+     * Minimum query length (characters) before a query is planned when the
+     * caller does not pass `usePlan` itself. Default 0: plan every query.
+     */
     planningThreshold?: number;
   };
 
   /** Observability configuration */
   observability?: {
     enableTracing?: boolean;
+    /** Probability (0-1) that a query's trace is recorded. Default 1. */
     traceSampleRate?: number;
   };
 
@@ -356,7 +360,7 @@ export interface AiService {
   ): { path: string[]; edges: unknown[] } | null;
 
   /**
-   * Run evaluation on golden dataset.
+   * Run retrieval evaluation over a caller-supplied, labelled query set.
    */
   evaluate(dataset: EvalQuery[]): Promise<AggregatedMetrics>;
 
@@ -468,16 +472,21 @@ export function createAiService(config: AiServiceConfig): AiService {
   /**
    * Span helpers that also feed `getStats().observability`. Root (`server`)
    * spans are the requests in flight, which is what "active traces" counts.
+   * Only spans the tracer's sampler kept are counted: a dropped trace was
+   * never recorded, so reporting it would overstate what was traced.
    */
   function startSpan(name: string, kind: SpanKind): Span | undefined {
     if (!tracer) return undefined;
-    stats.observability.spansCreated += 1;
-    if (kind === 'server') stats.observability.activeRootSpans += 1;
-    return tracer.startSpan(name, { kind });
+    const span = tracer.startSpan(name, { kind });
+    if (span.context.sampled) {
+      stats.observability.spansCreated += 1;
+      if (kind === 'server') stats.observability.activeRootSpans += 1;
+    }
+    return span;
   }
   function endSpan(span: Span | undefined, kind: SpanKind): void {
     if (!span) return;
-    if (kind === 'server') stats.observability.activeRootSpans -= 1;
+    if (kind === 'server' && span.context.sampled) stats.observability.activeRootSpans -= 1;
     tracer?.endSpan(span);
   }
 
@@ -590,9 +599,13 @@ Respond with JSON array:
 
     // Initialize tracer
     if (config.observability?.enableTracing) {
+      // The tracer rejects a rate outside [0, 1]. A bad stored setting should
+      // cost tracing fidelity, not the whole service, so clamp it here.
+      const rate = config.observability.traceSampleRate;
       tracer = createAgentTracer({
         name: 'team-x-ai-service',
         version: '1.0.0',
+        sampleRate: rate === undefined || Number.isNaN(rate) ? 1 : Math.min(1, Math.max(0, rate)),
       });
     }
 
@@ -694,7 +707,12 @@ Respond with JSON array:
     queryStream(companyId, query, options = {}) {
       const topK = options.topK ?? config.rag?.topK ?? 10;
       const threshold = options.threshold ?? config.rag?.threshold ?? 0.7;
-      const usePlan = options.usePlan ?? config.planning?.enablePlanning ?? false;
+      // An explicit `usePlan` is the caller's decision; otherwise plan only
+      // when planning is on and the query reaches the configured length.
+      const usePlan =
+        options.usePlan ??
+        ((config.planning?.enablePlanning ?? false) &&
+          query.length >= (config.planning?.planningThreshold ?? 0));
       const includeRelated = options.includeRelated ?? true;
 
       const startTime = Date.now();
@@ -908,6 +926,7 @@ Respond with JSON array:
       const facts = await memory.extractFacts(text, {
         companyId,
         sourceId,
+        options: { minConfidence: config.memory?.factExtraction?.minConfidence ?? 0.7 },
       });
 
       // Store in memory

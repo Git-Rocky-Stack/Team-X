@@ -231,9 +231,9 @@ export interface DownloadProgress {
 // The high-level, renderer-facing shape of the `localGguf.*` IPC namespace.
 // Composed into `TeamXApi` (see ipc.ts) so renderer code calls
 // `window.teamx.localGguf.<area>.<method>(...)` and type-checks against the
-// same contract the main-process handler layer implements. Phase 1 ships the
-// full typed surface even though every handler is a not-implemented stub;
-// later phases swap the implementations in behind these stable signatures.
+// same contract the main-process handler layer implements. Every method is
+// backed by a real handler; the Phase 1 not-implemented stubs that first
+// sat behind these signatures have all been replaced.
 
 export interface LocalGgufApi {
   library: {

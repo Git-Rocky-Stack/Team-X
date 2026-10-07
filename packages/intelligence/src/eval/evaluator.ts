@@ -2,7 +2,7 @@
  * RAG Evaluator
  *
  * Main evaluation harness that runs queries against a RAG system
- * and computes metrics using the golden dataset.
+ * and computes metrics against a caller-supplied labelled dataset.
  */
 
 import {
