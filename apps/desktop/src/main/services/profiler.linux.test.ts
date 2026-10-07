@@ -91,6 +91,66 @@ describe('detectHardware on Linux', () => {
     expect(profile.gpuDetected).toBe(false);
   });
 
+  // Virtual / BMC display adapters are the Linux counterpart of the
+  // "Microsoft Basic Display Adapter" the Windows branch filters: every VM
+  // and most rack servers expose one, and none can run a model. Reporting
+  // them as a GPU steers the strategy picker toward GPU-only strategies.
+  it.each([
+    [
+      'QXL',
+      '00:02.0 VGA compatible controller: Red Hat, Inc. QXL paravirtual graphic card (rev 05)',
+    ],
+    ['virtio-gpu', '00:01.0 VGA compatible controller: Red Hat, Inc. Virtio 1.0 GPU (rev 01)'],
+    ['VMware SVGA', '00:0f.0 VGA compatible controller: VMware SVGA II Adapter'],
+    [
+      'VirtualBox',
+      '00:02.0 VGA compatible controller: InnoTek Systemberatung GmbH VirtualBox Graphics Adapter',
+    ],
+    ['Cirrus', '00:02.0 VGA compatible controller: Cirrus Logic GD 5446'],
+    [
+      'ASPEED BMC',
+      '03:00.0 VGA compatible controller: ASPEED Technology, Inc. ASPEED Graphics Family (rev 41)',
+    ],
+    [
+      'Matrox G200 BMC',
+      '0b:00.0 VGA compatible controller: Matrox Electronics Systems Ltd. MGA G200e [Pilot] ServerEngines (SEP1) (rev 02)',
+    ],
+    ['Hyper-V', '00:08.0 VGA compatible controller: Microsoft Corporation Hyper-V virtual VGA'],
+    ['QEMU std VGA', '00:02.0 VGA compatible controller: Device 1234:1111 (rev 02)'],
+    ['bochs', '00:02.0 VGA compatible controller: Bochs QEMU Standard VGA (rev 02)'],
+  ])('does not report a %s display adapter as a GPU', async (_label, line) => {
+    const { execFileSync } = await import('node:child_process');
+    vi.mocked(execFileSync)
+      .mockImplementationOnce(() => {
+        throw new Error('ENOENT');
+      })
+      .mockReturnValueOnce(`${line}\n`);
+    clearProfileCache();
+
+    const profile = detectHardware();
+    expect(profile.gpuDetected).toBe(false);
+    expect(profile.gpuName).toBeNull();
+  });
+
+  it('skips a BMC adapter and reports the real GPU behind it', async () => {
+    const { execFileSync } = await import('node:child_process');
+    vi.mocked(execFileSync)
+      .mockImplementationOnce(() => {
+        throw new Error('ENOENT');
+      })
+      .mockReturnValueOnce(
+        [
+          '03:00.0 VGA compatible controller: ASPEED Technology, Inc. ASPEED Graphics Family (rev 41)',
+          'c1:00.0 Display controller: Advanced Micro Devices, Inc. [AMD/ATI] Aldebaran/MI200 [Instinct MI210] (rev 02)',
+        ].join('\n'),
+      );
+    clearProfileCache();
+
+    const profile = detectHardware();
+    expect(profile.gpuDetected).toBe(true);
+    expect(profile.gpuName).toContain('Instinct MI210');
+  });
+
   it('still reports CPU and RAM correctly', () => {
     const profile = detectHardware();
     expect(profile.cpuCores).toBe(16);

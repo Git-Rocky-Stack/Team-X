@@ -99,6 +99,29 @@ interface GpuDetection {
 const NO_GPU: GpuDetection = { detected: false, name: null, vramGb: null };
 
 /**
+ * lspci names of virtual and BMC display adapters — the Linux counterpart of
+ * the "Microsoft Basic Display Adapter" the Windows branch filters. Every VM
+ * and most rack servers expose one of these, and none can run a model.
+ */
+const LINUX_NON_GPU_DISPLAY_ADAPTERS: readonly RegExp[] = [
+  /\bqxl\b/i, // SPICE paravirtual (Red Hat QXL)
+  /\bvirtio\b/i, // virtio-gpu
+  /\bvmware svga\b/i,
+  /\bvirtualbox\b/i,
+  /\bcirrus logic\b/i, // QEMU's legacy emulated VGA
+  /\baspeed\b/i, // server BMC
+  /\bmatrox\b.*\bg200/i, // server BMC (G200e / G200eW / G200eR …)
+  /\bhyper-v\b/i,
+  /\bbochs\b/i,
+  /\bqemu\b/i,
+  /\b1234:1111\b/, // QEMU/Bochs std VGA when pci.ids has no name for it
+];
+
+function isNonGpuDisplayAdapter(name: string): boolean {
+  return LINUX_NON_GPU_DISPLAY_ADAPTERS.some((pattern) => pattern.test(name));
+}
+
+/**
  * Fraction of unified memory Apple documents as addressable by the GPU on
  * Apple Silicon. `system_profiler` reports no VRAM line for these parts
  * (memory is shared), so reporting `null` would tell the strategy picker
@@ -171,7 +194,9 @@ function detectLinuxGpu(): GpuDetection {
           line.trim(),
         );
       const name = match?.[1]?.trim();
-      if (name) {
+      // Keep scanning past a virtual/BMC adapter: a server's BMC VGA is
+      // commonly listed ahead of the real accelerator.
+      if (name && !isNonGpuDisplayAdapter(name)) {
         // lspci exposes no VRAM figure. `null` is the honest answer —
         // a fabricated number would be worse than "unknown".
         return { detected: true, name, vramGb: null };

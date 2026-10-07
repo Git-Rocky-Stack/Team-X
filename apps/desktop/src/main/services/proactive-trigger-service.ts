@@ -201,6 +201,16 @@ export function createProactiveTriggerService(
   // which is exactly what the dashboard tiles claim to show.
   const runtimeState = new Map<string, ProactiveRuntimeState>();
 
+  // Per-company round-robin position, carried across scans so the first
+  // ticket of every scan does not always land on the same worker. In-memory
+  // only: rotation restarts at the first eligible employee after a restart,
+  // which is harmless — it only spreads load, it does not record ownership.
+  const assignmentCursors = new Map<string, number>();
+
+  // The scan currently running for each company. A concurrent request joins
+  // it instead of starting a second pass over the same unassigned tickets.
+  const inFlightScans = new Map<string, Promise<{ queuedCount: number }>>();
+
   function stateFor(companyId: string): ProactiveRuntimeState {
     let current = runtimeState.get(companyId);
     if (!current) {
@@ -433,12 +443,28 @@ Use the decompose_project tool to generate the proposal.`;
   /**
    * Scan for work opportunities and queue agent replies.
    * Finds unassigned tickets and creates proactive work items.
+   *
+   * At most one scan runs per company. A call that arrives while a scan is
+   * in flight (the "Scan for Work Now" button, a timer tick) receives that
+   * scan's promise: dispatching again would re-send the same still-unassigned
+   * tickets (duplicate budget spend) and clobber the running scan's
+   * `queuedWork` / `lastScanAt` counters. Joining keeps the return shape
+   * unchanged, so callers that refresh `getState` after awaiting still see
+   * the settled picture.
    */
-  async function scanForWork(args: {
-    companyId: string;
-  }): Promise<{ queuedCount: number }> {
+  function scanForWork(args: { companyId: string }): Promise<{ queuedCount: number }> {
     const { companyId } = args;
+    const inFlight = inFlightScans.get(companyId);
+    if (inFlight) return inFlight;
 
+    const scan = runScan(companyId).finally(() => {
+      inFlightScans.delete(companyId);
+    });
+    inFlightScans.set(companyId, scan);
+    return scan;
+  }
+
+  async function runScan(companyId: string): Promise<{ queuedCount: number }> {
     // Resolve the system agent for this company
     const systemAgentId = resolveSystemAgent(companyId);
     if (!systemAgentId) {
@@ -475,7 +501,6 @@ Use the decompose_project tool to generate the proposal.`;
     state.queuedWork = unassignedTickets.length;
 
     let queuedCount = 0;
-    let assignmentCursor = 0;
 
     try {
       for (const ticket of unassignedTickets) {
@@ -522,14 +547,16 @@ Use the decompose_project tool to generate the proposal.`;
         }
 
         // Round-robin across eligible employees so a single owner does not
-        // absorb every unassigned ticket in one scan. The
+        // absorb every unassigned ticket, within a scan or across scans. The
         // `employees.length === 0` guard above proves the index is in range;
         // the explicit guard narrows the type without a non-null assertion.
-        const assignedEmployee = employees[assignmentCursor % employees.length];
+        const cursor = assignmentCursors.get(companyId) ?? 0;
+        const assignedEmployee = employees[cursor % employees.length];
         if (!assignedEmployee) {
           continue;
         }
-        assignmentCursor += 1;
+        // Stored modulo the roster so the cursor stays bounded.
+        assignmentCursors.set(companyId, (cursor + 1) % employees.length);
 
         // Hand off to the governed dispatcher: it creates the thread and the
         // trigger message, enforces budget admission, re-checks pause state
