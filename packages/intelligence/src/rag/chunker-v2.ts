@@ -581,9 +581,14 @@ function chunkCodeOrData(
   const chunks: Chunk[] = [];
   const lines = text.split('\n');
   const maxLines = Math.ceil(options.maxTokens / 10); // Rough line count
-  const overlapLines = Math.ceil(options.overlapTokens / 10);
+  // Overlap must leave at least one fresh line per window, or the buffer
+  // never shrinks below `maxLines` and every later window keeps growing.
+  const overlapLines = Math.max(0, Math.min(Math.ceil(options.overlapTokens / 10), maxLines - 1));
 
   let currentLines: string[] = [];
+  // Leading lines of `currentLines` carried over as overlap from the previous
+  // chunk. They are already emitted, so a merge must not append them twice.
+  let carriedLines = 0;
   let chunkIndex = 0;
 
   for (let i = 0; i < lines.length; i++) {
@@ -595,27 +600,48 @@ function chunkCodeOrData(
     if (currentLines.length >= maxLines || i === lines.length - 1) {
       const content = currentLines.join('\n');
       const tokens = counter.count(content);
+      const previous = chunks[chunks.length - 1];
 
-      if (tokens >= options.minChunkTokens) {
-        chunks.push({
-          content,
-          tokens,
-          boundaries: [],
-          index: chunkIndex++,
-          startPos: 0, // Not tracking for code
-          endPos: content.length,
-          metadata: {
-            contentType: options.contentType,
-            hasCode: true,
-            hasList: false,
-            hasTable: false,
-            hasHeading: false,
-          },
-        });
+      // Same merge-or-keep rule as the prose flush in `semanticChunk`:
+      // `minChunkTokens` is a merge threshold, not a discard threshold.
+      // Discarding here dropped every short snippet or config file outright
+      // and every short tail of a longer one, with no error to show for it.
+      // A whitespace-only window has nothing to index and is never emitted.
+      if (content.trim().length > 0) {
+        if (tokens >= options.minChunkTokens || previous === undefined) {
+          // Either it stands on its own, or it is the whole document.
+          chunks.push({
+            content,
+            tokens,
+            boundaries: [],
+            index: chunkIndex++,
+            startPos: 0, // Not tracking for code
+            endPos: content.length,
+            metadata: {
+              contentType: options.contentType,
+              hasCode: true,
+              hasList: false,
+              hasTable: false,
+              hasHeading: false,
+            },
+          });
+        } else {
+          // Undersized with a predecessor: append only the lines it has not
+          // already seen, so the text survives without duplicating the overlap.
+          const fresh = currentLines.slice(carriedLines).join('\n');
+          if (fresh.trim().length > 0) {
+            const merged = `${previous.content}\n${fresh}`;
+            previous.content = merged;
+            previous.tokens = counter.count(merged);
+            previous.endPos = merged.length;
+          }
+        }
       }
 
-      // Overlap
-      currentLines = currentLines.slice(-overlapLines);
+      // Overlap. `slice(-0)` is `slice(0)` — the whole buffer — so zero
+      // overlap needs its own branch or every chunk re-carries all before it.
+      currentLines = overlapLines > 0 ? currentLines.slice(-overlapLines) : [];
+      carriedLines = currentLines.length;
     }
   }
 
@@ -668,9 +694,18 @@ async function chunkMarkdownWithCodeBlocks(
     segments.push({ content: text.slice(lastEnd), isCode: false, boundaries: [] });
   }
 
+  // Prose between fences is chunked as plain prose. Passing the caller's
+  // options through unchanged left `contentType` at 'markdown', which routed
+  // straight back into this function — unbounded recursion and a
+  // `RangeError: Maximum call stack size exceeded` on every markdown document.
+  const proseOptions: SemanticChunkOptions = { ...options, contentType: 'prose' };
+
   // Chunk each segment
   for (const segment of segments) {
     if (segment.isCode) {
+      // An empty fence carries nothing worth embedding.
+      if (segment.content.trim().length === 0) continue;
+
       // Code blocks stay intact
       const tokens = counter.count(segment.content);
       chunks.push({
@@ -690,14 +725,15 @@ async function chunkMarkdownWithCodeBlocks(
       });
     } else {
       // Prose gets regular semantic chunking
-      const proseChunks = await semanticChunk(segment.content, options);
+      const proseChunks = await semanticChunk(segment.content, proseOptions);
       for (const chunk of proseChunks) {
         chunks.push({
           ...chunk,
           index: chunkIndex++,
           metadata: {
             ...chunk.metadata,
-            hasCode: true, // Parent markdown has code
+            contentType: options.contentType,
+            hasCode: codeBlocks.length > 0, // Parent markdown has code
           },
         });
       }

@@ -7,7 +7,14 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
-import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  renameSync,
+  statSync,
+  truncateSync,
+  unlinkSync,
+} from 'node:fs';
 
 export interface RetrievalLogEntry {
   /** Log entry version */
@@ -186,6 +193,14 @@ export class StructuredLogger {
    * the logger is supposed to manage.
    */
   private fileSinkFailed = false;
+  /**
+   * Latches after the first rotation failure. Unlike an append failure, a
+   * failed rotation does not disable the sink: the entry is still appended
+   * and rotation is retried on the next write. On Windows a backup held open
+   * by a tail or a virus scan throws EBUSY transiently, and latching the
+   * whole sink off for one of those silently ended logging for the process.
+   */
+  private rotationFailureReported = false;
 
   constructor(options: LoggerOptions = {}) {
     this.minLevel = options.minLevel ?? 'info';
@@ -215,6 +230,19 @@ export class StructuredLogger {
 
     try {
       this.rotateIfNeeded(sink);
+    } catch (err) {
+      // Non-fatal: the live file grows past `maxSize` until a later rotation
+      // succeeds, which beats dropping every subsequent entry.
+      if (!this.rotationFailureReported) {
+        this.rotationFailureReported = true;
+        console.warn(
+          `[rag-logging] cannot rotate "${sink.path}" — still appending, will retry:`,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    }
+
+    try {
       appendFileSync(
         sink.path,
         `${line}
@@ -234,11 +262,18 @@ export class StructuredLogger {
    * Roll `rag.log` -> `rag.log.1` -> ... -> `rag.log.<maxFiles>`, dropping
    * the oldest backup. Called before the append so the live file never
    * exceeds `maxSize` by more than one entry.
+   *
+   * `maxFiles: 0` keeps no backups: the live file is truncated in place.
    */
   private rotateIfNeeded(sink: Required<NonNullable<LoggerOptions['file']>>): void {
     if (sink.maxSize <= 0) return;
     if (!existsSync(sink.path)) return;
     if (statSync(sink.path).size < sink.maxSize) return;
+
+    if (sink.maxFiles <= 0) {
+      truncateSync(sink.path, 0);
+      return;
+    }
 
     const oldest = `${sink.path}.${sink.maxFiles}`;
     if (existsSync(oldest)) unlinkSync(oldest);

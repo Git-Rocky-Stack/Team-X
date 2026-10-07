@@ -48,6 +48,15 @@ export interface AnnIndexOptions {
    * flaky and makes a recall regression impossible to attribute.
    */
   seed?: number;
+  /**
+   * Expected vector length. Defaults to the first non-empty entry's.
+   *
+   * Entries of any other length are left out of the index. Vectors are
+   * stored flattened at `row * dimension`, so a wider one spilled into the
+   * next row's slot and a narrower one became a zero-padded stub scored on
+   * its prefix — and neither has a meaningful cosine against the query.
+   */
+  dimension?: number;
 }
 
 export interface AnnIndex {
@@ -123,8 +132,10 @@ export function buildAnnIndex(
   entries: readonly AnnEntry[],
   options: AnnIndexOptions = {},
 ): AnnIndex {
-  const size = entries.length;
-  const dimension = size === 0 ? 0 : (entries[0]?.vector.length ?? 0);
+  const dimension =
+    options.dimension ?? entries.find((e) => e.vector.length > 0)?.vector.length ?? 0;
+  const accepted = entries.filter((e) => e.vector.length === dimension);
+  const size = accepted.length;
 
   if (size === 0 || dimension === 0) {
     return {
@@ -138,10 +149,10 @@ export function buildAnnIndex(
     };
   }
 
-  const ids = entries.map((e) => e.id);
+  const ids = accepted.map((e) => e.id);
   const vectors = new Float64Array(size * dimension);
   for (let i = 0; i < size; i++) {
-    writeNormalized(entries[i]?.vector ?? [], vectors, i * dimension);
+    writeNormalized(accepted[i]?.vector ?? [], vectors, i * dimension);
   }
 
   // Never more clusters than vectors: k-means cannot fill them, and empty
@@ -234,6 +245,9 @@ export function queryAnnIndex(
   options: AnnQueryOptions,
 ): AnnHit[] {
   if (index.size === 0 || index.dimension === 0) return [];
+  // A query from a different embedding space has no meaningful score
+  // against any stored vector — the same rule that keeps such entries out.
+  if (query.length !== index.dimension) return [];
 
   const dim = index.dimension;
   const normalizedQuery = new Float64Array(dim);
