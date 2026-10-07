@@ -88,6 +88,13 @@ export interface AiServiceConfig {
      * will throw at call time.
      */
     repo?: RagRepo;
+    /**
+     * An existing RAG service to retrieve and index through, instead of
+     * building a second one over `repo`. A second instance carries its own
+     * query cache that writes through the first never invalidate, so content
+     * indexed elsewhere stays invisible for the cache TTL.
+     */
+    service?: RagService;
     topK?: number;
     threshold?: number;
     cacheTtl?: number;
@@ -484,8 +491,10 @@ export function createAiService(config: AiServiceConfig): AiService {
       maxEntries: 1000,
     });
 
-    // Initialize RAG service if a repo is provided
-    if (config.rag?.repo) {
+    // Use the caller's RAG service when given; otherwise build one if a repo is provided
+    if (config.rag?.service) {
+      ragService = config.rag.service;
+    } else if (config.rag?.repo) {
       ragService = createRagService({
         embedText: config.embedding.embedText,
         dimension: config.embedding.dimension,
@@ -1053,7 +1062,9 @@ Respond with JSON array:
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
-          cacheHitRate: cache ? cache.getStats().hitRate : 0,
+          // From whichever service actually answers queries (an injected one
+          // may carry no cache at all, which is a hit rate of zero).
+          cacheHitRate: ragService?.getCacheStats?.()?.hitRate ?? 0,
           avgLatencyMs:
             stats.rag.completedQueries > 0
               ? stats.rag.totalLatencyMs / stats.rag.completedQueries

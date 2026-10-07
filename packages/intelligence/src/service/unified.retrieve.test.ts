@@ -25,7 +25,12 @@ import { describe, expect, it } from 'vitest';
 
 import { createInMemoryGraphRepo } from '../knowledge/graph.js';
 import { createInMemoryMemoryRepo } from '../memory/long-term.js';
-import type { RagEmbeddingRow, RagRepo, RagUpsertInput } from '../rag/service.js';
+import {
+  type RagEmbeddingRow,
+  type RagRepo,
+  type RagUpsertInput,
+  createRagService,
+} from '../rag/service.js';
 import { type AiServiceConfig, createAiService } from './unified.js';
 
 const DIMENSION = 16;
@@ -254,5 +259,30 @@ describe('createAiService — getStats', () => {
 
     expect(service.getStats('co-1').rag.totalRetrievals).toBe(1);
     expect(service.getStats('co-1').rag.avgLatencyMs).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('createAiService — shared RAG service', () => {
+  // The desktop app already runs a RagService for its indexer. Building a
+  // second one over the same table gave the AI service its own query cache,
+  // which the indexer's writes never invalidated: a passage indexed after a
+  // cached retrieval stayed invisible for the cache TTL (5 minutes).
+  it('retrieves through an injected service, so writes made through it are seen at once', async () => {
+    const repo = createInMemoryRagRepo();
+    const shared = createRagService({ embedText, dimension: DIMENSION, repo });
+    const { service } = await buildService({ rag: { service: shared, repo, threshold: 0 } });
+
+    expect((await service.retrieve('co-1', 'why is the release blocked?')).context).toEqual([]);
+
+    await shared.indexSource({
+      companyId: 'co-1',
+      sourceType: 'message' as EmbeddingSourceType,
+      sourceId: 'msg-1',
+      content: 'The release is blocked because the signing certificate expired last Friday.',
+    });
+
+    const after = await service.retrieve('co-1', 'why is the release blocked?');
+    expect(after.context.map((h) => h.sourceId)).toEqual(['msg-1']);
+    expect(service.getRagService()).toBe(shared);
   });
 });
