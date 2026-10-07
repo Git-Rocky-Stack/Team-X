@@ -8,6 +8,8 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
+import { significantTerms, termOverlap } from './terms.js';
+
 /**
  * A fact extracted from conversation or content.
  */
@@ -408,7 +410,12 @@ export interface LongTermMemoryService {
   ): ExtractedFact[];
 
   /**
-   * Retrieve ranked facts (by freshness score).
+   * Retrieve ranked facts.
+   *
+   * Without a query (or one with no significant terms), facts rank by
+   * freshness. With one, only facts sharing a term with it — in the fact
+   * text or its entities — are returned, ranked by term overlap weighted by
+   * freshness, so "relevant facts" means relevant to the question asked.
    */
   retrieveRankedFacts(
     companyId: string,
@@ -560,20 +567,30 @@ export function createLongTermMemoryService(options: {
       return facts;
     },
 
-    retrieveRankedFacts(companyId, _query, freshnessOpts) {
+    retrieveRankedFacts(companyId, query, freshnessOpts) {
       const facts = options.repo.listFactsByCompany(companyId);
       const now_ = now();
       const opts = freshnessOpts ?? freshnessOptions;
 
-      const withScores = facts.map((fact) => ({
-        fact,
-        score: calculateFreshness(fact, opts, fact.confidence, now_),
-      }));
+      const live = facts
+        .map((fact) => ({ fact, score: calculateFreshness(fact, opts, fact.confidence, now_) }))
+        .filter((fs) => !fs.score.expired);
 
-      // Filter expired and sort by score
-      return withScores
-        .filter((fs) => !fs.score.expired)
-        .sort((a, b) => b.score.finalScore - a.score.finalScore);
+      // The query used to be accepted and ignored, so "relevant" facts were
+      // just the freshest ones whatever was asked.
+      const queryTerms = query ? significantTerms(query) : [];
+      if (queryTerms.length === 0) {
+        return live.sort((a, b) => b.score.finalScore - a.score.finalScore);
+      }
+
+      return live
+        .map((fs) => ({
+          ...fs,
+          relevance: termOverlap(queryTerms, [fs.fact.fact, ...(fs.fact.entities ?? [])].join(' ')),
+        }))
+        .filter((fs) => fs.relevance > 0)
+        .sort((a, b) => b.relevance * b.score.finalScore - a.relevance * a.score.finalScore)
+        .map(({ fact, score }) => ({ fact, score }));
     },
 
     async summarizeConversation(conversation, context) {
