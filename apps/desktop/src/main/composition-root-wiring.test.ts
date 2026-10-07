@@ -49,6 +49,12 @@ describe('main/index.ts — privacy tier reaches every provider path', () => {
     expect(calls.length).toBeGreaterThanOrEqual(2);
     for (const call of calls) expect(call).toContain('getMaxPrivacyTier');
   });
+
+  it('passes getMaxPrivacyTier to the runtime-profile resolver (external runtimes)', () => {
+    const calls = callArguments('createRuntimeProfileProviderService');
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    for (const call of calls) expect(call).toContain('getMaxPrivacyTier');
+  });
 });
 
 describe('main/index.ts — Settings → Enhanced AI → Semantic Chunking', () => {

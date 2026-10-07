@@ -79,6 +79,7 @@ import {
 } from './built-in-tools.js';
 import type { EventBus } from './event-bus.js';
 import { type CostCalculator, runAgent } from './run-agent.js';
+import { markWorkFailureReported } from './work-failure-reports.js';
 
 // ---------------------------------------------------------------------------
 // Repo shapes
@@ -1719,6 +1720,36 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     task.reject(err);
   }
 
+  /**
+   * Tell the dashboard a turn was refused before it started — a provider the
+   * privacy tier forbids, a missing API key, a disabled provider. Every caller
+   * otherwise only logs the rejection, so the employee would just never
+   * answer. Best-effort: the caller still receives the error.
+   */
+  function reportRefusedTurn(task: PendingTask, companyId: string, err: unknown): void {
+    try {
+      bus.emit({
+        type: 'work.failed',
+        companyId,
+        actorId: 'orchestrator',
+        actorKind: 'orchestrator',
+        payload: {
+          threadId: task.threadId,
+          employeeId: task.employeeId,
+          messageId: task.kind === 'chat' ? task.userMessageId : task.triggerMessageId,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
+      markWorkFailureReported(err);
+    } catch (emitErr) {
+      console.error(
+        `[orchestrator] failed to report a refused turn for thread=${task.threadId} ` +
+          `employee=${task.employeeId}:`,
+        emitErr,
+      );
+    }
+  }
+
   function cancelPendingTasksForThread(threadId: string): boolean {
     let canceled = false;
     for (let i = pending.length - 1; i >= 0; i--) {
@@ -1790,6 +1821,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
         provider = await resolveProvider(employee);
       } catch (err) {
         pending.splice(i, 1);
+        reportRefusedTurn(task, thread.companyId, err);
         settleTask(task, err);
         i--;
         continue;
@@ -2028,3 +2060,4 @@ export type {
   ProactiveDispatcherDeps,
   ProactiveEnqueueResult,
 } from './proactive-dispatch.js';
+export { isWorkFailureReported } from './work-failure-reports.js';

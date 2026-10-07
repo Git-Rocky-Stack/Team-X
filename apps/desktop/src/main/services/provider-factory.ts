@@ -166,12 +166,15 @@ export class PrivacyTierViolationError extends Error {
   readonly maxTier: string;
 
   constructor(args: {
-    provider: ProviderConfig;
+    /** The refused provider — or, for an external runtime profile, its stand-in. */
+    provider: Pick<ProviderConfig, 'id' | 'name' | 'privacyTier'>;
     model: string;
     maxTier: string;
     /** Where the user fixes it — the employee (runs) or Settings → Retrieval (embeddings). */
     remedyScope: 'none' | 'employee' | 'retrieval';
-    purpose: 'run' | 'embedding';
+    purpose: 'run' | 'embedding' | 'runtime';
+    /** Why the provider ranks where it does, when that is not self-evident. */
+    reason?: string;
   }) {
     const { provider, model, maxTier } = args;
     const providerTierName = isPrivacyTier(provider.privacyTier)
@@ -187,9 +190,15 @@ export class PrivacyTierViolationError extends Error {
         : args.remedyScope === 'retrieval'
           ? ' in Settings → Retrieval'
           : '';
-    const subject = args.purpose === 'embedding' ? 'Embedding provider' : 'Provider';
+    const subject =
+      args.purpose === 'embedding'
+        ? 'Embedding provider'
+        : args.purpose === 'runtime'
+          ? 'Runtime profile'
+          : 'Provider';
+    const reason = args.reason ? ` ${args.reason}` : '';
     super(
-      `${subject} "${provider.name} (${model})" is ${providerTierName}-tier, but Settings → Privacy allows ${maxLabel}. Choose ${alternative}${scope} or raise the privacy tier.`,
+      `${subject} "${provider.name} (${model})" is ${providerTierName}-tier, but Settings → Privacy allows ${maxLabel}.${reason} Choose ${alternative}${scope} or raise the privacy tier.`,
     );
     this.name = 'PrivacyTierViolationError';
     this.providerId = provider.id;
@@ -205,7 +214,10 @@ export class PrivacyTierViolationError extends Error {
  * with an unrecognised tier ranks as the least private, and an unrecognised
  * max tier (a corrupted settings row) ranks as Local Only.
  */
-function exceedsPrivacyTier(provider: ProviderConfig, maxTier: string): boolean {
+export function exceedsPrivacyTier(
+  provider: Pick<ProviderConfig, 'privacyTier'>,
+  maxTier: string,
+): boolean {
   const providerRank = isPrivacyTier(provider.privacyTier)
     ? PRIVACY_TIER_RANK[provider.privacyTier]
     : Number.POSITIVE_INFINITY;

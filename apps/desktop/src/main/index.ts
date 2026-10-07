@@ -179,6 +179,7 @@ import {
   type ResolveTools,
   buildOrchestrator,
   createProactiveDispatcher,
+  isWorkFailureReported,
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
@@ -422,7 +423,8 @@ function recoverUnansweredDirectMessages(args: {
                 row.authorKind === 'employee' &&
                 row.authorId === employee.id,
             );
-          if (!alreadyStarted) {
+          // The orchestrator already reported a turn it refused before start.
+          if (!alreadyStarted && !isWorkFailureReported(err)) {
             args.bus.emit({
               type: 'work.failed',
               companyId: company.id,
@@ -1268,6 +1270,7 @@ app
         runtimeProfilesService,
         providerFactory,
         externalRuntimeAdapters,
+        getMaxPrivacyTier,
       });
       resolveProvider = (employee) => runtimeProfileProviderService.resolveForEmployee(employee);
     }

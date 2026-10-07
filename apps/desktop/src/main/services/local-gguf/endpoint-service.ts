@@ -209,6 +209,62 @@ const LOCAL_TIER_RULE =
   'Endpoints are Local privacy tier — they may only point at loopback, an RFC1918 / link-local address, or a .local / bare LAN hostname that resolves only to such addresses.';
 
 /**
+ * Why `hostname` is not provably on the local network, or null when it is.
+ *
+ * A name is resolved and EVERY address must be local: a client may connect
+ * to any of them, so one public answer is enough to break the Local tier.
+ * Endpoints run it on add / update and again before every probe, because DNS
+ * can change after the row was written; runtime profiles run it before every
+ * resolution under a Local privacy tier.
+ */
+export async function nonLocalHostReason(
+  hostname: string,
+  opts: {
+    lookup?: (hostname: string, options: { all: true }) => Promise<LookupAddress[]>;
+    timeoutMs?: number;
+    /** The sentence that explains the rule; defaults to the endpoint rule. */
+    rule?: string;
+  } = {},
+): Promise<string | null> {
+  const rule = opts.rule ?? LOCAL_TIER_RULE;
+  const lookup = opts.lookup ?? ((name: string) => dnsLookup(name, { all: true }));
+  const probeTimeoutMs = opts.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
+  const kind = classifyHost(hostname);
+  if (kind === 'local') return null;
+  if (kind === 'public') return `"${hostname}" is not on the local network. ${rule}`;
+
+  let addresses: LookupAddress[];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    // getaddrinfo cannot be cancelled, so bound the wait instead of letting
+    // a dead resolver hang an add or a probe.
+    addresses = await Promise.race([
+      lookup(hostname, { all: true }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`DNS lookup timed out after ${probeTimeoutMs} ms`)),
+          probeTimeoutMs,
+        );
+      }),
+    ]);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return `"${hostname}" could not be resolved (${detail}), so it cannot be confirmed to be on the local network.`;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (addresses.length === 0) {
+    return `"${hostname}" could not be resolved (no addresses), so it cannot be confirmed to be on the local network.`;
+  }
+  const outside = addresses.map((a) => a.address).filter((a) => !isLocalNetworkAddress(a));
+  if (outside.length > 0) {
+    return `"${hostname}" resolves to ${outside.join(', ')}, which is not on the local network. ${rule}`;
+  }
+  return null;
+}
+
+/**
  * Parse a candidate endpoint URL and check its scheme.
  *
  * @returns the parsed URL; its `origin` is the canonical form to persist.
@@ -238,49 +294,8 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
   const probeTimeoutMs = deps.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
   const lookup = deps.lookup ?? ((hostname: string) => dnsLookup(hostname, { all: true }));
 
-  /**
-   * Why `hostname` is not provably on the local network, or null when it is.
-   *
-   * A name is resolved and EVERY address must be local: a client may connect
-   * to any of them, so one public answer is enough to break the Local tier.
-   * Run on add / update and again before every probe, because DNS can change
-   * after the row was written.
-   */
-  async function nonLocalReason(hostname: string): Promise<string | null> {
-    const kind = classifyHost(hostname);
-    if (kind === 'local') return null;
-    if (kind === 'public') return `"${hostname}" is not on the local network. ${LOCAL_TIER_RULE}`;
-
-    let addresses: LookupAddress[];
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      // getaddrinfo cannot be cancelled, so bound the wait instead of letting
-      // a dead resolver hang an add or a probe.
-      addresses = await Promise.race([
-        lookup(hostname, { all: true }),
-        new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(
-            () => reject(new Error(`DNS lookup timed out after ${probeTimeoutMs} ms`)),
-            probeTimeoutMs,
-          );
-        }),
-      ]);
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      return `"${hostname}" could not be resolved (${detail}), so it cannot be confirmed to be on the local network.`;
-    } finally {
-      clearTimeout(timer);
-    }
-
-    if (addresses.length === 0) {
-      return `"${hostname}" could not be resolved (no addresses), so it cannot be confirmed to be on the local network.`;
-    }
-    const outside = addresses.map((a) => a.address).filter((a) => !isLocalNetworkAddress(a));
-    if (outside.length > 0) {
-      return `"${hostname}" resolves to ${outside.join(', ')}, which is not on the local network. ${LOCAL_TIER_RULE}`;
-    }
-    return null;
-  }
+  const nonLocalReason = (hostname: string): Promise<string | null> =>
+    nonLocalHostReason(hostname, { lookup, timeoutMs: probeTimeoutMs });
 
   /**
    * Parse, validate and canonicalize a candidate endpoint URL.

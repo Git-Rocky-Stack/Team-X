@@ -374,6 +374,7 @@ import type {
 } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
 import type { createMeetingService } from '../orchestrator/meeting-service.js';
+import { isWorkFailureReported } from '../orchestrator/work-failure-reports.js';
 import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
 import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
 import type { McpHost } from '../services/mcp-host.js';
@@ -5041,7 +5042,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
                 row.authorKind === 'employee' &&
                 row.authorId === employeeId,
             );
-          if (!alreadyStarted) {
+          // The orchestrator already reported a turn it refused before start.
+          if (!alreadyStarted && !isWorkFailureReported(err)) {
             try {
               bus?.emit({
                 type: 'work.failed',

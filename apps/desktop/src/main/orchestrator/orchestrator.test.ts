@@ -38,6 +38,7 @@ import {
   type ResolveSystemPrompt,
   type ResolveTools,
   buildOrchestrator,
+  isWorkFailureReported,
 } from './index.js';
 
 interface Fixture {
@@ -2144,6 +2145,52 @@ describe('buildOrchestrator', () => {
         }),
       ).rejects.toThrow(/on fire/);
       expect(providerCalled).toBe(false);
+    });
+
+    // A refused provider (Settings → Privacy, a missing API key, a disabled
+    // provider) settles the caller's promise before the turn starts. Only
+    // chat.send used to turn that into a `work.failed`; ticket creation,
+    // assignment, participant wake-ups and delegation pickups only logged it,
+    // so the user saw an employee who simply never answered.
+    it('reports a provider refusal as work.failed, once, before any work starts', async () => {
+      const refusal = new Error(
+        'Provider "Anthropic (claude-haiku-4-5)" is Proprietary Cloud-tier',
+      );
+      const orchestrator = buildDefaultOrchestrator(f, {
+        resolveProvider: async () => {
+          throw refusal;
+        },
+      });
+
+      const err = await orchestrator
+        .enqueueChat({
+          threadId: f.threadId,
+          employeeId: f.employeeId,
+          userMessageId: f.userMessageId,
+        })
+        .catch((e: unknown) => e);
+
+      expect(err).toBe(refusal);
+      const events = f.bus.replaySince(0).filter((e) => e.type.startsWith('work.'));
+      expect(events).toEqual([
+        expect.objectContaining({
+          type: 'work.failed',
+          companyId: f.companyId,
+          payload: {
+            threadId: f.threadId,
+            employeeId: f.employeeId,
+            messageId: f.userMessageId,
+            error: refusal.message,
+          },
+        }),
+      ]);
+      // Callers that also report failures (chat.send) can tell it is done.
+      expect(isWorkFailureReported(err)).toBe(true);
+    });
+
+    it('does not mark failures it did not report', () => {
+      expect(isWorkFailureReported(new Error('elsewhere'))).toBe(false);
+      expect(isWorkFailureReported('a string')).toBe(false);
     });
   });
 });
