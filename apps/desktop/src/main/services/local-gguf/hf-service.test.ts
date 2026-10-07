@@ -560,6 +560,172 @@ describe('HfService — startDownload', () => {
     });
     await expect(service.startDownload(REPO, FILE, '/nope')).rejects.toThrow(/folder/i);
   });
+
+  it.each([
+    ['a README', 'README.md'],
+    ['a non-GGUF weight file', 'model.safetensors'],
+    ['a disguised executable', 'model.gguf.exe'],
+    ['a nested config', 'Q8_0/config.json'],
+    ['no extension', 'model'],
+  ])('refuses %s — the browser only ever downloads GGUF files', async (_label, filename) => {
+    // `filename` is renderer-supplied. A compromised renderer must not be able
+    // to drop an arbitrary repo file (a script, a DLL) onto disk through here.
+    const { service, calls } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(300)])),
+    });
+    await expect(service.startDownload(REPO, filename, FOLDER)).rejects.toThrow(/\.gguf/i);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('accepts a .gguf extension regardless of case', async () => {
+    const { service, files } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(300)])),
+    });
+    const { handleId } = await service.startDownload(REPO, 'MODEL.GGUF', FOLDER);
+    await service.settled(handleId);
+    expect(files.get(at(FOLDER, 'MODEL.GGUF'))?.length).toBe(300);
+  });
+
+  it('refuses a relative target folder rather than resolving it against the cwd', async () => {
+    // A relative path would land wherever the main process happens to be
+    // running from — a destination nobody chose.
+    const { service, calls, dirs } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(300)])),
+    });
+    dirs.add(at('models'));
+    await expect(service.startDownload(REPO, FILE, 'models')).rejects.toThrow(/absolute/i);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('HfService — one transfer per destination', () => {
+  /** A 300-byte transfer that stalls after 100 bytes until released. */
+  function stalledService() {
+    let releaseGate: () => void = () => undefined;
+    const gate = {
+      release: new Promise<void>((res) => {
+        releaseGate = res;
+      }),
+    };
+    let attempt = 0;
+    const built = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: (_u, init) => {
+            attempt += 1;
+            if (attempt > 1) return new Response('boom', { status: 503 });
+            return new Response(streamOf([bytes(100), bytes(200)], gate, init?.signal), {
+              status: 200,
+              headers: { 'content-length': '300' },
+            });
+          },
+        },
+      ],
+    });
+    return { ...built, releaseGate };
+  }
+
+  it('returns the in-flight handle instead of starting a second transfer to the same file', async () => {
+    // Double-clicking Download used to start transfer 2 with a Range request
+    // that appended into the very `.part` transfer 1 was still writing —
+    // interleaved bytes, then a corrupt model registered as complete.
+    const { service, files, calls, releaseGate } = stalledService();
+    const first = await service.startDownload(REPO, FILE, FOLDER);
+    await vi.waitFor(() => expect(files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(100));
+
+    const second = await service.startDownload(REPO, FILE, FOLDER);
+
+    expect(second.handleId).toBe(first.handleId);
+    expect(await service.activeDownloads()).toHaveLength(1);
+    releaseGate();
+    await service.settled(first.handleId);
+    expect(calls.filter((c) => c.url.includes('/resolve/'))).toHaveLength(1);
+    expect(files.get(at(FOLDER, FILE))?.length).toBe(300);
+  });
+
+  it('dedupes two clicks that race each other before either transfer starts', async () => {
+    const { service, releaseGate } = stalledService();
+    const [a, b] = await Promise.all([
+      service.startDownload(REPO, FILE, FOLDER),
+      service.startDownload(REPO, FILE, `${FOLDER}/`),
+    ]);
+    expect(b.handleId).toBe(a.handleId);
+    releaseGate();
+    await service.settled(a.handleId);
+  });
+
+  it('returns a paused transfer’s handle rather than opening a rival on its .part', async () => {
+    const { service, files } = stalledService();
+    const first = await service.startDownload(REPO, FILE, FOLDER);
+    await vi.waitFor(() => expect(files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(100));
+    await service.pauseDownload(first.handleId);
+
+    const second = await service.startDownload(REPO, FILE, FOLDER);
+
+    expect(second.handleId).toBe(first.handleId);
+    expect((await service.activeDownloads())[0]?.state).toBe('paused');
+    expect(files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(100);
+  });
+
+  it('retries a failed transfer under its existing handle rather than adding a duplicate', async () => {
+    // Two records on one `.part` would let cancelling the stale failed one
+    // delete the file the fresh one is writing.
+    let attempt = 0;
+    const { service, files } = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: () => {
+            attempt += 1;
+            if (attempt === 1) return new Response('boom', { status: 503 });
+            return new Response(streamOf([bytes(300)]), {
+              status: 200,
+              headers: { 'content-length': '300' },
+            });
+          },
+        },
+      ],
+    });
+    const first = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(first.handleId);
+    expect((await service.activeDownloads())[0]?.state).toBe('failed');
+
+    const second = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(second.handleId);
+
+    expect(second.handleId).toBe(first.handleId);
+    expect(await service.activeDownloads()).toHaveLength(1);
+    expect((await service.activeDownloads())[0]?.state).toBe('completed');
+    expect(files.get(at(FOLDER, FILE))?.length).toBe(300);
+  });
+
+  it('refuses a different repo’s file while another transfer owns that destination', async () => {
+    // Handing back the other repo's handle would silently download the wrong
+    // model; starting a rival would corrupt the shared `.part`.
+    const { service, files, releaseGate } = stalledService();
+    const first = await service.startDownload(REPO, FILE, FOLDER);
+    await vi.waitFor(() => expect(files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(100));
+
+    await expect(service.startDownload('someone/Other-GGUF', FILE, FOLDER)).rejects.toThrow(
+      /already being downloaded/i,
+    );
+    releaseGate();
+    await service.settled(first.handleId);
+  });
+
+  it('starts a fresh transfer once the previous one to that file has finished', async () => {
+    const { service } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(300)])),
+    });
+    const first = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(first.handleId);
+
+    const second = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(second.handleId);
+
+    expect(second.handleId).not.toBe(first.handleId);
+  });
 });
 
 describe('HfService — progress reporting', () => {
@@ -687,6 +853,56 @@ describe('HfService — pause, resume and cancel', () => {
     await service.settled(handleId);
 
     expect(files.get(at(FOLDER, FILE))?.length).toBe(300);
+  });
+
+  it('treats a 416 on resume as complete when the .part already holds every byte', async () => {
+    // Pause (or quit) can land after the last byte was written but before the
+    // rename. Resuming then asks for `bytes=300-` of a 300-byte file and the
+    // server rightly answers 416 — which must finish the download, not fail it
+    // (a later Cancel on the failed row would delete a complete model).
+    const { service, files, calls } = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: () =>
+            new Response('', { status: 416, headers: { 'content-range': 'bytes */300' } }),
+        },
+      ],
+    });
+    files.set(at(FOLDER, `${FILE}.part`), bytes(300));
+
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+
+    expect(new Headers(calls[0]?.init?.headers).get('range')).toBe('bytes=300-');
+    expect((await service.activeDownloads())[0]).toMatchObject({
+      state: 'completed',
+      bytesReceived: 300,
+      bytesTotal: 300,
+      errorMessage: null,
+    });
+    expect(files.has(at(FOLDER, `${FILE}.part`))).toBe(false);
+    expect(files.get(at(FOLDER, FILE))?.length).toBe(300);
+  });
+
+  it('still fails a 416 whose reported total does not match the .part size', async () => {
+    const { service, files } = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: () =>
+            new Response('', { status: 416, headers: { 'content-range': 'bytes */500' } }),
+        },
+      ],
+    });
+    files.set(at(FOLDER, `${FILE}.part`), bytes(300));
+
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+
+    expect((await service.activeDownloads())[0]?.state).toBe('failed');
+    expect(files.has(at(FOLDER, FILE))).toBe(false);
+    expect(files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(300);
   });
 
   it('cancel stops the transfer and deletes the partial file', async () => {

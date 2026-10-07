@@ -68,7 +68,10 @@ const DEFAULT_N_PREDICT = 128;
 /** Default gap between VRAM samples, so sampling never dominates the run. */
 const DEFAULT_VRAM_SAMPLE_INTERVAL_MS = 250;
 
-/** Budget for one benchmark run, including model load. */
+/**
+ * Budget for the timed completion request. Model load (`pool.load`) and the
+ * `/props` read happen before the timer starts and are not covered by it.
+ */
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 // ---------------------------------------------------------------------------
@@ -247,6 +250,11 @@ export function createBenchmarkService(deps: BenchmarkServiceDeps): BenchmarkSer
       }
     };
 
+    // Baseline sample taken BEFORE the clock starts. The real sampler spawns
+    // nvidia-smi (100–500 ms); inside the timed window that spawn would be
+    // charged to time-to-first-token.
+    await sampleVram(now());
+
     // --- drive the completion --------------------------------------------
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -255,8 +263,6 @@ export function createBenchmarkService(deps: BenchmarkServiceDeps): BenchmarkSer
     let timings: LlamaTimings | null = null;
 
     try {
-      await sampleVram(startedAt);
-
       const response = await fetchFn(`${loaded.baseUrl}/completion`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

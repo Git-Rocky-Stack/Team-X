@@ -21,8 +21,11 @@
  * the row carries the string `Local`, not that the URL points anywhere local.
  * Without a host check, a user could register `https://api.openai.com` and the
  * app would label a cloud provider as a Local-tier endpoint, then route
- * privacy-tier-filtered traffic to it. {@link assertLocalNetworkUrl} is where
- * that promise is actually kept, and it runs on both `add` and `update`.
+ * privacy-tier-filtered traffic to it. `assertLocalNetworkUrl` is where
+ * that promise is actually kept, and it runs on both `add` and `update`. A
+ * hostname is resolved and every address must be local; the probe re-resolves
+ * before each request (DNS is not a property of the row) and never follows a
+ * redirect off the LAN.
  *
  * ## Judgment calls (documented for review)
  *
@@ -43,6 +46,9 @@
  *     there is nothing to report a verdict about.
  */
 
+import type { LookupAddress } from 'node:dns';
+import { lookup as dnsLookup } from 'node:dns/promises';
+
 import type { EndpointStatus, LocalGgufError, RemoteEndpoint } from '@team-x/shared-types';
 
 import type {
@@ -53,6 +59,9 @@ import type { EndpointTestResult } from '../../ipc/local-gguf-endpoint-handlers.
 
 /** Default probe budget. Long enough for a cold LAN server, short enough to feel live. */
 const DEFAULT_PROBE_TIMEOUT_MS = 5_000;
+
+/** Statuses a `fetch` would follow under the default `redirect: 'follow'`. */
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 /** Narrow structural slice of the local-model-endpoints repo this service consumes. */
 export interface EndpointServiceRepo {
@@ -79,8 +88,14 @@ export interface EndpointServiceDeps {
   fetchFn?: typeof fetch;
   /** Clock for latency measurement; defaults to `Date.now`. */
   now?: () => number;
-  /** Per-probe timeout; defaults to {@link DEFAULT_PROBE_TIMEOUT_MS}. */
+  /** Per-probe timeout; defaults to {@link DEFAULT_PROBE_TIMEOUT_MS}. Also bounds each DNS lookup. */
   probeTimeoutMs?: number;
+  /**
+   * Resolves a hostname to every address it maps to; defaults to
+   * `dns.promises.lookup` (the OS resolver — hosts file, mDNS, search
+   * domains — i.e. exactly what a later connection would use).
+   */
+  lookup?: (hostname: string, options: { all: true }) => Promise<LookupAddress[]>;
 }
 
 export interface EndpointAddConfig {
@@ -145,37 +160,61 @@ function isPrivateIpv6(host: string): boolean {
       .split('%')[0]
       ?.toLowerCase() ?? '';
   if (addr === '::1' || addr === '::') return true;
+  // IPv4-mapped (::ffff:a.b.c.d, or the hex form URL canonicalizes it to):
+  // a connection reaches the embedded IPv4 address, so that decides.
+  const mapped = /^::ffff:(?:(\d{1,3}(?:\.\d{1,3}){3})|([0-9a-f]{1,4}):([0-9a-f]{1,4}))$/.exec(
+    addr,
+  );
+  if (mapped) {
+    if (mapped[1]) return isPrivateIpv4(mapped[1]);
+    const hi = Number.parseInt(mapped[2] ?? '', 16);
+    const lo = Number.parseInt(mapped[3] ?? '', 16);
+    return isPrivateIpv4(`${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`);
+  }
   if (/^f[cd][0-9a-f]{2}:/.test(addr)) return true; // fc00::/7
   if (/^fe[89ab][0-9a-f]:/.test(addr)) return true; // fe80::/10
   return false;
 }
 
-/**
- * True when `host` is unambiguously on the local network.
- *
- * Deliberately conservative: anything not provably local is rejected. A false
- * negative costs the user an explanatory error; a false positive silently
- * breaks the Local privacy tier, which is the whole point of the table.
- */
-export function isLocalNetworkHost(host: string): boolean {
-  const h = host.toLowerCase();
-  if (h === 'localhost' || h.endsWith('.localhost')) return true;
-  if (h.endsWith('.local')) return true; // mDNS / Bonjour
-  if (h.includes(':') || h.startsWith('[')) return isPrivateIpv6(h);
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return isPrivateIpv4(h);
-  // A bare hostname with no dot cannot be resolved on the public DNS root —
-  // it is a LAN / NetBIOS / search-domain name (e.g. `http://bench-rig:1234`).
-  if (!h.includes('.')) return true;
-  return false;
+/** True when `address` (an IP literal, v4 or v6) is loopback / RFC1918 / link-local / ULA. */
+export function isLocalNetworkAddress(address: string): boolean {
+  return address.includes(':') ? isPrivateIpv6(address) : isPrivateIpv4(address);
 }
 
 /**
- * Parse, validate and canonicalize a candidate endpoint URL.
+ * Classify `host` without touching the network.
  *
- * @returns the origin form with no trailing slash.
- * @throws {EndpointServiceError} when unparseable, non-HTTP(S), or non-local.
+ *   • `'local'` / `'public'` — an IP literal or `localhost`, decided on sight.
+ *   • `'resolve'` — a bare LAN name or an mDNS / `.localhost` name. These
+ *     prove nothing on their own: `http://ai` is a real public TLD, and a
+ *     search-suffix expansion can turn `bench-rig` into a public record. The
+ *     verdict comes from resolving them ({@link EndpointService} does that).
+ *
+ * Deliberately conservative: any other dotted name is `'public'` without a
+ * lookup. A false negative costs the user an explanatory error; a false
+ * positive silently breaks the Local privacy tier, which is the whole point of
+ * the table.
  */
-function assertLocalNetworkUrl(raw: string): string {
+export function classifyHost(host: string): 'local' | 'public' | 'resolve' {
+  const h = host.toLowerCase();
+  if (h === 'localhost') return 'local';
+  if (h.includes(':') || h.startsWith('[')) return isPrivateIpv6(h) ? 'local' : 'public';
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return isPrivateIpv4(h) ? 'local' : 'public';
+  if (h.endsWith('.localhost') || h.endsWith('.local')) return 'resolve'; // mDNS / Bonjour
+  if (!h.includes('.')) return 'resolve'; // LAN / NetBIOS / search-domain name
+  return 'public';
+}
+
+const LOCAL_TIER_RULE =
+  'Endpoints are Local privacy tier — they may only point at loopback, an RFC1918 / link-local address, or a .local / bare LAN hostname that resolves only to such addresses.';
+
+/**
+ * Parse a candidate endpoint URL and check its scheme.
+ *
+ * @returns the parsed URL; its `origin` is the canonical form to persist.
+ * @throws {EndpointServiceError} when unparseable or non-HTTP(S).
+ */
+function parseEndpointUrl(raw: string): URL {
   let url: URL;
   try {
     url = new URL(raw);
@@ -188,17 +227,7 @@ function assertLocalNetworkUrl(raw: string): string {
       `Endpoint URLs must use http or https; got "${url.protocol.replace(':', '')}".`,
     );
   }
-
-  if (!isLocalNetworkHost(url.hostname)) {
-    throw new EndpointServiceError(
-      `"${url.hostname}" is not on the local network. Endpoints are Local privacy tier — they may only point at loopback, an RFC1918 / link-local address, a .local mDNS name, or a bare LAN hostname.`,
-      { kind: 'endpoint-unreachable', url: raw },
-    );
-  }
-
-  // `url.origin` drops any path, query and fragment, and never has a trailing
-  // slash — exactly the canonical form we want to persist and probe against.
-  return url.origin;
+  return url;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +236,68 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
   const now = deps.now ?? Date.now;
   const fetchFn = deps.fetchFn ?? globalThis.fetch;
   const probeTimeoutMs = deps.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
+  const lookup = deps.lookup ?? ((hostname: string) => dnsLookup(hostname, { all: true }));
+
+  /**
+   * Why `hostname` is not provably on the local network, or null when it is.
+   *
+   * A name is resolved and EVERY address must be local: a client may connect
+   * to any of them, so one public answer is enough to break the Local tier.
+   * Run on add / update and again before every probe, because DNS can change
+   * after the row was written.
+   */
+  async function nonLocalReason(hostname: string): Promise<string | null> {
+    const kind = classifyHost(hostname);
+    if (kind === 'local') return null;
+    if (kind === 'public') return `"${hostname}" is not on the local network. ${LOCAL_TIER_RULE}`;
+
+    let addresses: LookupAddress[];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      // getaddrinfo cannot be cancelled, so bound the wait instead of letting
+      // a dead resolver hang an add or a probe.
+      addresses = await Promise.race([
+        lookup(hostname, { all: true }),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`DNS lookup timed out after ${probeTimeoutMs} ms`)),
+            probeTimeoutMs,
+          );
+        }),
+      ]);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      return `"${hostname}" could not be resolved (${detail}), so it cannot be confirmed to be on the local network.`;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (addresses.length === 0) {
+      return `"${hostname}" could not be resolved (no addresses), so it cannot be confirmed to be on the local network.`;
+    }
+    const outside = addresses.map((a) => a.address).filter((a) => !isLocalNetworkAddress(a));
+    if (outside.length > 0) {
+      return `"${hostname}" resolves to ${outside.join(', ')}, which is not on the local network. ${LOCAL_TIER_RULE}`;
+    }
+    return null;
+  }
+
+  /**
+   * Parse, validate and canonicalize a candidate endpoint URL.
+   *
+   * @returns the origin form with no trailing slash.
+   * @throws {EndpointServiceError} when unparseable, non-HTTP(S), or non-local.
+   */
+  async function assertLocalNetworkUrl(raw: string): Promise<string> {
+    const url = parseEndpointUrl(raw);
+    const reason = await nonLocalReason(url.hostname);
+    if (reason !== null) {
+      throw new EndpointServiceError(reason, { kind: 'endpoint-unreachable', url: raw });
+    }
+    // `url.origin` drops any path, query and fragment, and never has a trailing
+    // slash — exactly the canonical form we want to persist and probe against.
+    return url.origin;
+  }
 
   function requireEndpoint(id: string): RemoteEndpoint {
     const row = deps.repo.getById(id);
@@ -246,6 +337,21 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
   async function probe(
     endpoint: RemoteEndpoint,
   ): Promise<{ result: EndpointTestResult; status: EndpointStatus; lastError: string | null }> {
+    // Re-check where the host points NOW, before any byte (or the auth
+    // header) leaves the machine. The row was validated when written, but a
+    // name's DNS answer is not a property of the row.
+    const reason = await nonLocalReason(new URL(endpoint.baseUrl).hostname);
+    if (reason !== null) {
+      return {
+        result: {
+          reachable: false,
+          error: { kind: 'endpoint-unreachable', url: endpoint.baseUrl },
+        },
+        status: 'unreachable',
+        lastError: reason,
+      };
+    }
+
     const authHeader = await resolveAuthHeader(endpoint);
     const headers: Record<string, string> = { accept: 'application/json' };
     if (authHeader) headers.authorization = authHeader;
@@ -259,8 +365,30 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
         method: 'GET',
         headers,
         signal: controller.signal,
+        // A LAN box must not be able to bounce the probe — auth header and
+        // all — to a public host. A redirect is a failed probe, not a hop.
+        redirect: 'manual',
       });
       const latencyMs = now() - startedAt;
+
+      // Node's fetch hands back the real 3xx under `manual`; a browser-style
+      // runtime returns an opaque redirect with status 0. Treat both alike.
+      if (response.type === 'opaqueredirect' || REDIRECT_STATUSES.has(response.status)) {
+        const location = response.headers.get('location');
+        return {
+          result: {
+            reachable: false,
+            latencyMs,
+            error: {
+              kind: 'endpoint-unreachable',
+              url: endpoint.baseUrl,
+              httpStatus: response.status,
+            },
+          },
+          status: 'unreachable',
+          lastError: `HTTP ${response.status} redirect${location ? ` to ${location}` : ''} — endpoints must answer /v1/models directly; redirects are not followed.`,
+        };
+      }
 
       if (response.ok) {
         return { result: { reachable: true, latencyMs }, status: 'reachable', lastError: null };
@@ -318,7 +446,7 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
       if (name.length === 0) {
         throw new EndpointServiceError('Endpoint name is required.');
       }
-      const baseUrl = assertLocalNetworkUrl(config.baseUrl);
+      const baseUrl = await assertLocalNetworkUrl(config.baseUrl);
 
       if (deps.repo.list().some((e) => e.baseUrl === baseUrl)) {
         throw new EndpointServiceError(`An endpoint for ${baseUrl} already exists.`);
@@ -349,7 +477,7 @@ export function createEndpointService(deps: EndpointServiceDeps): EndpointServic
       let baseUrlChanged = false;
       if (partial.baseUrl !== undefined) {
         // Validate BEFORE any write so a rejected edit leaves the row intact.
-        const baseUrl = assertLocalNetworkUrl(partial.baseUrl);
+        const baseUrl = await assertLocalNetworkUrl(partial.baseUrl);
         if (baseUrl !== existing.baseUrl) {
           if (deps.repo.list().some((e) => e.id !== id && e.baseUrl === baseUrl)) {
             throw new EndpointServiceError(`An endpoint for ${baseUrl} already exists.`);

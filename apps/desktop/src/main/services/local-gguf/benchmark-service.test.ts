@@ -236,6 +236,43 @@ describe('BenchmarkService — run', () => {
     expect(rows[0]?.ttftMs).toBe(10);
   });
 
+  it('keeps the baseline VRAM sample out of time-to-first-token', async () => {
+    // In production the sampler spawns nvidia-smi (100–500 ms). Taking the
+    // baseline sample inside the timed window charged that spawn to TTFT.
+    let t = 0;
+    const SAMPLER_MS = 400;
+    const REQUEST_MS = 50;
+    const service = createBenchmarkService({
+      pool: {
+        load: async () => ({ modelId: 'model-1', baseUrl: 'http://127.0.0.1:1', pid: 1 }),
+        lastTuningFor: () => ({ nCtx: 4096, nGpuLayers: 33 }),
+      },
+      models: { getById: () => makeModel() },
+      benchmarks: {
+        insert: (i) => ({ id: 'b', ...i, ranAt: i.ranAt ?? 0 }),
+        listByModel: () => [],
+      },
+      runtime: { getSettings: async () => ({ activeBackend: 'cuda' as GpuBackend }) },
+      fetchFn: (async (input: unknown) => {
+        if (String(input).endsWith('/props')) return new Response('{}', { status: 200 });
+        t += REQUEST_MS;
+        return new Response(sseStream(completionRecords()), { status: 200 });
+      }) as unknown as typeof fetch,
+      now: () => t,
+      sampleVramMb: async () => {
+        t += SAMPLER_MS;
+        return 4_000;
+      },
+      vramSampleIntervalMs: 0,
+    });
+
+    const result = await service.run('model-1');
+
+    expect(result.ttftMs).toBe(REQUEST_MS);
+    // The baseline sample still counts toward the peak.
+    expect(result.vramPeakMb).toBe(4_000);
+  });
+
   it('persists the active backend alongside the numbers', async () => {
     const { service, rows } = build({ backend: 'vulkan' });
     await service.run('model-1');
