@@ -32,8 +32,12 @@ import {
   employees,
   fileVault,
   goals,
+  knowledgeEdges,
+  knowledgeNodes,
   mcpServers,
   meetings,
+  memoryFacts,
+  memorySummaries,
   messages,
   projectTickets,
   projects,
@@ -240,9 +244,11 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
      *                               cleaned for data hygiene only).
      *       5. employees — CASCADE-deletes `org_edges` rows on both the
      *          manager and report sides via migration 0013's FKs.
-     *       6. copilot_insights — CASCADE-deletes automatically when the
-     *          company row drops; explicit DELETE here is belt-and-
-     *          suspenders for audit-log parity with the other tables.
+     *       6. copilot_insights + Enhanced AI memory (memory_facts,
+     *          memory_summaries, knowledge_edges, knowledge_nodes) —
+     *          CASCADE-delete automatically when the company row drops;
+     *          explicit DELETEs here are belt-and-suspenders for audit-log
+     *          parity with the other tables.
      *       7. companies (the target row).
      *
      * No-op on unknown id (the inner DELETE WHERE id = ? matches zero rows
@@ -322,6 +328,11 @@ export function createCompaniesRepo<TRunResult>(db: CompaniesDb<TRunResult>) {
         // --- Phase 6: copilot_insights (CASCADE via schema.ts; explicit
         //     for audit parity with the other tables)
         tx.delete(copilotInsights).where(eq(copilotInsights.companyId, id)).run();
+        // Edges before nodes: an edge row references both of its endpoints.
+        tx.delete(knowledgeEdges).where(eq(knowledgeEdges.companyId, id)).run();
+        tx.delete(knowledgeNodes).where(eq(knowledgeNodes.companyId, id)).run();
+        tx.delete(memoryFacts).where(eq(memoryFacts.companyId, id)).run();
+        tx.delete(memorySummaries).where(eq(memorySummaries.companyId, id)).run();
 
         // --- Phase 7: the target row itself ---------------------------
         tx.delete(companies).where(eq(companies.id, id)).run();

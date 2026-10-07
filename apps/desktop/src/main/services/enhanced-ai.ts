@@ -10,6 +10,8 @@
  */
 
 import {
+  type KnowledgeGraphRepo,
+  type LongTermMemoryRepo,
   type PlanExecutor,
   type RagRepo,
   type RagService,
@@ -81,8 +83,12 @@ export interface EnhancedAiServiceOptions {
   /** LLM completion function */
   llmComplete?: (prompt: string) => Promise<string>;
 
-  /** Company ID for operations */
-  companyId?: string;
+  /**
+   * Persistent storage for long-term memory and the knowledge graph. Omitted,
+   * both fall back to in-memory stores that forget everything at exit.
+   */
+  memoryRepo?: LongTermMemoryRepo;
+  knowledgeRepo?: KnowledgeGraphRepo;
 
   /**
    * Feature flags from Settings → Enhanced AI.
@@ -105,11 +111,10 @@ export interface EnhancedAiService {
    */
   enhancedQuery(
     query: string,
-    options?: {
-      companyId?: string;
+    options: {
+      companyId: string;
       topK?: number;
       threshold?: number;
-      useExpansion?: boolean;
       includeRelated?: boolean;
       usePlanning?: boolean;
     },
@@ -119,6 +124,17 @@ export interface EnhancedAiService {
     related?: Array<{ entity: string; relation: string }>;
     plan?: ExecutionPlan;
   }>;
+
+  /**
+   * Grounding for a question — retrieved passages, remembered facts and
+   * knowledge-graph entities — without generating an answer. Facts follow the
+   * Long-Term Memory switch and entities the Knowledge Graph switch, so a
+   * caller that composes its own reply (the Copilot) honours both.
+   */
+  retrieveContext(
+    query: string,
+    options: { companyId: string; topK?: number; threshold?: number },
+  ): Promise<EnhancedAiContext>;
 
   /**
    * Index with semantic chunking.
@@ -137,7 +153,7 @@ export interface EnhancedAiService {
     conversation: string,
     options: {
       sourceId: string;
-      companyId?: string;
+      companyId: string;
     },
   ): Promise<number>;
 
@@ -146,8 +162,8 @@ export interface EnhancedAiService {
    */
   queryKnowledge(
     query: string,
-    options?: {
-      companyId?: string;
+    options: {
+      companyId: string;
       maxDepth?: number;
       maxResults?: number;
     },
@@ -166,7 +182,7 @@ export interface EnhancedAiService {
    */
   streamQuery(
     query: string,
-    options?: { companyId?: string; topK?: number; threshold?: number },
+    options: { companyId: string; topK?: number; threshold?: number },
   ): AsyncGenerator<{
     type: string;
     content: string;
@@ -174,13 +190,20 @@ export interface EnhancedAiService {
   }>;
 
   /**
-   * Get service statistics.
+   * Get service statistics, scoped to one company when `companyId` is given.
    */
-  getStats(): {
+  getStats(companyId?: string): {
     rag: { enabled: boolean };
     memory: { factsCount: number };
     knowledge: { nodesCount: number };
   };
+}
+
+/** What `retrieveContext` returns: grounding only, no generated answer. */
+export interface EnhancedAiContext {
+  passages: Array<{ sourceType: string; sourceId: string; content: string; similarity: number }>;
+  facts: Array<{ fact: string; type: string; confidence: number }>;
+  related: Array<{ entity: string; relation: string }>;
 }
 
 /**
@@ -217,8 +240,18 @@ export function chunkText(content: string, maxSize = 512, overlap = 64): string[
   return chunks;
 }
 
-/** Company scope used when a caller does not supply one. */
-const DEFAULT_COMPANY = 'default';
+/**
+ * Every operation is company-scoped and takes the id explicitly. There used to
+ * be a `'default'` fallback, which no company row ever had: reads against it
+ * came back empty and, once memory persisted, writes against it would fail
+ * the company foreign key.
+ */
+function requireCompany(companyId: string | undefined, operation: string): string {
+  if (typeof companyId !== 'string' || companyId.length === 0) {
+    throw new Error(`[enhanced-ai] ${operation}: companyId is required`);
+  }
+  return companyId;
+}
 
 /**
  * Create the Enhanced AI service.
@@ -267,8 +300,14 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
     embedding: { embedText: options.embedText, dimension: options.dimension },
     rag: {
       repo: options.ragRepo,
+      // Retrieve through the indexer's own service when one is supplied. This
+      // option used to be accepted and ignored, so Enhanced AI ran a second
+      // RagService whose query cache the indexer's writes never invalidated.
+      ...(options.ragService ? { service: options.ragService } : {}),
       enableExpansion: constructionFlags.queryExpansionEnabled,
     },
+    ...(options.memoryRepo ? { memory: { repo: options.memoryRepo } } : {}),
+    ...(options.knowledgeRepo ? { knowledge: { repo: options.knowledgeRepo } } : {}),
     planning: {
       enablePlanning: constructionFlags.planningEnabled,
       planningThreshold: constructionFlags.planningThreshold,
@@ -293,7 +332,12 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
    */
   let initPromise: Promise<void> | null = null;
   function ready(): Promise<void> {
-    initPromise ??= ai.initialize();
+    // A rejected initialization is not cached: the next call retries rather
+    // than replaying the same failure for the life of the process.
+    initPromise ??= ai.initialize().catch((err: unknown) => {
+      initPromise = null;
+      throw err;
+    });
     return initPromise;
   }
 
@@ -325,10 +369,10 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
   }
 
   return {
-    async enhancedQuery(query, queryOptions = {}) {
+    async enhancedQuery(query, queryOptions) {
+      const companyId = requireCompany(queryOptions?.companyId, 'enhancedQuery');
       await ready();
       const flags = features();
-      const companyId = queryOptions.companyId ?? DEFAULT_COMPANY;
 
       const result = await ai.query(companyId, query, {
         topK: queryOptions.topK ?? 10,
@@ -353,7 +397,32 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       };
     },
 
+    async retrieveContext(query, retrieveOptions) {
+      const companyId = requireCompany(retrieveOptions?.companyId, 'retrieveContext');
+      await ready();
+      const flags = features();
+
+      const result = await ai.retrieve(companyId, query, {
+        topK: retrieveOptions.topK ?? 8,
+        threshold: retrieveOptions.threshold ?? 0.3,
+        includeFacts: flags.longTermMemoryEnabled,
+        includeRelated: flags.knowledgeGraphEnabled,
+      });
+
+      return {
+        passages: result.context.map((hit) => ({
+          sourceType: hit.sourceType,
+          sourceId: hit.sourceId,
+          content: hit.contentText,
+          similarity: hit.similarity,
+        })),
+        facts: result.facts.map((f) => ({ fact: f.fact, type: f.type, confidence: f.confidence })),
+        related: result.related,
+      };
+    },
+
     async indexWithSemanticChunking(input) {
+      requireCompany(input.companyId, 'indexWithSemanticChunking');
       await ready();
 
       // Semantic chunking splits on real content boundaries (headings,
@@ -362,6 +431,19 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       const chunks = features().semanticChunkingEnabled
         ? await semanticChunkText(input.content)
         : chunkText(input.content);
+
+      // Chunks are stored as `<sourceId>#<i>` (see below), so a re-index that
+      // produces fewer chunks — or switches between one and several — must
+      // first clear every row the previous indexing wrote. Deleting only the
+      // ids about to be rewritten left `X#3`, `X#4` serving deleted text.
+      const previous = new Set(
+        options.ragRepo
+          .listByCompany(input.companyId)
+          .map((row) => row.sourceId)
+          .filter((id) => id === input.sourceId || id.startsWith(`${input.sourceId}#`)),
+      );
+      for (const id of previous) options.ragRepo.deleteBySource(id);
+      if (previous.size > 0) ai.getRagService()?.invalidateCache?.(input.companyId);
 
       let indexed = 0;
       for (let i = 0; i < chunks.length; i++) {
@@ -380,23 +462,21 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
     },
 
     async extractAndStoreFacts(conversation, factOptions) {
+      const companyId = requireCompany(factOptions?.companyId, 'extractAndStoreFacts');
       if (!features().longTermMemoryEnabled || !llmComplete) return 0;
       await ready();
 
-      const facts = await ai.extractFacts(
-        factOptions.companyId ?? DEFAULT_COMPANY,
-        factOptions.sourceId,
-        conversation,
-      );
+      const facts = await ai.extractFacts(companyId, factOptions.sourceId, conversation);
       return facts.length;
     },
 
-    queryKnowledge(query, knowledgeOptions = {}) {
+    queryKnowledge(query, knowledgeOptions) {
+      const companyId = requireCompany(knowledgeOptions?.companyId, 'queryKnowledge');
       if (!features().knowledgeGraphEnabled || !initialized) {
         return { nodes: [], edges: [] };
       }
 
-      const graph = ai.queryKnowledge(knowledgeOptions.companyId ?? DEFAULT_COMPANY, query, {
+      const graph = ai.queryKnowledge(companyId, query, {
         maxDepth: knowledgeOptions.maxDepth ?? 2,
         maxResults: knowledgeOptions.maxResults ?? 20,
       });
@@ -424,11 +504,12 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       return { id: plan.id, query: plan.query, steps: plan.steps };
     },
 
-    async *streamQuery(query, streamOptions = {}) {
+    async *streamQuery(query, streamOptions) {
+      const companyId = requireCompany(streamOptions?.companyId, 'streamQuery');
       await ready();
       const flags = features();
 
-      const { stream, result } = ai.queryStream(streamOptions.companyId ?? DEFAULT_COMPANY, query, {
+      const { stream, result } = ai.queryStream(companyId, query, {
         topK: streamOptions.topK ?? 10,
         threshold: streamOptions.threshold ?? 0.7,
         includeRelated: flags.knowledgeGraphEnabled,
@@ -454,7 +535,7 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       yield { type: 'control', content: '', isFinal: true };
     },
 
-    getStats() {
+    getStats(companyId) {
       if (!initialized) {
         return {
           rag: { enabled: options.ragRepo !== undefined },
@@ -463,7 +544,7 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
         };
       }
 
-      const stats = ai.getStats(DEFAULT_COMPANY);
+      const stats = ai.getStats(companyId);
       return {
         rag: { enabled: true },
         memory: { factsCount: stats.memory.totalFacts },

@@ -145,7 +145,7 @@ Add any supported provider in **Settings > AI Providers**: enter your API key, t
 Team-X/
   apps/desktop/             Electron app
     src/main/               Main process (Node.js + TypeScript)
-      db/                   SQLite + Drizzle ORM (37 migrations)
+      db/                   SQLite + Drizzle ORM (38 migrations)
       ipc/                  Typed IPC handlers (195 registrations / 224 bridge methods)
       orchestrator/         Agent scheduler + event bus
       services/             Vault, backup, MCP host, providers, updater,
@@ -209,7 +209,7 @@ Team-X/
 | Agent framework | Custom orchestrator (not LangChain/CrewAI) |
 | MCP | @modelcontextprotocol/sdk |
 | Local models | Ollama today; `@team-x/local-gguf-runtime` (llama.cpp `b9371`) foundation for native GGUF |
-| Database | better-sqlite3 + Drizzle ORM (37 migrations) |
+| Database | better-sqlite3 + Drizzle ORM (38 migrations) |
 | Full-text search | SQLite FTS5 |
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |

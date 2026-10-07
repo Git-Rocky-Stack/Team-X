@@ -38,10 +38,9 @@ export interface EnhancedAiHandlers {
    */
   query(input: {
     query: string;
-    companyId?: string;
+    companyId: string;
     topK?: number;
     threshold?: number;
-    useExpansion?: boolean;
     includeRelated?: boolean;
     usePlanning?: boolean;
   }): Promise<{
@@ -69,7 +68,7 @@ export interface EnhancedAiHandlers {
   extractAndStoreFacts(input: {
     conversation: string;
     sourceId: string;
-    companyId?: string;
+    companyId: string;
   }): Promise<number>;
 
   /**
@@ -78,7 +77,7 @@ export interface EnhancedAiHandlers {
    */
   queryKnowledge(input: {
     query: string;
-    companyId?: string;
+    companyId: string;
     maxDepth?: number;
     maxResults?: number;
   }): {
@@ -122,11 +121,16 @@ export function buildEnhancedAiHandlers(deps: EnhancedAiHandlersDeps): EnhancedA
       if (!service) {
         throw new Error('Enhanced AI service not available — configure LLM provider first');
       }
+      // `companyId` and `usePlanning` used to be dropped here, so every query
+      // ran against a company that does not exist and returned no context.
+      // Query expansion is not a per-call option: it is fixed when the
+      // pipeline is built (Settings → Enhanced AI, applied on next launch).
       return service.enhancedQuery(input.query, {
+        companyId: input.companyId,
         topK: input.topK,
         threshold: input.threshold,
-        useExpansion: input.useExpansion,
         includeRelated: input.includeRelated,
+        usePlanning: input.usePlanning,
       });
     },
 
@@ -157,6 +161,7 @@ export function buildEnhancedAiHandlers(deps: EnhancedAiHandlersDeps): EnhancedA
         return { nodes: [], edges: [] };
       }
       return service.queryKnowledge(input.query, {
+        companyId: input.companyId,
         maxDepth: input.maxDepth,
         maxResults: input.maxResults,
       });
