@@ -69,6 +69,7 @@ describe('operator / employee labels in consumers', () => {
 
   it('audit-view and commands-view share the operator label', () => {
     expect(consumers['audit-view.tsx']).toContain('actorLabel(');
-    expect(consumers['commands-view.tsx']).toContain('OPERATOR_LABEL');
+    expect(consumers['commands-view.tsx']).toContain('commandActorLabel(');
+    expect(read('../dashboard/commands-view-helpers.ts')).toContain('OPERATOR_LABEL');
   });
 });

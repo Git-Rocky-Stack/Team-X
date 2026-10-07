@@ -134,6 +134,51 @@ describe('createClassifierCompleteFor', () => {
   });
 });
 
+describe('createClassifierCompleteFor — bounds', () => {
+  // The classifier call is a real model call on every palette submit. It had
+  // no timeout (a stalled provider hung the palette) and ignored budgets (it
+  // spent on a company already over its hard cap).
+  it('gives up on a stalled provider after the timeout and aborts the stream', async () => {
+    vi.useFakeTimers();
+    try {
+      let aborted = false;
+      const stalled: ProviderStreamFn = async function* (args) {
+        args.signal?.addEventListener('abort', () => {
+          aborted = true;
+        });
+        await new Promise(() => undefined);
+        yield { done: true, usage: { promptTokens: 0, completionTokens: 0 } };
+      };
+      const { deps, warn } = makeDeps({ stream: stalled });
+
+      const pending = createClassifierCompleteFor({ ...deps, timeoutMs: 5_000 })('co-1')({
+        system: 'S',
+        user: 'U',
+      });
+      await vi.advanceTimersByTimeAsync(5_000);
+
+      await expect(pending).resolves.toBe(CLASSIFIER_FALLBACK_REPLY);
+      expect(aborted).toBe(true);
+      expect(String(warn.mock.calls[0]?.[1])).toMatch(/timed out after 5000 ms/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not call the model for a company over its budget cap', async () => {
+    const { stream, calls } = cannedStream('{}');
+    const { deps, resolveProvider } = makeDeps({ stream });
+
+    const out = await createClassifierCompleteFor({ ...deps, isBudgetBlocked: () => true })('co-1')(
+      { system: 'S', user: 'U' },
+    );
+
+    expect(out).toBe(CLASSIFIER_FALLBACK_REPLY);
+    expect(resolveProvider).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe('createPaletteIntentClassifier', () => {
   it("resolves a structured intent from the model reply for the palette's company", async () => {
     const reply = JSON.stringify({

@@ -2158,6 +2158,9 @@ app
             findSystemAgent: (companyId) =>
               employeesRepo.findSystemByRoleId(companyId, SYSTEM_AGENT_ROLE_ID),
             resolveProvider,
+            // Read-only: getOverview neither pauses nor files approvals.
+            isBudgetBlocked: (companyId) =>
+              (budgetGovernanceServiceInstance?.getOverview(companyId).exceededCount ?? 0) > 0,
           }),
         });
     // DB rows type `status` as `string`; shared-types narrows to the

@@ -15,6 +15,7 @@ import { createRunsRepo } from '../db/repos/runs.js';
 import { createThreadsRepo } from '../db/repos/threads.js';
 import { createTicketsRepo } from '../db/repos/tickets.js';
 import { type TestDbHandle, makeTestDb } from '../db/test-helpers.js';
+import { LOCAL_OWNER_OPERATOR_ID } from '../services/operator-access-service.js';
 
 import { createEventBus } from './event-bus.js';
 import { type MeetingServiceOptions, createMeetingService } from './meeting-service.js';
@@ -134,6 +135,7 @@ async function buildFixture(
     messagesRepo,
     threadsRepo,
     ticketsRepo,
+    bus,
     events,
     companyId,
     ceoId,
@@ -254,6 +256,34 @@ describe('meeting service', () => {
 
       const interjections = f.events.filter((e) => e.type === 'meeting.interjection');
       expect(interjections).toHaveLength(1);
+    });
+
+    it('defaults to the local owner operator id the rest of the app uses', async () => {
+      // The default was 'user-rocky' while chat, tickets, audit and
+      // operator access all use 'rocky', so the operator's meeting messages,
+      // thread membership and filed tickets did not match theirs anywhere else.
+      const service = createMeetingService({
+        orchestrator: f.orchestrator,
+        bus: f.bus,
+        meetingsRepo: f.meetingsRepo,
+        threadsRepo: f.threadsRepo,
+        messagesRepo: f.messagesRepo,
+        employeesRepo: f.employeesRepo,
+        ticketsRepo: f.ticketsRepo,
+      });
+      const { meetingId, threadId } = await service.callMeeting({
+        companyId: f.companyId,
+        chairId: f.ceoId,
+        attendeeIds: [f.ceoId, f.ctoId],
+        agenda: 'Review',
+      });
+
+      service.interject(meetingId, 'Focus on Q2 targets');
+
+      const mine = f.messagesRepo
+        .listByThread(threadId)
+        .find((m) => m.content.includes('Q2 targets'));
+      expect(mine?.authorId).toBe(LOCAL_OWNER_OPERATOR_ID);
     });
 
     it('throws for ended meeting', async () => {

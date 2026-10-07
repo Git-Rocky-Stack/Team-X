@@ -7,7 +7,9 @@
  * Phase 5 — M30 T7.
  */
 
-import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
+import type { Employee, IpcCommandHistoryEntry } from '@team-x/shared-types';
+
+import { OPERATOR_LABEL } from '../audit/actor-label.js';
 
 /**
  * Render a human-readable "time ago" relative to now. Falls back to
@@ -48,4 +50,19 @@ export function truncateText(text: string | undefined, maxChars = 80): string {
   const s = text?.trim() ?? '';
   if (s.length <= maxChars) return s;
   return `${s.slice(0, Math.max(0, maxChars - 3))}...`;
+}
+
+/**
+ * Label for a command's actor. CommandService records palette commands as
+ * `user` (the operator) and Copilot insight actions as `copilot`; any other
+ * id is an employee, named from the list, or left raw so the row stays
+ * traceable.
+ */
+export function commandActorLabel(
+  actorId: string,
+  employees: ReadonlyArray<Pick<Employee, 'id' | 'name'>>,
+): string {
+  if (actorId === 'user') return OPERATOR_LABEL;
+  if (actorId === 'copilot') return 'Copilot';
+  return employees.find((e) => e.id === actorId)?.name ?? actorId;
 }

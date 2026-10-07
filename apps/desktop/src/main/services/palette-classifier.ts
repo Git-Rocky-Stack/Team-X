@@ -49,8 +49,20 @@ export interface ClassifierCompleteDeps<TEmployee> {
   findSystemAgent: (companyId: string) => TEmployee | null;
   /** Same resolver the orchestrator uses; throws when no provider is usable. */
   resolveProvider: (employee: TEmployee) => Promise<{ stream: ProviderStreamFn }>;
+  /**
+   * True when the company is over a budget hard cap. Read-only (it must not
+   * pause the company or file an approval): the classifier then skips the
+   * model and routes the command to the agentic loop, whose own admission
+   * gate reports the budget state.
+   */
+  isBudgetBlocked?: (companyId: string) => boolean;
+  /** Abort a classification that has not finished by then. Default 15 s. */
+  timeoutMs?: number;
   logger?: { warn: (msg: string, err: unknown) => void };
 }
+
+/** A palette submit should not wait longer than this on intent classification. */
+export const CLASSIFIER_TIMEOUT_MS = 15_000;
 
 /**
  * Build a per-company completer factory. Per-company because the
@@ -64,26 +76,51 @@ export function createClassifierCompleteFor<TEmployee>(
   const logger = deps.logger ?? {
     warn: (msg: string, err: unknown) => console.warn('[palette-classifier]', msg, err),
   };
+  const timeoutMs = deps.timeoutMs ?? CLASSIFIER_TIMEOUT_MS;
   let warned = false;
+
+  async function streamReply(
+    stream: ProviderStreamFn,
+    system: string,
+    user: string,
+    signal: AbortSignal,
+  ): Promise<string> {
+    let text = '';
+    for await (const chunk of streamAgent({
+      providerFactory: stream,
+      system,
+      messages: [{ role: 'user', content: user }],
+      signal,
+    })) {
+      if (chunk.kind === 'delta') {
+        text += chunk.delta;
+      }
+    }
+    return text;
+  }
 
   return (companyId) =>
     async ({ system, user }) => {
+      if (deps.isBudgetBlocked?.(companyId)) return CLASSIFIER_FALLBACK_REPLY;
+      const controller = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         const systemAgent = deps.findSystemAgent(companyId);
         if (!systemAgent) {
           throw new Error(`no system-agent for company "${companyId}"`);
         }
         const resolved = await deps.resolveProvider(systemAgent);
-        let text = '';
-        for await (const chunk of streamAgent({
-          providerFactory: resolved.stream,
-          system,
-          messages: [{ role: 'user', content: user }],
-        })) {
-          if (chunk.kind === 'delta') {
-            text += chunk.delta;
-          }
-        }
+        // Abort the stream on timeout, and race it too: a provider that
+        // ignores the signal must not hold the palette.
+        const text = await Promise.race([
+          streamReply(resolved.stream, system, user, controller.signal),
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              controller.abort();
+              reject(new Error(`intent classification timed out after ${timeoutMs} ms`));
+            }, timeoutMs);
+          }),
+        ]);
         warned = false;
         return text;
       } catch (err) {
@@ -95,6 +132,8 @@ export function createClassifierCompleteFor<TEmployee>(
           );
         }
         return CLASSIFIER_FALLBACK_REPLY;
+      } finally {
+        clearTimeout(timer);
       }
     };
 }

@@ -26,6 +26,7 @@ import type { MeetingActionItem, MeetingMode } from '@team-x/shared-types';
 import type { CreateMeetingInput, MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { CreateTicketInput } from '../db/repos/tickets.js';
+import { LOCAL_OWNER_OPERATOR_ID } from '../services/operator-access-service.js';
 
 import type { EventBus } from './event-bus.js';
 import { type MeetingMinutesModelDeps, generateMeetingMinutes } from './meeting-minutes.js';
@@ -88,7 +89,10 @@ export interface MeetingServiceOptions {
   messagesRepo: MeetingServiceMessagesRepo;
   employeesRepo: OrchestratorEmployeesRepo;
   ticketsRepo: MeetingServiceTicketsRepo;
-  /** Actor id of the human operator (interjections, thread membership). */
+  /**
+   * Actor id of the human operator (interjections, thread membership, filed
+   * tickets). Defaults to the local owner id the rest of the app uses.
+   */
   humanUserId?: string;
   /**
    * Model access for end-of-meeting minutes (chair summary + action-item
@@ -135,7 +139,7 @@ export function createMeetingService(opts: MeetingServiceOptions) {
     messagesRepo,
     employeesRepo,
     ticketsRepo,
-    humanUserId = 'user-rocky',
+    humanUserId = LOCAL_OWNER_OPERATOR_ID,
     minutes,
     logger = {
       warn: (msg: string, err?: unknown) => console.warn('[meeting-service]', msg, err),
