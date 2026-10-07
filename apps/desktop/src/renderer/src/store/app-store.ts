@@ -147,6 +147,12 @@ export interface AppState {
   pendingDirectChats: Record<string, PendingDirectChatState>;
   /** Optional section to focus when Settings opens. */
   settingsFocusSection: SettingsSectionFocus | null;
+  /**
+   * A package path another panel has handed to the Portability import field
+   * (Paperclip Import's "Review & import in Portability"). Portability takes
+   * it into its own field and clears it.
+   */
+  portabilityImportRef: string | null;
   /** Incremented when another surface needs the Hire dialog to open. */
   hireDialogRequestNonce: number;
   /**
@@ -177,6 +183,9 @@ export interface AppState {
   setActiveTicketId: (ticketId: string | null) => void;
   setActiveMeetingId: (meetingId: string | null) => void;
   setSettingsFocusSection: (section: SettingsSectionFocus | null) => void;
+  /** Hand a package path to the Portability import and scroll Settings to it. */
+  stagePortabilityImport: (packageRef: string) => void;
+  clearPortabilityImportRef: () => void;
   openSettingsSection: (section: SettingsSectionFocus) => void;
   requestHireDialog: () => void;
   ackAnnunciator: (id: string, fingerprint: string) => void;
@@ -231,6 +240,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   copilotSidebarOpen: false,
   pendingDirectChats: {},
   settingsFocusSection: null,
+  portabilityImportRef: null,
   hireDialogRequestNonce: 0,
   ackedAnnunciators: {},
 
@@ -316,6 +326,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
   setActiveMeetingId: (meetingId) => set({ activeMeetingId: meetingId }),
   setSettingsFocusSection: (section) => set({ settingsFocusSection: section }),
+  stagePortabilityImport: (packageRef) =>
+    set({ portabilityImportRef: packageRef, settingsFocusSection: 'portability' }),
+  clearPortabilityImportRef: () => set({ portabilityImportRef: null }),
   openSettingsSection: (section) =>
     set({
       activeView: 'settings',

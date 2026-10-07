@@ -174,6 +174,7 @@ import type {
   PackedThreadContext,
   PaperclipImportBridgePreview,
   PaperclipPreviewRequest,
+  PaperclipSavePackageResponse,
   PreviewCompanyPackageImportRequest,
   PreviewCompanyPackageImportResponse,
   PrivateOperatorAccessPlan,
@@ -350,6 +351,7 @@ const CHANNELS = {
   runtimeProfilesValidate: 'runtimeProfiles.validate',
   runtimeOperationsSnapshot: 'runtimeOperations.snapshot',
   paperclipPreview: 'paperclip.preview',
+  paperclipSavePackage: 'paperclip.savePackage',
   privateOperatorPlan: 'privateOperator.plan',
   privateOperatorSnapshot: 'privateOperator.snapshot',
   autonomyDoctorRun: 'autonomyDoctor.run',
@@ -703,6 +705,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     paperclip: {
       preview: (req: PaperclipPreviewRequest) =>
         ipc.invoke(CHANNELS.paperclipPreview, req) as Promise<PaperclipImportBridgePreview>,
+      savePackage: (req: PaperclipPreviewRequest) =>
+        ipc.invoke(CHANNELS.paperclipSavePackage, req) as Promise<PaperclipSavePackageResponse>,
     },
     privateOperator: {
       // Forwarded verbatim: the main-process handler is the trust boundary and

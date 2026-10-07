@@ -10,13 +10,16 @@
  * inside the same call that performs the read, and the easiest way to write
  * that is the wrong way — preview `null` and let the main process reject it.
  *
- * Nothing here writes. `usePaperclipImportPreview` returns a `packageData` that
- * the existing portability import flow can commit; committing is that flow's
- * job, not this one's.
+ * `usePaperclipImportPreview` writes nothing. `useSavePaperclipPackage` writes
+ * the converted package to a file the operator chooses — the file the
+ * portability import flow commits; committing is that flow's job, not this one's.
  */
 
 import { useMutation } from '@tanstack/react-query';
-import type { PaperclipImportBridgePreview } from '@team-x/shared-types';
+import type {
+  PaperclipImportBridgePreview,
+  PaperclipSavePackageResponse,
+} from '@team-x/shared-types';
 
 import { ipc } from '@/lib/ipc.js';
 
@@ -46,5 +49,16 @@ export function useSelectPaperclipFolder() {
 export function usePaperclipImportPreview() {
   return useMutation<PaperclipImportBridgePreview, Error, string>({
     mutationFn: (folderPath: string) => ipc.paperclip.preview({ folderPath }),
+  });
+}
+
+/**
+ * Converts the folder again in the main process and writes the package through
+ * a native save dialog. Resolves `{ canceled: true, packagePath: null }` when
+ * the operator backs out.
+ */
+export function useSavePaperclipPackage() {
+  return useMutation<PaperclipSavePackageResponse, Error, string>({
+    mutationFn: (folderPath: string) => ipc.paperclip.savePackage({ folderPath }),
   });
 }

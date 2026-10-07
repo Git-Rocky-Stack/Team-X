@@ -43,9 +43,11 @@
 
 import {
   access as fsAccess,
+  mkdir as fsMkdir,
   open as fsOpen,
   readdir as fsReaddir,
   stat as fsStat,
+  writeFile as fsWriteFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -3173,13 +3175,27 @@ app
     // `companyPortability.importPackage`, which owns secret binding and the
     // per-entity plan. Two write paths that can create a workspace would be one
     // too many.
+    const paperclipPackageDir = join(userDataDir(), 'portability');
     const paperclipHandlers = buildPaperclipHandlers({
       loadExportFolder: loadPaperclipExportFolder,
       previewBridge: previewPaperclipImportBridge,
       appVersion: app.getVersion(),
+      // `paperclip.savePackage` writes the converted package where the
+      // operator chooses, opening in Portability's own export folder; the
+      // Portability panel then imports that file.
+      showSaveDialog: async (options) => {
+        await fsMkdir(paperclipPackageDir, { recursive: true });
+        const owner = BrowserWindow.getFocusedWindow() ?? undefined;
+        return owner ? dialog.showSaveDialog(owner, options) : dialog.showSaveDialog(options);
+      },
+      writeFile: (path, contents) => fsWriteFile(path, contents, 'utf8'),
+      defaultSaveDir: paperclipPackageDir,
     });
     ipcMain.handle('paperclip.preview', async (_evt, request) =>
       paperclipHandlers.preview(request),
+    );
+    ipcMain.handle('paperclip.savePackage', async (_evt, request) =>
+      paperclipHandlers.savePackage(request),
     );
 
     // ---- Private operator access IPC handlers ----------------------------

@@ -1,4 +1,14 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { validateCompanyPackage } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
+
+import {
+  loadPaperclipExportFolder,
+  previewPaperclipImportBridge,
+} from '../services/paperclip-import-bridge.js';
 
 import { type PaperclipHandlersDeps, buildPaperclipHandlers } from './paperclip-handlers.js';
 
@@ -125,5 +135,107 @@ describe('paperclip.preview', () => {
     });
     const handlers = buildPaperclipHandlers(deps);
     await expect(handlers.preview({ folderPath: 'D:/missing' })).rejects.toThrow(/D:\/missing/);
+  });
+});
+
+describe('paperclip.savePackage', () => {
+  function saveDeps(dialog: { canceled: boolean; filePath?: string }) {
+    const written: Array<{ path: string; contents: string }> = [];
+    const showSaveDialog = vi.fn(async () => dialog);
+    const deps = makeDeps({
+      previewBridge: vi.fn(() =>
+        makePreview({
+          importPreview: { suggestedSlug: 'acme-ops', manifest: { mode: 'workspace-export' } },
+        }),
+      ),
+      showSaveDialog,
+      writeFile: vi.fn(async (path: string, contents: string) => {
+        written.push({ path, contents });
+      }),
+      defaultSaveDir: 'D:/portability',
+    });
+    return { deps, written, showSaveDialog };
+  }
+
+  it('rebuilds the package from the folder and writes it where the operator chose', async () => {
+    const { deps, written, showSaveDialog } = saveDeps({
+      canceled: false,
+      filePath: 'D:/out/acme.teamx-package.json',
+    });
+
+    const result = await buildPaperclipHandlers(deps).savePackage({ folderPath: 'D:/export' });
+
+    expect(deps.loadExportFolder).toHaveBeenCalledWith('D:/export');
+    expect(showSaveDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPath: expect.stringMatching(/acme-ops\.teamx-package\.json$/),
+      }),
+    );
+    expect(result).toEqual({ canceled: false, packagePath: 'D:/out/acme.teamx-package.json' });
+    expect(JSON.parse(written[0]?.contents ?? '')).toEqual(makePreview().packageData);
+  });
+
+  it('writes nothing when the operator cancels the dialog', async () => {
+    const { deps, written } = saveDeps({ canceled: true });
+
+    const result = await buildPaperclipHandlers(deps).savePackage({ folderPath: 'D:/export' });
+
+    expect(result).toEqual({ canceled: true, packagePath: null });
+    expect(written).toEqual([]);
+  });
+
+  it('adds the package extension when the chosen name has none', async () => {
+    const { deps, written } = saveDeps({ canceled: false, filePath: 'D:/out/acme' });
+
+    const result = await buildPaperclipHandlers(deps).savePackage({ folderPath: 'D:/export' });
+
+    expect(result.packagePath).toBe('D:/out/acme.teamx-package.json');
+    expect(written[0]?.path).toBe('D:/out/acme.teamx-package.json');
+  });
+
+  it('refuses an empty folder path before reading anything', async () => {
+    const { deps } = saveDeps({ canceled: true });
+
+    await expect(buildPaperclipHandlers(deps).savePackage({ folderPath: '' })).rejects.toThrow(
+      /folderPath is required/,
+    );
+    expect(deps.loadExportFolder).not.toHaveBeenCalled();
+  });
+});
+
+describe('paperclip.savePackage — round trip into Portability', () => {
+  it('writes a file that passes the same validation Portability applies on import', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'teamx-paperclip-save-'));
+    try {
+      const exportDir = join(dir, 'export');
+      await mkdir(exportDir);
+      await writeFile(
+        join(exportDir, 'company.json'),
+        JSON.stringify({ id: 'pc-acme', name: 'Acme Ops' }),
+      );
+      await writeFile(
+        join(exportDir, 'agents.json'),
+        JSON.stringify([{ id: 'agent-1', name: 'Researcher' }]),
+      );
+      const target = join(dir, 'acme.teamx-package.json');
+
+      const handlers = buildPaperclipHandlers({
+        loadExportFolder: loadPaperclipExportFolder,
+        previewBridge: previewPaperclipImportBridge,
+        appVersion: '3.4.0',
+        showSaveDialog: async () => ({ canceled: false, filePath: target }),
+        writeFile: (path, contents) => writeFile(path, contents, 'utf8'),
+        defaultSaveDir: dir,
+      });
+
+      const result = await handlers.savePackage({ folderPath: exportDir });
+      const validation = validateCompanyPackage(JSON.parse(await readFile(target, 'utf8')));
+
+      expect(result).toEqual({ canceled: false, packagePath: target });
+      expect(validation.ok).toBe(true);
+      if (validation.ok) expect(validation.value.company.name).toBe('Acme Ops');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -120,7 +120,11 @@ import type {
   DashboardEvent,
 } from './events.js';
 import type { LocalGgufApi } from './local-gguf.js';
-import type { PaperclipImportBridgePreview, PaperclipPreviewRequest } from './paperclip.js';
+import type {
+  PaperclipImportBridgePreview,
+  PaperclipPreviewRequest,
+  PaperclipSavePackageResponse,
+} from './paperclip.js';
 import type {
   PrivateOperatorAccessPlan,
   PrivateOperatorAccessRequest,
@@ -2826,11 +2830,15 @@ export interface IpcContract {
     request: string;
     response: RagDeleteForCompanyResponse;
   };
-  // Paperclip import bridge (preview only — the commit path is
-  // companyPortability.importPackage)
+  // Paperclip import bridge (preview + save the converted package — the
+  // commit path is companyPortability.importPackage)
   'paperclip.preview': {
     request: PaperclipPreviewRequest;
     response: PaperclipImportBridgePreview;
+  };
+  'paperclip.savePackage': {
+    request: PaperclipPreviewRequest;
+    response: PaperclipSavePackageResponse;
   };
   // Private operator access (read-only supervision planning)
   'privateOperator.plan': {
@@ -3560,6 +3568,11 @@ export interface TeamXApi {
      * `packageData` to `companyPortability.importPackage` to commit.
      */
     preview(req: PaperclipPreviewRequest): Promise<PaperclipImportBridgePreview>;
+    /**
+     * Convert the folder again and write the package to a `.teamx-package.json`
+     * chosen in a native save dialog — the file Portability imports.
+     */
+    savePackage(req: PaperclipPreviewRequest): Promise<PaperclipSavePackageResponse>;
   };
   privateOperator: {
     /**

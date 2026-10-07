@@ -289,6 +289,7 @@ const REQUEST_CHANNELS = [
   'rag.deleteForCompany',
   // Paperclip import bridge (preview only)
   'paperclip.preview',
+  'paperclip.savePackage',
   // Private operator access (read-only supervision planning)
   'privateOperator.plan',
   'privateOperator.snapshot',
