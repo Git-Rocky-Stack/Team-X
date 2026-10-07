@@ -78,7 +78,12 @@ import {
   makeOpenRouterStream,
   makeTogetherStream,
 } from '@team-x/provider-router';
-import type { ProviderConfig, ProviderKind } from '@team-x/shared-types';
+import {
+  PRIVACY_TIER_RANK,
+  type PrivacyTier,
+  type ProviderConfig,
+  type ProviderKind,
+} from '@team-x/shared-types';
 
 import { getDb } from '../db/client.js';
 import { createCompaniesRepo } from '../db/repos/companies.js';
@@ -118,6 +123,96 @@ const DEFAULT_MODEL_BY_KIND: Partial<Record<ProviderKind, string>> = {
   // because the target endpoint's model catalog is unknown.
 };
 
+// -----------------------------------------------------------------------------
+// Privacy-tier enforcement
+// -----------------------------------------------------------------------------
+
+/** Provider-side tier names, as the refusal message phrases them. */
+const PROVIDER_TIER_NAME: Record<PrivacyTier, string> = {
+  local: 'Local',
+  'open-source-cloud': 'Open-Source Cloud',
+  'proprietary-cloud': 'Proprietary Cloud',
+};
+
+/** Max-tier names — mirror the Settings → Privacy option labels verbatim. */
+const MAX_TIER_LABEL: Record<PrivacyTier, string> = {
+  local: 'Local Only',
+  'open-source-cloud': 'Open-Source Cloud',
+  'proprietary-cloud': 'All Providers',
+};
+
+/** What the user can switch to instead, per max tier. */
+const ALLOWED_ALTERNATIVE: Record<PrivacyTier, string> = {
+  local: 'a local provider (Ollama)',
+  'open-source-cloud': 'a local or open-source cloud provider',
+  'proprietary-cloud': 'a provider with a recognised privacy tier',
+};
+
+function isPrivacyTier(value: string): value is PrivacyTier {
+  return Object.hasOwn(PRIVACY_TIER_RANK, value);
+}
+
+/**
+ * Thrown when Settings → Privacy's max tier forbids the provider a run (or an
+ * embedding call) resolved to. The message is user-facing — it reaches the
+ * dashboard verbatim through the orchestrator's `work.failed` path — so it
+ * names the provider, both tiers, and the two ways out. The structured fields
+ * let callers branch without parsing the message.
+ */
+export class PrivacyTierViolationError extends Error {
+  readonly providerId: string;
+  readonly providerName: string;
+  readonly providerTier: string;
+  readonly maxTier: string;
+
+  constructor(args: {
+    provider: ProviderConfig;
+    model: string;
+    maxTier: string;
+    /** Where the user fixes it — the employee (runs) or Settings → Retrieval (embeddings). */
+    remedyScope: 'none' | 'employee' | 'retrieval';
+    purpose: 'run' | 'embedding';
+  }) {
+    const { provider, model, maxTier } = args;
+    const providerTierName = isPrivacyTier(provider.privacyTier)
+      ? PROVIDER_TIER_NAME[provider.privacyTier]
+      : 'Unclassified';
+    const maxLabel = isPrivacyTier(maxTier) ? MAX_TIER_LABEL[maxTier] : MAX_TIER_LABEL.local;
+    const alternative = isPrivacyTier(maxTier)
+      ? ALLOWED_ALTERNATIVE[maxTier]
+      : ALLOWED_ALTERNATIVE.local;
+    const scope =
+      args.remedyScope === 'employee'
+        ? ' for this employee'
+        : args.remedyScope === 'retrieval'
+          ? ' in Settings → Retrieval'
+          : '';
+    const subject = args.purpose === 'embedding' ? 'Embedding provider' : 'Provider';
+    super(
+      `${subject} "${provider.name} (${model})" is ${providerTierName}-tier, but Settings → Privacy allows ${maxLabel}. Choose ${alternative}${scope} or raise the privacy tier.`,
+    );
+    this.name = 'PrivacyTierViolationError';
+    this.providerId = provider.id;
+    this.providerName = provider.name;
+    this.providerTier = provider.privacyTier;
+    this.maxTier = maxTier;
+  }
+}
+
+/**
+ * `true` when `provider` sits above `maxTier` on the shared
+ * `PRIVACY_TIER_RANK` scale. Fails closed in both directions: a provider row
+ * with an unrecognised tier ranks as the least private, and an unrecognised
+ * max tier (a corrupted settings row) ranks as Local Only.
+ */
+function exceedsPrivacyTier(provider: ProviderConfig, maxTier: string): boolean {
+  const providerRank = isPrivacyTier(provider.privacyTier)
+    ? PRIVACY_TIER_RANK[provider.privacyTier]
+    : Number.POSITIVE_INFINITY;
+  const maxRank = isPrivacyTier(maxTier) ? PRIVACY_TIER_RANK[maxTier] : PRIVACY_TIER_RANK.local;
+  return providerRank > maxRank;
+}
+
 /**
  * Resolved provider binding returned to the orchestrator. The shape
  * intentionally matches `ResolveProvider`'s return type from
@@ -155,6 +250,14 @@ export interface ProviderFactoryDeps {
   providersService: ProvidersService;
   secretsStore: SecretsReader;
   companiesRepo: ProviderFactoryCompaniesRepo;
+  /**
+   * Settings → Privacy's max tier, read on EVERY resolution so a change
+   * applies to the next run without rebuilding the factory. When present,
+   * `create` and `resolveForEmployee` refuse a provider above it with a
+   * `PrivacyTierViolationError`. Absent = no enforcement (unit suites and
+   * ad-hoc factories keep their pre-enforcement behaviour).
+   */
+  getMaxPrivacyTier?: () => PrivacyTier;
 }
 
 export interface ProviderFactory {
@@ -167,7 +270,9 @@ export interface ProviderFactory {
    *   - the provider id does not exist in the registry,
    *   - the provider is disabled,
    *   - the provider is unconfigured (cloud + no key in keychain),
-   *   - the provider kind has no Phase 1 adapter.
+   *   - the provider kind has no Phase 1 adapter,
+   *   - the provider's privacy tier exceeds `getMaxPrivacyTier()`
+   *     (`PrivacyTierViolationError`).
    */
   create(args: { providerId: string; model?: string }): Promise<ResolvedProvider>;
 
@@ -176,13 +281,38 @@ export interface ProviderFactory {
    * `employee.providerPref` first, then falls back through the Phase 1
    * default order. Implements the `ResolveProvider` contract from
    * `orchestrator/index.ts` so it can be passed straight to
-   * `buildOrchestrator`.
+   * `buildOrchestrator`. The privacy tier is checked against the RESOLVED
+   * provider — a disallowed pick is refused, never silently re-routed, so
+   * the user learns why their employee did not run.
    */
   resolveForEmployee(employee: EmployeeRow): Promise<ResolvedProvider>;
 }
 
 export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactory {
-  const { providersService, secretsStore, companiesRepo } = deps;
+  const { providersService, secretsStore, companiesRepo, getMaxPrivacyTier } = deps;
+
+  /**
+   * Refuse `provider` when it sits above Settings → Privacy's max tier.
+   * Runs after selection and BEFORE `buildStream`, so a refused provider
+   * never has its API key read or an SDK client constructed.
+   */
+  function assertPrivacyTierAllows(
+    provider: ProviderConfig,
+    model: string,
+    remedyScope: 'none' | 'employee',
+  ): void {
+    if (getMaxPrivacyTier === undefined) return;
+    const maxTier = getMaxPrivacyTier();
+    if (exceedsPrivacyTier(provider, maxTier)) {
+      throw new PrivacyTierViolationError({
+        provider,
+        model,
+        maxTier,
+        remedyScope,
+        purpose: 'run',
+      });
+    }
+  }
 
   /**
    * Resolve a `ProviderConfig` row to a bound `ProviderStreamFn`.
@@ -386,6 +516,7 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
       );
     }
     const model = defaultModelFor(provider, args.model);
+    assertPrivacyTierAllows(provider, model, 'none');
     const stream = await buildStream(provider, model);
     return { providerName: provider.id, providerKind: provider.kind, model, stream };
   }
@@ -393,6 +524,7 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
   async function resolveForEmployee(employee: EmployeeRow): Promise<ResolvedProvider> {
     const provider = await pickConfigured(employee.providerPref, employee.companyId);
     const model = defaultModelFor(provider, employee.modelPref);
+    assertPrivacyTierAllows(provider, model, 'employee');
     const stream = await buildStream(provider, model);
     return { providerName: provider.id, providerKind: provider.kind, model, stream };
   }
@@ -616,6 +748,15 @@ export interface EmbedProvidersReader {
  * Only `ollama`, `openai`, and `custom-openai` kinds support embeddings
  * via the Phase 5 adapter surface. Cloud providers require a key; local
  * Ollama does not.
+ *
+ * Privacy tier: embedding sends the indexed / queried text to the provider,
+ * so the same Settings → Privacy rule as `ProviderFactory` applies. When
+ * `getMaxPrivacyTier` is passed, the returned adapter re-reads it on EVERY
+ * `embed()` call and rejects with `PrivacyTierViolationError` before any
+ * text reaches a provider above the tier. Checked per call rather than at
+ * build time because the RAG composition root builds the adapter once at
+ * boot and keeps it — a build-time check would neither honour a later tier
+ * change nor surface a refusal (it would only switch RAG off silently).
  */
 export async function buildEmbedAdapter(args: {
   provider: string;
@@ -623,10 +764,39 @@ export async function buildEmbedAdapter(args: {
   dimension: number;
   providersService: EmbedProvidersReader;
   secretsStore: EmbedSecretsReader;
+  getMaxPrivacyTier?: () => PrivacyTier;
 }): Promise<EmbedAdapter | null> {
   const config = args.providersService.get(args.provider);
   if (!config || !config.enabled) return null;
 
+  const adapter = await buildRawEmbedAdapter(config, args);
+  const getMaxPrivacyTier = args.getMaxPrivacyTier;
+  if (adapter === null || getMaxPrivacyTier === undefined) return adapter;
+
+  return {
+    model: adapter.model,
+    dimension: adapter.dimension,
+    embed: async (texts: string[]): Promise<number[][]> => {
+      const maxTier = getMaxPrivacyTier();
+      if (exceedsPrivacyTier(config, maxTier)) {
+        throw new PrivacyTierViolationError({
+          provider: config,
+          model: args.model,
+          maxTier,
+          remedyScope: 'retrieval',
+          purpose: 'embedding',
+        });
+      }
+      return adapter.embed(texts);
+    },
+  };
+}
+
+/** Kind→embed-adapter dispatch for `buildEmbedAdapter` (no tier guard). */
+async function buildRawEmbedAdapter(
+  config: ProviderConfig,
+  args: { model: string; dimension: number; secretsStore: EmbedSecretsReader },
+): Promise<EmbedAdapter | null> {
   if (config.kind === 'ollama') {
     const opts: { baseURL?: string; model: string; dimension: number } = {
       model: args.model,
