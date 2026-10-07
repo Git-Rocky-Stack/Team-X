@@ -528,7 +528,10 @@ export function createQueryExpansionService(options: {
   let totalExpansions = 0;
   const methodCounts: Record<string, number> = {};
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: QueryExpansionService = {
     async expand(query, context) {
       totalExpansions++;
 
@@ -554,7 +557,7 @@ export function createQueryExpansionService(options: {
     },
 
     async retrieveWithExpansion(query, context, retrieveFn) {
-      const expanded = await this.expand(query, context);
+      const expanded = await impl.expand(query, context);
       return retrieveWithExpansion(query, expanded, retrieveFn);
     },
 
@@ -566,4 +569,5 @@ export function createQueryExpansionService(options: {
       };
     },
   };
+  return impl;
 }

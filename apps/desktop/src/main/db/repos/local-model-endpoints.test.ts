@@ -89,6 +89,104 @@ describe('localModelEndpointsRepo', () => {
     expect(count).toBe(0);
   });
 
+  // ---------------------------------------------------------------------
+  // updateConfig — the write behind `localGguf.endpoint.update`.
+  //
+  // The channel accepts a partial of { name, baseUrl, authHeaderKeyRef } and
+  // must return one consistent row. Composing rename() + updateAuthRef()
+  // would take two write+readback round-trips and leave a window where the
+  // row carries a new name but the old URL, so the update is a single
+  // statement. `baseUrl` had no setter at all before this.
+  // ---------------------------------------------------------------------
+
+  it('updateConfig changes the baseUrl', () => {
+    const e = repo.insert({ name: 'X', baseUrl: 'http://old:1234', authHeaderKeyRef: null });
+    const updated = repo.updateConfig(e.id, { baseUrl: 'http://new:5678' });
+    expect(updated.baseUrl).toBe('http://new:5678');
+    expect(updated.name).toBe('X');
+  });
+
+  it('updateConfig applies name, baseUrl and authHeaderKeyRef in one write', () => {
+    const e = repo.insert({ name: 'X', baseUrl: 'http://old', authHeaderKeyRef: null });
+    const updated = repo.updateConfig(e.id, {
+      name: 'Bench rig',
+      baseUrl: 'http://192.168.1.7:8080',
+      authHeaderKeyRef: 'local-gguf.endpoint:bench',
+    });
+    expect(updated).toMatchObject({
+      name: 'Bench rig',
+      baseUrl: 'http://192.168.1.7:8080',
+      authHeaderKeyRef: 'local-gguf.endpoint:bench',
+    });
+  });
+
+  it('updateConfig leaves omitted fields untouched', () => {
+    const e = repo.insert({
+      name: 'X',
+      baseUrl: 'http://x',
+      authHeaderKeyRef: 'local-gguf.endpoint:x',
+    });
+    const updated = repo.updateConfig(e.id, { name: 'Y' });
+    expect(updated.baseUrl).toBe('http://x');
+    expect(updated.authHeaderKeyRef).toBe('local-gguf.endpoint:x');
+  });
+
+  it('updateConfig can clear authHeaderKeyRef with an explicit null', () => {
+    const e = repo.insert({
+      name: 'X',
+      baseUrl: 'http://x',
+      authHeaderKeyRef: 'local-gguf.endpoint:x',
+    });
+    expect(repo.updateConfig(e.id, { authHeaderKeyRef: null }).authHeaderKeyRef).toBeNull();
+  });
+
+  it('updateConfig bumps updatedAt but preserves createdAt', () => {
+    const e = repo.insert({ name: 'X', baseUrl: 'http://x', authHeaderKeyRef: null });
+    ctx.raw.run('UPDATE local_model_endpoints SET updated_at = 1 WHERE id = ?', [e.id]);
+    const updated = repo.updateConfig(e.id, { name: 'Y' });
+    expect(updated.updatedAt).toBeGreaterThan(1);
+    expect(updated.createdAt).toBe(e.createdAt);
+  });
+
+  it('updateConfig throws for an unknown id rather than silently no-opping', () => {
+    expect(() => repo.updateConfig('nope', { name: 'Y' })).toThrow(/not found/i);
+  });
+
+  // ---------------------------------------------------------------------
+  // clearStatus — used when an endpoint's baseUrl changes.
+  //
+  // `updateStatus` always stamps last_checked_at = now, which is right for a
+  // probe result and wrong for "forget the previous verdict": it would leave
+  // a row reading status 'unknown' next to a check timestamp, i.e. never
+  // probed but checked at 14:32. The two operations are genuinely different
+  // writes, so they are two methods.
+  // ---------------------------------------------------------------------
+
+  it('clearStatus resets status, lastCheckedAt and lastError together', () => {
+    const e = repo.insert({ name: 'X', baseUrl: 'http://x', authHeaderKeyRef: null });
+    repo.updateStatus(e.id, 'reachable', null);
+    expect(repo.getById(e.id)?.lastCheckedAt).toBeGreaterThan(0);
+
+    const cleared = repo.clearStatus(e.id);
+
+    expect(cleared.status).toBe('unknown');
+    expect(cleared.lastCheckedAt).toBeNull();
+    expect(cleared.lastError).toBeNull();
+    // The stored row must agree with what was returned.
+    expect(repo.getById(e.id)).toEqual(cleared);
+  });
+
+  it('clearStatus wipes a recorded error as well as a success', () => {
+    const e = repo.insert({ name: 'X', baseUrl: 'http://x', authHeaderKeyRef: null });
+    repo.updateStatus(e.id, 'unreachable', 'ECONNREFUSED');
+
+    expect(repo.clearStatus(e.id).lastError).toBeNull();
+  });
+
+  it('clearStatus throws for an unknown id', () => {
+    expect(() => repo.clearStatus('nope')).toThrow(/not found/i);
+  });
+
   it('rejects a non-Local privacy_tier (CHECK constraint)', () => {
     expect(() =>
       ctx.raw.run(

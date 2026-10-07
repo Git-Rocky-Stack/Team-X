@@ -21,7 +21,10 @@ export interface UpsertThreadDigestInput {
 type ThreadDigestsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createThreadDigestsRepo<TRunResult>(db: ThreadDigestsDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     getByCompanyThread(companyId: string, threadId: string): ThreadDigestRow | null {
       return (
         db
@@ -33,7 +36,7 @@ export function createThreadDigestsRepo<TRunResult>(db: ThreadDigestsDb<TRunResu
     },
 
     upsert(input: UpsertThreadDigestInput): ThreadDigestRow {
-      const existing = this.getByCompanyThread(input.companyId, input.threadId);
+      const existing = impl.getByCompanyThread(input.companyId, input.threadId);
       const now = Date.now();
       if (existing) {
         const next: ThreadDigestRow = {
@@ -78,6 +81,7 @@ export function createThreadDigestsRepo<TRunResult>(db: ThreadDigestsDb<TRunResu
       return row;
     },
   };
+  return impl;
 }
 
 export type ThreadDigestsRepo = ReturnType<typeof createThreadDigestsRepo>;

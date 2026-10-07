@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./errors": "./src/errors.ts"
+    "./errors": "./src/errors.ts",
+    "./gpu-probe/parsers": "./src/gpu-probe/parsers.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

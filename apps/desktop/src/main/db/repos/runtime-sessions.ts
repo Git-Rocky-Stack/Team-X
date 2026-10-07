@@ -65,7 +65,10 @@ function isLiveStatus(status: string): status is (typeof LIVE_RUNTIME_SESSION_ST
 }
 
 export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     create(input: CreateRuntimeSessionInput): string {
       const id = nanoid();
       const now = input.now ?? Date.now();
@@ -109,9 +112,9 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
     },
 
     listLiveByCompany(companyId: string): RuntimeSessionRow[] {
-      return this.listByCompany(companyId).filter(
-        (row) => row.endedAt === null && isLiveStatus(row.status),
-      );
+      return impl
+        .listByCompany(companyId)
+        .filter((row) => row.endedAt === null && isLiveStatus(row.status));
     },
 
     update(
@@ -119,7 +122,7 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
       patch: UpdateRuntimeSessionInput,
       now = Date.now(),
     ): RuntimeSessionRow | null {
-      const existing = this.getById(id);
+      const existing = impl.getById(id);
       if (!existing) return null;
       const next: Record<string, unknown> = { updatedAt: now };
       if (patch.status !== undefined) next.status = patch.status;
@@ -133,7 +136,7 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
       if (patch.failureReason !== undefined) next.failureReason = patch.failureReason;
       if (patch.endedAt !== undefined) next.endedAt = patch.endedAt;
       db.update(runtimeSessions).set(next).where(eq(runtimeSessions.id, id)).run();
-      return this.getById(id);
+      return impl.getById(id);
     },
 
     recordHeartbeat(input: RecordRuntimeHeartbeatInput): RuntimeHeartbeatRow {
@@ -196,7 +199,7 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
       input: { status?: RuntimeSessionStatus; failureReason?: string | null; now?: number } = {},
     ): RuntimeSessionRow | null {
       const now = input.now ?? Date.now();
-      return this.update(
+      return impl.update(
         id,
         {
           status: input.status ?? 'ended',
@@ -216,7 +219,7 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
     }): RuntimeSessionRow[] {
       const now = input.now ?? Date.now();
       const candidates = input.companyId
-        ? this.listByCompany(input.companyId)
+        ? impl.listByCompany(input.companyId)
         : db.select().from(runtimeSessions).all();
       const staleRows = candidates.filter(
         (row) =>
@@ -235,10 +238,11 @@ export function createRuntimeSessionsRepo<TRunResult>(db: RuntimeSessionsDb<TRun
           .run();
       }
       return staleRows
-        .map((row) => this.getById(row.id))
+        .map((row) => impl.getById(row.id))
         .filter((row): row is RuntimeSessionRow => row !== null);
     },
   };
+  return impl;
 }
 
 export type RuntimeSessionsRepo = ReturnType<typeof createRuntimeSessionsRepo>;

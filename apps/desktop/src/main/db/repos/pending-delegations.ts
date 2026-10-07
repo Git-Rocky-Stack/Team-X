@@ -87,7 +87,10 @@ export interface MarkRejectedInput {
 type PendingDelegationsDb<TRunResult> = BaseSQLiteDatabase<'sync', TRunResult, Schema>;
 
 export function createPendingDelegationsRepo<TRunResult>(db: PendingDelegationsDb<TRunResult>) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     /**
      * Insert a new pending-delegation row and return its id. The caller
      * has already chosen the assignee from the fallback chain and
@@ -157,7 +160,7 @@ export function createPendingDelegationsRepo<TRunResult>(db: PendingDelegationsD
 
     /** Convenience — equivalent to listByCompany(companyId, 'pending'). */
     listPendingByCompany(companyId: string): PendingDelegationRow[] {
-      return this.listByCompany(companyId, 'pending');
+      return impl.listByCompany(companyId, 'pending');
     },
 
     /**
@@ -247,6 +250,7 @@ export function createPendingDelegationsRepo<TRunResult>(db: PendingDelegationsD
       return updated;
     },
   };
+  return impl;
 }
 
 export type PendingDelegationsRepo = ReturnType<typeof createPendingDelegationsRepo>;

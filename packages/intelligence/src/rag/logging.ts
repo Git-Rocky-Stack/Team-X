@@ -7,6 +7,8 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
+import { appendFileSync, existsSync, renameSync, statSync, unlinkSync } from 'node:fs';
+
 export interface RetrievalLogEntry {
   /** Log entry version */
   version: string;
@@ -176,11 +178,77 @@ export class StructuredLogger {
   private minLevel: RetrievalLogEntry['level'];
   private useConsole: boolean;
   private structured: boolean;
+  private readonly file: Required<NonNullable<LoggerOptions['file']>> | null;
+  /**
+   * Latches after the first file-sink failure so a permanently unwritable
+   * path (bad permissions, missing directory) reports once instead of
+   * emitting a warning per log line — which would itself become the flood
+   * the logger is supposed to manage.
+   */
+  private fileSinkFailed = false;
 
   constructor(options: LoggerOptions = {}) {
     this.minLevel = options.minLevel ?? 'info';
     this.useConsole = options.console !== false;
     this.structured = options.structured !== false;
+    this.file = options.file
+      ? {
+          path: options.file.path,
+          // 10 MB per file, 5 backups — bounded by default so an
+          // unattended long-running index cannot fill the disk.
+          maxSize: options.file.maxSize ?? 10 * 1024 * 1024,
+          maxFiles: options.file.maxFiles ?? 5,
+        }
+      : null;
+  }
+
+  /**
+   * Append one JSON line to the configured log file, rotating first if the
+   * live file has reached its size cap.
+   *
+   * Logging must never be able to break the operation it is observing, so
+   * every failure here is swallowed after a single warning.
+   */
+  private writeToFile(line: string): void {
+    const sink = this.file;
+    if (!sink || this.fileSinkFailed) return;
+
+    try {
+      this.rotateIfNeeded(sink);
+      appendFileSync(
+        sink.path,
+        `${line}
+`,
+        'utf8',
+      );
+    } catch (err) {
+      this.fileSinkFailed = true;
+      console.warn(
+        `[rag-logging] file sink disabled — cannot write "${sink.path}":`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  /**
+   * Roll `rag.log` -> `rag.log.1` -> ... -> `rag.log.<maxFiles>`, dropping
+   * the oldest backup. Called before the append so the live file never
+   * exceeds `maxSize` by more than one entry.
+   */
+  private rotateIfNeeded(sink: Required<NonNullable<LoggerOptions['file']>>): void {
+    if (sink.maxSize <= 0) return;
+    if (!existsSync(sink.path)) return;
+    if (statSync(sink.path).size < sink.maxSize) return;
+
+    const oldest = `${sink.path}.${sink.maxFiles}`;
+    if (existsSync(oldest)) unlinkSync(oldest);
+
+    for (let i = sink.maxFiles - 1; i >= 1; i--) {
+      const from = `${sink.path}.${i}`;
+      if (existsSync(from)) renameSync(from, `${sink.path}.${i + 1}`);
+    }
+
+    renameSync(sink.path, `${sink.path}.1`);
   }
 
   /**
@@ -253,7 +321,11 @@ export class StructuredLogger {
       }
     }
 
-    // TODO: Add file logging support
+    if (this.file) {
+      // The file sink is always structured JSON-lines regardless of the
+      // console `structured` preference: a log file exists to be parsed.
+      this.writeToFile(JSON.stringify(entry));
+    }
   }
 }
 

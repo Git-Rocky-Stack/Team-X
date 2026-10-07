@@ -331,7 +331,10 @@ export function createPlanExecutor(options: {
   const revisions = new Map<string, PlanRevision[]>();
   const running = new Set<string>();
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: PlanExecutor = {
     async createPlan(query, context) {
       const tools = context?.availableTools?.join(', ') || 'various tools';
       const prompt = PLANNING_TEMPLATES.createPlan
@@ -479,13 +482,13 @@ export function createPlanExecutor(options: {
               } else if (trackingOptions.autoRevise) {
                 step.status = 'failed';
                 // Auto-revise plan
-                const revisedPlan = await this.revisePlan(
+                const revisedPlan = await impl.revisePlan(
                   plan,
                   `Step failed: ${error}`,
                   'error_recovery',
                 );
                 // Restart execution with revised plan
-                return this.executePlan(revisedPlan, context);
+                return impl.executePlan(revisedPlan, context);
               } else {
                 step.status = 'failed';
                 plan.status = 'failed';
@@ -681,6 +684,7 @@ export function createPlanExecutor(options: {
       return lines.join('\n');
     },
   };
+  return impl;
 }
 
 /**
@@ -722,11 +726,13 @@ function topologicalSort(plan: ExecutionPlan): string[] {
 /**
  * Create a plan-enhanced agentic loop wrapper.
  */
-export function createPlanAwareLoop(options: {
-  executor: PlanExecutor;
-  enablePlanning: boolean;
-  planningThreshold: number; // Minimum query complexity to trigger planning
-}): {
+/**
+ * Named because the implementation literal has to be annotated with it: the
+ * literal's methods call each other lexically rather than through `this`, so
+ * they no longer get their parameter types from the function's return-type
+ * position and need the type at the declaration instead.
+ */
+export interface PlanAwareLoop {
   shouldCreatePlan: (query: string, estimatedSteps?: number) => boolean;
   wrapLoopExecution: (
     // biome-ignore lint/suspicious/noExplicitAny: runLoop's return type varies per caller and is consumed opaquely by the wrapper
@@ -734,8 +740,17 @@ export function createPlanAwareLoop(options: {
     query: string,
     // biome-ignore lint/suspicious/noExplicitAny: same — result is opaque
   ) => Promise<{ result: any; plan?: ExecutionPlan }>;
-} {
-  return {
+}
+
+export function createPlanAwareLoop(options: {
+  executor: PlanExecutor;
+  enablePlanning: boolean;
+  planningThreshold: number; // Minimum query complexity to trigger planning
+}): PlanAwareLoop {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: PlanAwareLoop = {
     shouldCreatePlan(query, estimatedSteps = 1) {
       if (!options.enablePlanning) return false;
 
@@ -746,7 +761,7 @@ export function createPlanAwareLoop(options: {
 
     async wrapLoopExecution(runLoop, query) {
       // If query is simple enough, run directly
-      if (!this.shouldCreatePlan(query)) {
+      if (!impl.shouldCreatePlan(query)) {
         const result = await runLoop();
         return { result };
       }
@@ -764,4 +779,5 @@ export function createPlanAwareLoop(options: {
       return { result, plan: trackedPlan };
     },
   };
+  return impl;
 }

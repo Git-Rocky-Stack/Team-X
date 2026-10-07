@@ -85,6 +85,19 @@ describe('top-bar release-marker freeze (M41 T6)', () => {
     expect(captured).toBe('Phase 6');
   });
 
+  it('carries no unreachable "Coming soon" tab affordance', () => {
+    // Audit F11 — `TabDef.disabled` was declared, threaded into the button's
+    // `disabled` attribute, the `cursor-not-allowed opacity-40` classes and a
+    // "Coming soon" tooltip, but no entry in TABS ever set it. That is dead
+    // UI: a disabled state and a user-facing tooltip string that can never
+    // render. Pin its absence so it cannot creep back unreferenced.
+    const src = readFileSync(TOP_BAR_PATH, 'utf8');
+
+    expect(src).not.toContain('Coming soon');
+    expect(src).not.toContain('cursor-not-allowed');
+    expect(src).not.toContain('tab.disabled');
+  });
+
   it('pins all release package.json versions to their current markers', () => {
     for (const marker of RELEASE_PACKAGE_JSON_MARKERS) {
       const packageJsonPath = marker.path;

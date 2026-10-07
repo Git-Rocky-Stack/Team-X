@@ -2,10 +2,12 @@
  * RagService — the one-call facade used by both the on-write indexer
  * and the agent-turn retriever. Composes chunker + embedder + repo + cache.
  *
- * Phase 5 — M29 (updated with cache, sqlite-vec accelerated retrieval).
+ * Phase 5 — M29 (updated with cache and an optional ANN index).
  */
 
 import type { EmbeddingSourceType } from '@team-x/shared-types';
+import type { AnnIndex } from './ann-index.js';
+import { buildAnnIndex, queryAnnIndex } from './ann-index.js';
 
 import type { QueryCache, RetrievalOptions } from './cache.js';
 import { type ChunkOptions, chunkText } from './chunker.js';
@@ -36,32 +38,11 @@ export interface RagUpsertInput {
 
 /**
  * Structural interface the service needs from the embeddings repo.
- * Updated to include the new similaritySearch method.
  */
 export interface RagRepo {
   upsert(input: RagUpsertInput): string;
   deleteBySource(sourceId: string): number;
   listByCompany(companyId: string): RagEmbeddingRow[];
-  /**
-   * Fast similarity search using sqlite-vec.
-   * If not available, falls back to listByCompany + brute force.
-   */
-  similaritySearch?(input: {
-    companyId: string;
-    queryVector: Float32Array;
-    topK: number;
-    threshold: number;
-    excludeSourceIds?: string[];
-  }): Promise<
-    Array<{
-      id: string;
-      sourceId: string;
-      sourceType: EmbeddingSourceType;
-      chunkIndex: number;
-      contentText: string;
-      similarity: number;
-    }>
-  >;
 }
 
 export interface RagServiceOptions {
@@ -81,14 +62,41 @@ export interface RagServiceOptions {
    */
   cacheTtl?: number;
   /**
-   * Force fallback to brute-force retrieval even if similaritySearch is available.
-   * Useful for testing or when sqlite-vec is not available.
-   */
-  forceBruteForce?: boolean;
-  /**
    * Enable/disable caching at runtime.
    */
   enableCache?: boolean;
+  /**
+   * Approximate nearest-neighbour retrieval.
+   *
+   * The exact path scores every stored chunk on every query, which is fine
+   * for a small corpus and quadratic-feeling once it is not. The index
+   * partitions the company's vectors and scans only the nearest partitions.
+   *
+   * It engages only above `minVectors`, so a corpus below the floor keeps
+   * today's exact behaviour unchanged. That floor is the safety property:
+   * ANN is approximate, and silently trading recall for speed on a small
+   * corpus would degrade answer quality for no measurable gain.
+   */
+  ann?: AnnRetrievalOptions;
+}
+
+export interface AnnRetrievalOptions {
+  /** Default true — but inert until the corpus passes `minVectors`. */
+  enabled?: boolean;
+  /**
+   * Corpus size at which the index starts being used. Default 4096: below
+   * that a full scan costs single-digit milliseconds and exactness is free.
+   */
+  minVectors?: number;
+  /** k-means partitions. Default √N. */
+  clusters?: number;
+  /**
+   * Partitions scanned per query. Default ⌈clusters/3⌉, which measured ~97.5%
+   * recall@10 on the clustered fixture in `ann-index.test.ts`.
+   */
+  nProbe?: number;
+  /** Fixed by default, so cluster layout and recall are reproducible. */
+  seed?: number;
 }
 
 export interface IndexSourceInput {
@@ -138,20 +146,6 @@ function floatArrayToBuffer(vec: number[]): Buffer {
   return Buffer.from(new Float32Array(vec).buffer);
 }
 
-/**
- * Normalize a vector to unit length (L2 normalization).
- * Required for sqlite-vec distance calculations to work correctly.
- */
-function normalizeVector(vec: number[]): number[] {
-  let sumSquares = 0;
-  for (const v of vec) {
-    sumSquares += v * v;
-  }
-  const magnitude = Math.sqrt(sumSquares);
-  if (magnitude === 0) return vec;
-  return vec.map((v) => v / magnitude);
-}
-
 export function createRagService(opts: RagServiceOptions): RagService {
   const now = opts.now ?? Date.now;
   const idGen =
@@ -161,6 +155,19 @@ export function createRagService(opts: RagServiceOptions): RagService {
   const cache = opts.cache;
   const cacheEnabled = opts.enableCache !== false && !!cache;
   const cacheTtl = opts.cacheTtl ?? 300000; // 5 minutes default
+
+  const annOpts = opts.ann ?? {};
+  const annEnabled = annOpts.enabled !== false;
+  const annMinVectors = annOpts.minVectors ?? 4096;
+
+  /**
+   * Per-company index, rebuilt whenever the company's vectors change.
+   *
+   * `rowCount` is a cheap staleness guard, not the primary one — the write
+   * paths below drop the entry outright. It catches the case the write paths
+   * cannot see: rows changed by something other than this service instance.
+   */
+  const annIndexes = new Map<string, { index: AnnIndex; rowCount: number }>();
 
   return {
     async indexSource(input: IndexSourceInput): Promise<number> {
@@ -173,6 +180,10 @@ export function createRagService(opts: RagServiceOptions): RagService {
       if (cache) {
         cache.invalidateByCompany(input.companyId);
       }
+      // The partition layout was built from the old vector set. Drop it, or
+      // the next retrieve answers from a snapshot that predates this write
+      // and the new chunks are unreachable — silently, with no error.
+      annIndexes.delete(input.companyId);
 
       // Upsert is idempotent on (sourceId, chunkIndex), but a shorter
       // re-index (fewer chunks than last time) would leave stale rows.
@@ -231,47 +242,62 @@ export function createRagService(opts: RagServiceOptions): RagService {
       const queryVector = vectors[0];
       if (!queryVector) return [];
 
-      // Normalize query vector for sqlite-vec
-      const normalizedQuery = new Float32Array(normalizeVector(queryVector));
+      // Brute-force cosine similarity over the company's stored chunks.
+      //
+      // This is the only ranking path. An ANN branch that called
+      // `repo.similaritySearch` used to run ahead of it, but the sqlite-vec
+      // table it queried was never created (its migration was never
+      // journaled and the extension was never loaded), so it threw on every
+      // call and fell through to exactly this code. It was removed along
+      // with the `forceBruteForce` escape hatch that only existed to skip it.
+      const rows = opts.repo.listByCompany(input.companyId);
+      const exclude = new Set(input.excludeSourceIds ?? []);
 
-      let results: Array<{
-        sourceType: EmbeddingSourceType;
-        sourceId: string;
-        chunkIndex: number;
-        contentText: string;
-        similarity: number;
-      }> = [];
+      let results: RetrievalHit[];
 
-      // Try sqlite-vec accelerated search first
-      if (!opts.forceBruteForce && opts.repo.similaritySearch) {
-        try {
-          const vecResults = await opts.repo.similaritySearch({
-            companyId: input.companyId,
-            queryVector: normalizedQuery,
-            topK: input.topK,
-            threshold: input.threshold,
-            excludeSourceIds: input.excludeSourceIds,
-          });
-
-          results = vecResults.map((r) => ({
-            sourceType: r.sourceType,
-            sourceId: r.sourceId,
-            chunkIndex: r.chunkIndex,
-            contentText: r.contentText,
-            similarity: r.similarity,
-          }));
-        } catch (error) {
-          // Fall through to brute force if similaritySearch fails
-          const errMsg = error instanceof Error ? error.message : String(error);
-          console.warn('[RAG] similaritySearch failed, falling back to brute force:', errMsg);
+      if (annEnabled && rows.length >= annMinVectors) {
+        // Partitioned scan. Reuse the cached index when the corpus has not
+        // moved; the rows themselves are re-read every call, so `contentText`
+        // is always current even when the partition layout is not rebuilt.
+        let cachedIndex = annIndexes.get(input.companyId);
+        if (!cachedIndex || cachedIndex.rowCount !== rows.length) {
+          cachedIndex = {
+            index: buildAnnIndex(
+              rows.map((row) => ({ id: row.id, vector: bufferToFloatArray(row.embedding) })),
+              { clusters: annOpts.clusters, seed: annOpts.seed ?? 0x5eed },
+            ),
+            rowCount: rows.length,
+          };
+          annIndexes.set(input.companyId, cachedIndex);
         }
-      }
 
-      // Fallback: brute-force cosine similarity (original implementation)
-      if (results.length === 0) {
-        const rows = opts.repo.listByCompany(input.companyId);
-        const exclude = new Set(input.excludeSourceIds ?? []);
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        const nProbe = annOpts.nProbe ?? Math.max(1, Math.ceil(cachedIndex.index.clusterCount / 3));
 
+        results = queryAnnIndex(cachedIndex.index, queryVector, {
+          topK: input.topK,
+          threshold: input.threshold,
+          nProbe,
+          // Excluded sources are dropped inside the scan so they do not
+          // consume slots out of topK.
+          filter: (id) => {
+            const row = byId.get(id);
+            return row !== undefined && !exclude.has(row.sourceId);
+          },
+        }).flatMap((hit) => {
+          const row = byId.get(hit.id);
+          if (!row) return [];
+          return [
+            {
+              sourceType: row.sourceType,
+              sourceId: row.sourceId,
+              chunkIndex: row.chunkIndex,
+              contentText: row.contentText,
+              similarity: hit.similarity,
+            },
+          ];
+        });
+      } else {
         const ranked: RetrievalHit[] = [];
         for (const row of rows) {
           if (exclude.has(row.sourceId)) continue;
@@ -310,6 +336,10 @@ export function createRagService(opts: RagServiceOptions): RagService {
       if (cache) {
         cache.invalidateBySourceIds([sourceId]);
       }
+      // This signature carries no companyId, so the owning company cannot be
+      // identified — clear every layout rather than guess. Deletes are rare
+      // and a rebuild is one k-means pass, so correctness wins over reuse.
+      annIndexes.clear();
       return opts.repo.deleteBySource(sourceId);
     },
 
@@ -317,6 +347,7 @@ export function createRagService(opts: RagServiceOptions): RagService {
       if (cache) {
         cache.invalidateByCompany(companyId);
       }
+      annIndexes.delete(companyId);
     },
 
     getCacheStats() {

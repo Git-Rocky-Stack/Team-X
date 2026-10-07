@@ -217,7 +217,10 @@ export function createExtensionsRepo(db: DB) {
 export type ExtensionsRepo = ReturnType<typeof createExtensionsRepo>;
 
 export function createSkillAssignmentsRepo(db: DB) {
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     create(input: CreateSkillAssignmentInput): string {
       const id = nanoid();
       const now = Date.now();
@@ -279,7 +282,7 @@ export function createSkillAssignmentsRepo(db: DB) {
     },
 
     upsert(input: CreateSkillAssignmentInput): string {
-      const existing = this.getByScope(
+      const existing = impl.getByScope(
         input.companyId,
         input.extensionId,
         input.employeeId ?? null,
@@ -295,13 +298,14 @@ export function createSkillAssignmentsRepo(db: DB) {
           .run();
         return existing.id;
       }
-      return this.create(input);
+      return impl.create(input);
     },
 
     delete(id: string): void {
       db.delete(skillAssignments).where(eq(skillAssignments.id, id)).run();
     },
   };
+  return impl;
 }
 
 export type SkillAssignmentsRepo = ReturnType<typeof createSkillAssignmentsRepo>;
@@ -316,7 +320,10 @@ export function createAuthorityRepo(db: DB) {
     };
   }
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl = {
     createGrant(input: CreateAuthorityGrantInput): string {
       const id = nanoid();
       const now = Date.now();
@@ -424,7 +431,7 @@ export function createAuthorityRepo(db: DB) {
     },
 
     listPendingByCompany(companyId: string): AuthorityRequestRow[] {
-      return this.listRequestsByCompany(companyId, 'pending');
+      return impl.listRequestsByCompany(companyId, 'pending');
     },
 
     reviewRequest(input: ReviewAuthorityRequestInput): void {
@@ -438,6 +445,7 @@ export function createAuthorityRepo(db: DB) {
         .run();
     },
   };
+  return impl;
 }
 
 export type AuthorityRepo = ReturnType<typeof createAuthorityRepo>;

@@ -321,6 +321,50 @@ describe('createLibraryService', () => {
   // addFolder
   // -------------------------------------------------------------------------
 
+  describe('listFolders', () => {
+    // Without this, `removeFolder(id)` and `scanFolder(id)` are unreachable
+    // from any UI: both take a folder id and nothing in the contract could
+    // produce one. Two live channels with no way to call them.
+    it('returns every registered watch folder', async () => {
+      const h = makeHarness(ctx);
+      h.scan.mockResolvedValue({ candidates: [], error: null });
+      await h.service.addFolder('/models/a', true);
+      await h.service.addFolder('/models/b', false);
+
+      const folders = await h.service.listFolders();
+
+      expect(folders.map((f) => f.path).sort()).toEqual(['/models/a', '/models/b']);
+    });
+
+    it('returns an empty list when no folder is watched', async () => {
+      const h = makeHarness(ctx);
+      await expect(h.service.listFolders()).resolves.toEqual([]);
+    });
+
+    it('surfaces the id that removeFolder and scanFolder need', async () => {
+      const h = makeHarness(ctx);
+      h.scan.mockResolvedValue({ candidates: [], error: null });
+      const added = await h.service.addFolder('/models/a', true);
+
+      const [listed] = await h.service.listFolders();
+
+      expect(listed?.id).toBe(added.id);
+      await expect(h.service.scanFolder(listed?.id as string)).resolves.toBeDefined();
+    });
+
+    it('reports the reachability status the resilience monitor recorded', async () => {
+      const h = makeHarness(ctx);
+      h.scan.mockResolvedValue({ candidates: [], error: null });
+      const added = await h.service.addFolder('/models/a', true);
+      h.watchFolders.updateStatus(added.id, 'unreachable', 'ENOENT');
+
+      const [listed] = await h.service.listFolders();
+
+      expect(listed?.status).toBe('unreachable');
+      expect(listed?.lastScanError).toBe('ENOENT');
+    });
+  });
+
   describe('addFolder', () => {
     it('inserts the folder row, starts a watcher + monitor, and runs an initial scan', async () => {
       const h = makeHarness(ctx);

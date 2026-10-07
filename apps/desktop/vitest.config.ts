@@ -35,5 +35,24 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'out', 'e2e/**'],
+    /**
+     * Raised from the 5,000ms default on measured evidence, not on a hunch.
+     *
+     * A full-workspace run of this suite is ~4,100 tests across 328 files, and
+     * the per-test cost scales with how loaded the machine is: the same test
+     * measured 1,163ms idle and 5,280ms during a parallel sweep — a ~4.5x
+     * multiplier — and timed out. That was a real flake, reproduced once in
+     * five consecutive full runs.
+     *
+     * With the userEvent keystroke cost fixed at its source, the slowest
+     * remaining test under that same load was 4,412ms ("autonomy benchmark
+     * service"), leaving 12% headroom against the default. That is too thin
+     * to be stable, and the next timeout would again look like a mystery
+     * rather than a slow machine.
+     *
+     * This buys headroom; it does not weaken anything. No assertion changes,
+     * and a genuinely hung test still fails — 10 seconds later.
+     */
+    testTimeout: 15_000,
   },
 });

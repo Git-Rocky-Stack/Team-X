@@ -19,7 +19,15 @@ import { probeNvidia } from './nvidia';
 import { probeRocm } from './rocm';
 import { probeVulkan } from './vulkan';
 
-async function defaultRunCommand(
+/**
+ * Spawn a probe tool and collect its output.
+ *
+ * Exported because BenchmarkService's VRAM sampler needs the same bounded,
+ * timeout-guarded spawn as the probes themselves — duplicating it in the
+ * Electron-main composition root would mean a second copy of the output cap
+ * and the Windows kill guard, free to drift from this one.
+ */
+export async function runProbeCommand(
   cmd: string,
   args: string[],
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -56,7 +64,7 @@ async function defaultRunCommand(
 
 export async function probeGpu(): Promise<GpuInventory> {
   const cpuResult = probeCpu();
-  const deps = { runCommand: defaultRunCommand, timeoutMs: 3000 };
+  const deps = { runCommand: runProbeCommand, timeoutMs: 3000 };
   const [nvidia, rocm, vulkan, metal] = await Promise.all([
     probeNvidia(deps),
     probeRocm(deps),

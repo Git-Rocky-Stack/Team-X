@@ -19,10 +19,12 @@ import { CopilotSection } from './copilot-section.js';
 import { EnhancedAiSection } from './enhanced-ai-section.js';
 import { ExtensionsSection } from './extensions-section.js';
 import { MemorySection } from './memory-section.js';
+import { PaperclipImportSection } from './paperclip-import-section.js';
 import { PermissionsSection } from './permissions-section.js';
 import { PlannerSection } from './planner-section.js';
 import { PortabilitySection } from './portability-section.js';
 import { PrivacySection } from './privacy-section.js';
+import { PrivateOperatorSection } from './private-operator-section.js';
 import { ProvidersSection } from './providers-section.js';
 import { RagSection } from './rag-section.js';
 import { RuntimeSection } from './runtime-section.js';
@@ -94,6 +96,16 @@ export function SettingsView() {
         <section data-settings-section="portability">
           <ErrorBoundary componentName="PortabilitySection">
             <PortabilitySection />
+          </ErrorBoundary>
+        </section>
+        <section data-settings-section="paperclip">
+          <ErrorBoundary componentName="PaperclipImportSection">
+            <PaperclipImportSection />
+          </ErrorBoundary>
+        </section>
+        <section data-settings-section="private-operator">
+          <ErrorBoundary componentName="PrivateOperatorSection">
+            <PrivateOperatorSection />
           </ErrorBoundary>
         </section>
         <section data-settings-section="memory">

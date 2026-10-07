@@ -4,13 +4,21 @@
  * Runs once at startup and caches the result for the session. Used by
  * the strategy picker to auto-select between Hybrid/Always-On/Lean.
  *
- * Phase 3 — M19. Windows-focused; macOS/Linux stubs return
- * conservative defaults (Phase 4 will add cross-platform detection).
+ * Cross-platform: `wmic` on Windows, `system_profiler` on macOS,
+ * `nvidia-smi` (then `lspci`) on Linux. The macOS and Linux branches reuse
+ * the parsers from `@team-x/local-gguf-runtime`'s GPU probe rather than
+ * re-implementing them.
+ *
+ * Phase 3 — M19.
  */
 
 import { execFileSync } from 'node:child_process';
 import { cpus, platform, totalmem } from 'node:os';
 
+import {
+  parseNvidiaSmiCsv,
+  parseSystemProfiler,
+} from '@team-x/local-gguf-runtime/gpu-probe/parsers';
 import type { HardwareProfile } from '@team-x/shared-types';
 
 let cachedProfile: HardwareProfile | null = null;
@@ -66,11 +74,114 @@ export function detectHardware(): HardwareProfile {
     } catch {
       // GPU detection failed — assume none
     }
+  } else if (plat === 'darwin') {
+    const mac = detectDarwinGpu(totalRamGb);
+    gpuDetected = mac.detected;
+    gpuName = mac.name;
+    gpuVramGb = mac.vramGb;
+  } else if (plat === 'linux') {
+    const linux = detectLinuxGpu();
+    gpuDetected = linux.detected;
+    gpuName = linux.name;
+    gpuVramGb = linux.vramGb;
   }
-  // macOS / Linux stubs (Phase 4)
 
   cachedProfile = { cpuCores, totalRamGb, gpuDetected, gpuName, gpuVramGb, platform: plat };
   return cachedProfile;
+}
+
+interface GpuDetection {
+  detected: boolean;
+  name: string | null;
+  vramGb: number | null;
+}
+
+const NO_GPU: GpuDetection = { detected: false, name: null, vramGb: null };
+
+/**
+ * Fraction of unified memory Apple documents as addressable by the GPU on
+ * Apple Silicon. `system_profiler` reports no VRAM line for these parts
+ * (memory is shared), so reporting `null` would tell the strategy picker
+ * "unknown" when the GPU can in fact address most of system RAM.
+ */
+const APPLE_UNIFIED_MEMORY_GPU_SHARE = 0.7;
+
+/**
+ * macOS GPU detection via `system_profiler SPDisplaysDataType`.
+ *
+ * Parsing is delegated to `parseSystemProfiler`, the same tested parser the
+ * local-GGUF Metal probe uses — this path exists precisely because that
+ * parser had no desktop consumer.
+ */
+function detectDarwinGpu(totalRamGb: number): GpuDetection {
+  try {
+    const output = execFileSync('system_profiler', ['SPDisplaysDataType'], {
+      encoding: 'utf-8',
+      timeout: 5000,
+    });
+    const device = parseSystemProfiler(output).devices[0];
+    if (!device) return NO_GPU;
+
+    return {
+      detected: true,
+      name: device.name,
+      // Discrete cards report real VRAM; Apple Silicon reports 0 because
+      // the pool is unified, so derive the GPU-addressable share instead.
+      vramGb:
+        device.vramMb > 0
+          ? Math.round((device.vramMb / 1024) * 10) / 10
+          : Math.round(totalRamGb * APPLE_UNIFIED_MEMORY_GPU_SHARE * 10) / 10,
+    };
+  } catch {
+    return NO_GPU;
+  }
+}
+
+/**
+ * Linux GPU detection: `nvidia-smi` first because it reports exact VRAM,
+ * then `lspci` as the vendor-neutral fallback for AMD/Intel parts where no
+ * vendor tool is guaranteed to be installed.
+ */
+function detectLinuxGpu(): GpuDetection {
+  try {
+    const output = execFileSync(
+      'nvidia-smi',
+      ['--query-gpu=name,memory.total,driver_version', '--format=csv,noheader'],
+      { encoding: 'utf-8', timeout: 5000 },
+    );
+    const device = parseNvidiaSmiCsv(output).devices[0];
+    if (device) {
+      return {
+        detected: true,
+        name: device.name,
+        vramGb: Math.round((device.vramMb / 1024) * 10) / 10,
+      };
+    }
+  } catch {
+    // No NVIDIA tooling — fall through to lspci.
+  }
+
+  try {
+    const output = execFileSync('lspci', [], { encoding: 'utf-8', timeout: 5000 });
+    for (const line of output.split('\n')) {
+      // lspci class names for graphics parts. Anything else (audio,
+      // bridges, NICs) must not be mistaken for a GPU.
+      const match =
+        /^\S+\s+(?:VGA compatible controller|3D controller|Display controller):\s*(.+)$/.exec(
+          line.trim(),
+        );
+      const name = match?.[1]?.trim();
+      if (name) {
+        // lspci exposes no VRAM figure. `null` is the honest answer —
+        // a fabricated number would be worse than "unknown".
+        return { detected: true, name, vramGb: null };
+      }
+    }
+  } catch {
+    // Neither probe available.
+  }
+
+  return NO_GPU;
 }
 
 /** Clear the cached profile. **Test-only.** */

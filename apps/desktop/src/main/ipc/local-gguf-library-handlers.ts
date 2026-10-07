@@ -23,6 +23,7 @@ export const LOCAL_GGUF_LIBRARY_CHANNELS = [
   'localGguf.library.get',
   'localGguf.library.addFile',
   'localGguf.library.addFolder',
+  'localGguf.library.listFolders',
   'localGguf.library.removeModel',
   'localGguf.library.removeFolder',
   'localGguf.library.scanFolder',
@@ -56,6 +57,7 @@ export function registerLocalGgufLibraryHandlers(
   ipc.handle('localGguf.library.addFolder', (_event, path: string, recursive: boolean) =>
     library.addFolder(path, recursive),
   );
+  ipc.handle('localGguf.library.listFolders', () => library.listFolders());
 
   // ── remove ──────────────────────────────────────────────────────────────
   ipc.handle('localGguf.library.removeModel', (_event, id: string) => library.removeModel(id));

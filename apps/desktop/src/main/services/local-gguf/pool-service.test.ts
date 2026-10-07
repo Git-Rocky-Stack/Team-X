@@ -390,4 +390,36 @@ describe('pool-service', () => {
       expect(status.loaded).toHaveLength(0);
     });
   });
+  describe('lastTuningFor', () => {
+    // The tuning the pool hands `spawnServer` — auto-tune overlaid with the
+    // user's advanced-param overrides — was computed and then discarded.
+    // BenchmarkService has to record `nCtxUsed` / `nGpuLayersUsed` for every
+    // run, and re-deriving them elsewhere would be a second implementation
+    // that can drift from the values the server was actually started with.
+    // This is main-process only; the IPC contract in shared-types is untouched.
+    it('reports the tuning a loaded model was actually started with', async () => {
+      const h = makeHarness();
+      await h.service.load('model-1');
+
+      const spawned = firstCallArg<SpawnServerOptions>(h.spawnServer);
+      expect(h.service.lastTuningFor('model-1')).toEqual({
+        nCtx: spawned.nCtx,
+        nGpuLayers: spawned.nGpuLayers,
+      });
+    });
+
+    it('reflects an advanced-param override rather than the auto-tuned base', async () => {
+      const h = makeHarness({
+        advanced: makeAdvancedParams({ nCtx: 2048, nGpuLayers: 12 }),
+      });
+      await h.service.load('model-1');
+
+      expect(h.service.lastTuningFor('model-1')).toEqual({ nCtx: 2048, nGpuLayers: 12 });
+    });
+
+    it('returns null for a model that has never been loaded', () => {
+      const h = makeHarness();
+      expect(h.service.lastTuningFor('never-loaded')).toBeNull();
+    });
+  });
 });

@@ -104,11 +104,61 @@ export interface ProactiveTriggerServiceDeps {
   settingsRepo: {
     getProactive(): { enabled: boolean; autonomyMode: ExtensionsAutonomyMode };
   };
+  /**
+   * Governed dispatch path for proactive work.
+   *
+   * `scanForWork` previously synthesized `proactive-thread-*` /
+   * `proactive-msg-*` ids for rows that were never inserted and called
+   * `orchestrator.enqueueChat` directly, which skipped budget admission
+   * entirely. The dispatcher owns thread creation, trigger-message
+   * creation, budget governance and the `proactive.*` lifecycle events, so
+   * it is a required dependency — there is no ungoverned fallback.
+   */
+  dispatcher: ProactiveDispatcherLike;
   logger?: {
     warn(msg: string, err?: unknown): void;
     error(msg: string, err?: unknown): void;
   };
   now?: () => number;
+}
+
+/**
+ * Structural subset of `ProactiveDispatcher` (orchestrator/proactive-dispatch)
+ * that this service needs. Declared structurally so the service stays
+ * unit-testable without importing the orchestrator barrel.
+ */
+export interface ProactiveDispatcherLike {
+  enqueueProactive(args: {
+    companyId: string;
+    employeeId: string;
+    trigger: 'goal_decompose' | 'work_scan' | 'background_monitor';
+    triggerId: string;
+    sourceGoalId?: string;
+    sourceTicketId?: string;
+  }): Promise<
+    | { success: true; threadId: string; userMessageId: string }
+    | { success: false; error: string; reason?: string }
+  >;
+}
+
+/**
+ * Observable proactive runtime state for one company.
+ *
+ * Every field is something the service can actually prove, so the metric
+ * tiles that render it (ProactiveControls, Settings → Extensions) cannot
+ * drift from reality:
+ *   - `activeWork`  — dispatches handed to the orchestrator whose turn has
+ *     not settled yet. `enqueueChat` resolves on turn COMPLETION, so this
+ *     is an exact in-flight count.
+ *   - `queuedWork`  — eligible tickets the running scan has accepted but
+ *     not yet dispatched.
+ *   - `lastScanAt`  — epoch ms at which the most recent scan finished, or
+ *     null when this company has never been scanned.
+ */
+export interface ProactiveRuntimeState {
+  activeWork: number;
+  queuedWork: number;
+  lastScanAt: number | null;
 }
 
 export interface ProactiveTriggerService {
@@ -123,6 +173,9 @@ export interface ProactiveTriggerService {
 
   // Query current state
   isEnabled(companyId: string): boolean;
+
+  /** Observable runtime counters for one company. Never synthesized. */
+  getState(companyId: string): ProactiveRuntimeState;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +195,25 @@ export function createProactiveTriggerService(
   // When global settings.enabled is true, all companies are enabled UNLESS
   // they're in this disabled set.
   const disabledCompanies = new Set<string>();
+
+  // Per-company runtime counters backing `getState`. Process-local by
+  // design: they describe work in flight *right now* in this main process,
+  // which is exactly what the dashboard tiles claim to show.
+  const runtimeState = new Map<string, ProactiveRuntimeState>();
+
+  function stateFor(companyId: string): ProactiveRuntimeState {
+    let current = runtimeState.get(companyId);
+    if (!current) {
+      current = { activeWork: 0, queuedWork: 0, lastScanAt: null };
+      runtimeState.set(companyId, current);
+    }
+    return current;
+  }
+
+  function getState(companyId: string): ProactiveRuntimeState {
+    const current = stateFor(companyId);
+    return { ...current };
+  }
 
   /**
    * Resolve the system agent employee for a company.
@@ -395,115 +467,152 @@ Use the decompose_project tool to generate the proposal.`;
     // Filter for unassigned, open tickets
     const unassignedTickets = tickets.filter((t) => t.assigneeId === null && t.status === 'open');
 
+    // The scan has cleared every gate, so it is genuinely running: publish
+    // the backlog it is about to work through. A scan refused upstream
+    // (disabled / paused) deliberately does not touch these counters —
+    // nothing was scanned.
+    const state = stateFor(companyId);
+    state.queuedWork = unassignedTickets.length;
+
     let queuedCount = 0;
+    let assignmentCursor = 0;
 
-    for (const ticket of unassignedTickets) {
-      // Check authority if ticket was filed by an employee
-      if (ticket.reporterKind === 'employee' && ticket.reporterId) {
-        const authority = deps.authorityResolver.resolveEmployee(companyId, ticket.reporterId);
+    try {
+      for (const ticket of unassignedTickets) {
+        // Check authority if ticket was filed by an employee
+        if (ticket.reporterKind === 'employee' && ticket.reporterId) {
+          const authority = deps.authorityResolver.resolveEmployee(companyId, ticket.reporterId);
 
-        // Check if proactive_work capability is allowed
-        const proactiveCapability = authority.entries.find(
-          (entry: { resourceKind: string; resourceId: string; permission: string }) =>
-            entry.resourceKind === 'capability' &&
-            (entry.resourceId === 'proactive_work' || entry.resourceId === '*'),
-        );
+          // Check if proactive_work capability is allowed
+          const proactiveCapability = authority.entries.find(
+            (entry: { resourceKind: string; resourceId: string; permission: string }) =>
+              entry.resourceKind === 'capability' &&
+              (entry.resourceId === 'proactive_work' || entry.resourceId === '*'),
+          );
 
-        if (proactiveCapability?.permission === 'deny') {
+          if (proactiveCapability?.permission === 'deny') {
+            try {
+              deps.bus.emit({
+                type: 'proactive.blocked',
+                companyId,
+                actorId: ticket.reporterId,
+                actorKind: 'employee',
+                payload: {
+                  triggerId: ticket.id,
+                  reason: 'authority',
+                  explanation: `Employee "${ticket.reporterId}" lacks authority for proactive work`,
+                  autonomyMode: settings.autonomyMode,
+                  blockedAt: now(),
+                },
+              });
+            } catch (err) {
+              logger.warn('[proactive] failed to emit blocked event', err);
+            }
+            continue;
+          }
+        }
+
+        // Find an available employee to assign the ticket to
+        const employees = deps.employeesRepo
+          .listByCompany(companyId)
+          .filter((e) => !e.isSystem && e.level !== 'officer');
+
+        if (employees.length === 0) {
+          continue;
+        }
+
+        // Round-robin across eligible employees so a single owner does not
+        // absorb every unassigned ticket in one scan. The
+        // `employees.length === 0` guard above proves the index is in range;
+        // the explicit guard narrows the type without a non-null assertion.
+        const assignedEmployee = employees[assignmentCursor % employees.length];
+        if (!assignedEmployee) {
+          continue;
+        }
+        assignmentCursor += 1;
+
+        // Hand off to the governed dispatcher: it creates the thread and the
+        // trigger message, enforces budget admission, re-checks pause state
+        // and emits the lifecycle events. Move the item from the scan backlog
+        // into the in-flight count for the duration of the turn —
+        // `enqueueChat` (and therefore `enqueueProactive`) settles on turn
+        // completion, so this window is the real execution window.
+        state.queuedWork = Math.max(0, state.queuedWork - 1);
+        state.activeWork += 1;
+
+        try {
+          const dispatched = await deps.dispatcher.enqueueProactive({
+            companyId,
+            employeeId: assignedEmployee.id,
+            trigger: 'work_scan',
+            triggerId: ticket.id,
+            sourceTicketId: ticket.id,
+          });
+
+          if (!dispatched.success) {
+            // The dispatcher already emitted the precise reason
+            // (budget_blocked / blocked / error); nothing was queued.
+            logger.warn(
+              `[proactive] dispatch refused for ticket "${ticket.id}": ${dispatched.error}${
+                dispatched.reason ? ` — ${dispatched.reason}` : ''
+              }`,
+            );
+            continue;
+          }
+
+          queuedCount += 1;
+
+          // Emit work_queued event
           try {
             deps.bus.emit({
-              type: 'proactive.blocked',
+              type: 'proactive.work_queued',
               companyId,
-              actorId: ticket.reporterId,
+              actorId: systemAgentId,
               actorKind: 'employee',
               payload: {
                 triggerId: ticket.id,
-                reason: 'authority',
-                explanation: `Employee "${ticket.reporterId}" lacks authority for proactive work`,
-                autonomyMode: settings.autonomyMode,
-                blockedAt: now(),
+                triggerKind: 'work_scan',
+                threadId: dispatched.threadId,
+                employeeId: assignedEmployee.id,
+                goalId: null,
+                ticketId: ticket.id,
+                queuedAt: now(),
               },
             });
           } catch (err) {
-            logger.warn('[proactive] failed to emit blocked event', err);
+            logger.warn('[proactive] failed to emit work_queued event', err);
           }
-          continue;
-        }
-      }
-
-      // Find an available employee to assign the ticket to
-      const employees = deps.employeesRepo
-        .listByCompany(companyId)
-        .filter((e) => !e.isSystem && e.level !== 'officer');
-
-      if (employees.length === 0) {
-        continue;
-      }
-
-      // Simple round-robin assignment (could be improved with workload scoring).
-      // The `employees.length === 0` guard above proves index 0 is defined; the
-      // explicit guard narrows the type without a non-null assertion.
-      const assignedEmployee = employees[0];
-      if (!assignedEmployee) {
-        continue;
-      }
-
-      // Create a thread for the proactive work
-      // In production, this would use the threadsRepo to create/get thread
-      // For now, we'll generate placeholder IDs
-      const threadId = `proactive-thread-${ticket.id}`;
-      const userMessageId = `proactive-msg-${ticket.id}`;
-
-      // Queue the work via orchestrator
-      try {
-        await deps.orchestrator.enqueueChat({
-          threadId,
-          employeeId: assignedEmployee.id,
-          userMessageId,
-        });
-
-        queuedCount += 1;
-
-        // Emit work_queued event
-        try {
-          deps.bus.emit({
-            type: 'proactive.work_queued',
-            companyId,
-            actorId: systemAgentId,
-            actorKind: 'employee',
-            payload: {
-              triggerId: ticket.id,
-              triggerKind: 'work_scan',
-              threadId,
-              employeeId: assignedEmployee.id,
-              goalId: null,
-              ticketId: ticket.id,
-              queuedAt: now(),
-            },
-          });
         } catch (err) {
-          logger.warn('[proactive] failed to emit work_queued event', err);
-        }
-      } catch (err) {
-        logger.error(`[proactive] failed to enqueue work for ticket "${ticket.id}"`, err);
+          logger.error(`[proactive] failed to enqueue work for ticket "${ticket.id}"`, err);
 
-        try {
-          deps.bus.emit({
-            type: 'proactive.error',
-            companyId,
-            actorId: systemAgentId,
-            actorKind: 'employee',
-            payload: {
-              operation: 'scanForWork',
-              message: `Failed to enqueue work for ticket "${ticket.id}": ${err instanceof Error ? err.message : String(err)}`,
-              recoverable: true,
-              errorAt: now(),
-            },
-          });
-        } catch (emitErr) {
-          logger.warn('[proactive] failed to emit error event', emitErr);
+          try {
+            deps.bus.emit({
+              type: 'proactive.error',
+              companyId,
+              actorId: systemAgentId,
+              actorKind: 'employee',
+              payload: {
+                operation: 'scanForWork',
+                message: `Failed to enqueue work for ticket "${ticket.id}": ${err instanceof Error ? err.message : String(err)}`,
+                recoverable: true,
+                errorAt: now(),
+              },
+            });
+          } catch (emitErr) {
+            logger.warn('[proactive] failed to emit error event', emitErr);
+          }
+        } finally {
+          // The turn has settled (completed, refused or thrown) — it is no
+          // longer in flight. A leaked counter would strand the dashboard at
+          // a non-zero "Active Work" forever.
+          state.activeWork = Math.max(0, state.activeWork - 1);
         }
       }
+    } finally {
+      // The scan is over however it ended: no backlog remains, and the
+      // completion timestamp is what "Last Scan" reports.
+      state.queuedWork = 0;
+      state.lastScanAt = now();
     }
 
     return { queuedCount };
@@ -514,5 +623,6 @@ Use the decompose_project tool to generate the proposal.`;
     scanForWork,
     setEnabled,
     isEnabled,
+    getState,
   };
 }

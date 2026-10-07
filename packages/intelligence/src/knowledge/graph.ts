@@ -222,7 +222,10 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
   const companyNodesIndex = new Map<string, Set<string>>();
   const companyEdgesIndex = new Map<string, Set<string>>();
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: KnowledgeGraphRepo = {
     upsertNode(node) {
       nodes.set(node.id, node);
 
@@ -244,7 +247,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
     },
 
     getNodesByType(companyId, type) {
-      return this.getNodesByCompany(companyId).filter((n) => n.type === type);
+      return impl.getNodesByCompany(companyId).filter((n) => n.type === type);
     },
 
     deleteNode(id) {
@@ -320,7 +323,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
 
     findNodesByLabel(companyId, labelPattern) {
       const regex = new RegExp(labelPattern, 'i');
-      return this.getNodesByCompany(companyId).filter((n) => regex.test(n.label));
+      return impl.getNodesByCompany(companyId).filter((n) => regex.test(n.label));
     },
 
     findRelatedNodes(nodeId, maxDepth) {
@@ -341,7 +344,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
 
         if (depth >= maxDepth) continue;
 
-        const outEdges = this.getEdgesFromNode(currentId);
+        const outEdges = impl.getEdgesFromNode(currentId);
         for (const edge of outEdges) {
           edgesTraversed++;
           resultEdges.push(edge);
@@ -357,7 +360,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
           }
         }
 
-        const inEdges = this.getEdgesToNode(currentId);
+        const inEdges = impl.getEdgesToNode(currentId);
         for (const edge of inEdges) {
           if (!visited.has(edge.fromNodeId)) {
             visited.add(edge.fromNodeId);
@@ -400,7 +403,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       // Delete nodes with this source
       for (const [id, node] of nodes) {
         if (node.metadata?.sourceId === sourceId) {
-          this.deleteNode(id);
+          impl.deleteNode(id);
           count++;
         }
       }
@@ -408,7 +411,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       // Delete edges with this source
       for (const [id, edge] of edges) {
         if (edge.metadata?.sourceId === sourceId) {
-          this.deleteEdge(id);
+          impl.deleteEdge(id);
           count++;
         }
       }
@@ -416,6 +419,7 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
       return count;
     },
   };
+  return impl;
 }
 
 /**
@@ -491,7 +495,10 @@ export function createKnowledgeGraphService(options: {
   // Node label cache for entity resolution
   const labelToNodeId = new Map<string, string>(); // companyId:label -> nodeId
 
-  return {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
+  const impl: KnowledgeGraphService = {
     ingestFacts(facts) {
       for (const fact of facts) {
         // Extract or create node from fact
@@ -781,13 +788,14 @@ export function createKnowledgeGraphService(options: {
           nodes,
           edges,
           exportedAt: now(),
-          stats: this.getStats(companyId),
+          stats: impl.getStats(companyId),
         },
         null,
         2,
       );
     },
   };
+  return impl;
 }
 
 /**

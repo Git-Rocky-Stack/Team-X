@@ -241,6 +241,15 @@ export interface LocalGgufApi {
     get(id: string): Promise<LocalModel | null>;
     addFile(path: string): Promise<LocalModel>;
     addFolder(path: string, recursive: boolean): Promise<WatchFolder>;
+    /**
+     * Every registered watch folder.
+     *
+     * Added after Phase 1 (contract note above: consumers migrate in the
+     * same commit). `removeFolder` and `scanFolder` both take a folder id,
+     * and until this existed nothing in the surface could produce one — so
+     * two live channels had no reachable caller.
+     */
+    listFolders(): Promise<WatchFolder[]>;
     removeModel(id: string): Promise<void>;
     removeFolder(id: string): Promise<void>;
     scanFolder(id: string): Promise<{ addedCount: number; removedCount: number }>;

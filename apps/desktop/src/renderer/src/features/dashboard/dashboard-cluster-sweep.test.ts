@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,23 +9,13 @@ const read = (file: string) => readFileSync(join(here, file), 'utf8');
 
 const subtabsSrc = read('dashboard-subtabs.tsx');
 const streamSrc = read('stream-view.tsx');
-const cardsSrc = read('cards-view.tsx');
-const employeeCardSrc = read('employee-card.tsx');
 const timelineSrc = read('timeline-view.tsx');
 const floorSrc = read('floor-view.tsx');
 const commandsSrc = read('commands-view.tsx');
 
 describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
   it('reads every swept sub-view source', () => {
-    for (const src of [
-      subtabsSrc,
-      streamSrc,
-      cardsSrc,
-      employeeCardSrc,
-      timelineSrc,
-      floorSrc,
-      commandsSrc,
-    ]) {
+    for (const src of [subtabsSrc, streamSrc, timelineSrc, floorSrc, commandsSrc]) {
       expect(typeof src).toBe('string');
       expect(src.length).toBeGreaterThan(0);
     }
@@ -56,18 +46,24 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(streamSrc).not.toContain('text-code-sm leading-relaxed text-foreground/80');
   });
 
-  it('cards view + employee card use console hardware and keep the a11y label', () => {
-    expect(cardsSrc).not.toMatch(/\bbg-black\b/);
-    expect(cardsSrc).not.toContain('text-red-500');
-    expect(cardsSrc).toContain('<RecessedWell');
-    expect(employeeCardSrc).toContain('${employee.title} — ${statusLabel(displayStatus)}');
-    expect(employeeCardSrc).toContain(". Click to ${isSelected ? 'close' : 'open'} chat.");
-    expect(employeeCardSrc).toContain('title={statusLabel(displayStatus)}');
-    expect(employeeCardSrc).toContain("'cap-select'");
-    expect(employeeCardSrc).toContain('<LampTile');
-    expect(employeeCardSrc).not.toMatch(/\bbg-black\b/);
-    expect(employeeCardSrc).not.toContain('font-mono');
-    expect(employeeCardSrc).not.toContain('text-[11px]');
+  it('keeps the retired CardsView deleted', () => {
+    // The Mission Control subview is rendered by `MissionControlDashboard`;
+    // `CardsView` was retired in its favour (see app/sidenav.tsx) but the file
+    // lingered unmounted. Pin its absence so the sweep cannot silently start
+    // grading dead code again.
+    expect(existsSync(join(here, 'cards-view.tsx'))).toBe(false);
+  });
+
+  it('keeps the orphaned EmployeeCard deleted', () => {
+    // `EmployeeCard` was swept in Phase 3 and then left with zero importers
+    // when `CardsView` retired — graded dead code ever since. Deleted
+    // 2026-08-23; pinned absent for the same reason `cards-view.tsx` is.
+    //
+    // It co-owned the employee aria-label contract that smoke / rag-flow /
+    // ticket-flow pin as `button[aria-label^="{name}, {title}"]`. That
+    // contract did not die with it: `app/sidenav.tsx` is now its sole
+    // carrier, and `app/shell-foundation.test.tsx` pins the format there.
+    expect(existsSync(join(here, 'employee-card.tsx'))).toBe(false);
   });
 
   it('timeline view uses stripe bands + lamp event tones', () => {

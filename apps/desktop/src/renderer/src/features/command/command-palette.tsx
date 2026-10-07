@@ -95,6 +95,7 @@ const SHOW_VIEW_LITERALS: ReadonlyArray<ActiveView> = [
   'files',
   'telemetry',
   'audit',
+  'models',
   'settings',
 ];
 

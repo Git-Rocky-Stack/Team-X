@@ -1,5 +1,13 @@
 # Private Operator Access
 
+> **Status: policy contract only — no transport, not reachable from the app.**
+> `createPrivateOperatorAccessService` is implemented in
+> `apps/desktop/src/main/services/private-operator-access-service.ts` and
+> covered by `private-operator-access-service.test.ts`, but nothing
+> constructs it: there is no local HTTP listener, no hosted bridge adapter,
+> no IPC channel, and no UI. Nothing described below is currently exposed to
+> an operator or a phone. Verified 2026-08-23.
+
 P2.3 adds the policy and read-only data contract for optional private operator supervision. The surface is intentionally local-first:
 
 - bind to `127.0.0.1` by default;
@@ -8,7 +16,7 @@ P2.3 adds the policy and read-only data contract for optional private operator s
 - enable approval review only after explicit operator opt-in and membership checks;
 - keep runtime launch and secret changes behind late-stage, explicit gates.
 
-The implementation lives in `createPrivateOperatorAccessService`.
+The implementation lives in `createPrivateOperatorAccessService`. It is a pure policy/snapshot function today; the adapter that would serve it over a local listener or a hosted bridge has not been built.
 
 ## Capabilities
 

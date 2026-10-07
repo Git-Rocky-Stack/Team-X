@@ -1501,8 +1501,14 @@ export const meetings = sqliteTable('meetings', {
 /**
  * Vector embeddings for RAG retrieval. Each row is one chunk of embedded
  * content. The raw embedding vector is stored as a BLOB (Float32Array
- * serialized). The companion `vec_embeddings` sqlite-vec virtual table
- * is created best-effort in `vec-init.ts` (same pattern as FTS5).
+ * serialized).
+ *
+ * There is no companion sqlite-vec virtual table. Retrieval reads these
+ * BLOBs and ranks them with brute-force cosine similarity in TypeScript
+ * (`packages/intelligence/src/rag/retriever.ts`). An ANN-accelerated path
+ * was drafted but never functioned — its migration was never journaled and
+ * the sqlite-vec extension was never loaded — so it was removed rather than
+ * left as a claim; see CHANGELOG [Unreleased].
  *
  * Architectural invariant #5: all LLM calls (including embedding
  * generation) route through provider-router.

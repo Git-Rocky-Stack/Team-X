@@ -34,6 +34,18 @@ export {
   type RankOptions,
   type RankedResult,
 } from './retriever.js';
+// Approximate retrieval. `service.ts` drives this itself once a company's
+// corpus passes the floor; exported so callers can tune or disable it, and so
+// the index is usable directly for ranking outside the RAG service.
+export {
+  buildAnnIndex,
+  queryAnnIndex,
+  type AnnEntry,
+  type AnnIndex,
+  type AnnIndexOptions,
+  type AnnQueryOptions,
+  type AnnHit,
+} from './ann-index.js';
 export {
   createRagService,
   type RagService,
@@ -44,6 +56,7 @@ export {
   type IndexSourceInput,
   type RetrieveInput,
   type RetrievalHit,
+  type AnnRetrievalOptions,
 } from './service.js';
 export {
   createQueryCache,

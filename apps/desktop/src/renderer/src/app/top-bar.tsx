@@ -1,4 +1,5 @@
 import {
+  Boxes,
   Building2,
   FileArchive,
   Gauge,
@@ -28,7 +29,6 @@ interface TabDef {
   label: string;
   icon: ComponentType<{ className?: string }>;
   view: ActiveView;
-  disabled?: boolean;
 }
 
 const TABS: TabDef[] = [
@@ -42,6 +42,7 @@ const TABS: TabDef[] = [
   { label: 'Files', icon: FileArchive, view: 'files' },
   { label: 'Telemetry', icon: Gauge, view: 'telemetry' },
   { label: 'Audit', icon: Shield, view: 'audit' },
+  { label: 'Models', icon: Boxes, view: 'models' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ];
 
@@ -88,15 +89,12 @@ export function TopBar() {
                 <button
                   type="button"
                   key={tab.label}
-                  disabled={tab.disabled}
                   onClick={() => setActiveView(tab.view)}
                   className={cn(
                     'nav-tile stencil inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[10.5px]',
                     'transition-all',
                     isActive && 'nav-tile-active',
-                    tab.disabled && 'cursor-not-allowed opacity-40',
                   )}
-                  title={tab.disabled ? 'Coming soon' : undefined}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}

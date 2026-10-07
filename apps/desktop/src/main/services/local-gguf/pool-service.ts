@@ -81,12 +81,32 @@ export interface PoolStatus {
   maxConcurrent: number;
 }
 
+/** The context and GPU-layer figures a model's server was started with. */
+export interface AppliedTuning {
+  nCtx: number;
+  nGpuLayers: number;
+}
+
 export interface PoolService {
   status(): Promise<PoolStatus>;
   load(modelId: string): Promise<LoadedModelInfo>;
   unload(modelId: string): Promise<void>;
   setMaxConcurrent(n: number): Promise<void>;
   shutdownAll(): Promise<void>;
+  /**
+   * The tuning `loadModel` last handed `spawnServer` for `modelId` — the
+   * auto-tuned base with the user's advanced-param overrides applied — or
+   * null if the model has never been loaded this session.
+   *
+   * BenchmarkService persists `nCtxUsed` / `nGpuLayersUsed` with every run,
+   * and these are the only values that are true by construction: re-deriving
+   * them from auto-tune plus the override row would be a second copy of the
+   * merge logic, free to drift from what the server was actually started with.
+   *
+   * Main-process only. Deliberately NOT on the `localGguf.pool.*` IPC surface,
+   * whose shape is locked in shared-types.
+   */
+  lastTuningFor(modelId: string): AppliedTuning | null;
 }
 
 /**
@@ -141,6 +161,8 @@ function mergeTuning(
 
 export function createPoolService(deps: PoolServiceDeps): PoolService {
   const allocatePort = deps.allocatePort ?? defaultAllocatePort;
+  /** Tuning actually applied per model, recorded at spawn time. */
+  const appliedTuning = new Map<string, AppliedTuning>();
   const spawnServer = deps.spawnServer ?? defaultSpawnServer;
   const autoTune = deps.autoTune ?? defaultAutoTune;
   const createPool = deps.createPool ?? createLruPool;
@@ -189,6 +211,8 @@ export function createPoolService(deps: PoolServiceDeps): PoolService {
 
     const port = await allocatePort();
 
+    appliedTuning.set(modelId, { nCtx: tuned.nCtx, nGpuLayers: tuned.nGpuLayers });
+
     return spawnServer({
       binaryPath,
       modelPath: row.sourcePath,
@@ -235,5 +259,10 @@ export function createPoolService(deps: PoolServiceDeps): PoolService {
     await pool.shutdownAll();
   }
 
-  return { status, load, unload, setMaxConcurrent, shutdownAll };
+  function lastTuningFor(modelId: string): AppliedTuning | null {
+    const tuning = appliedTuning.get(modelId);
+    return tuning ? { ...tuning } : null;
+  }
+
+  return { status, load, unload, setMaxConcurrent, shutdownAll, lastTuningFor };
 }

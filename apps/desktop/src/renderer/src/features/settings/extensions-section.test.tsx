@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,29 +9,11 @@ const SETTINGS_VIEW_PATH = join(currentDirname, 'settings-view.tsx');
 const EXTENSIONS_SECTION_PATH = join(currentDirname, 'extensions-section.tsx');
 const SETTINGS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-settings.ts');
 const EXTENSIONS_HOOKS_PATH = join(currentDirname, '..', '..', 'hooks', 'use-extensions.ts');
-const PERMISSION_PRESETS_PATH = join(currentDirname, '..', '..', 'data', 'permission-presets.ts');
-const BUILT_IN_MCP_TEMPLATES_PATH = join(
-  currentDirname,
-  '..',
-  '..',
-  'data',
-  'built-in-mcp-templates.ts',
-);
-const RENDERER_ENVIRONMENT_PATH = join(
-  currentDirname,
-  '..',
-  '..',
-  'lib',
-  'renderer-environment.ts',
-);
 
 const settingsViewSrc = readFileSync(SETTINGS_VIEW_PATH, 'utf8');
 const extensionsSectionSrc = readFileSync(EXTENSIONS_SECTION_PATH, 'utf8');
 const settingsHooksSrc = readFileSync(SETTINGS_HOOKS_PATH, 'utf8');
 const extensionsHooksSrc = readFileSync(EXTENSIONS_HOOKS_PATH, 'utf8');
-const permissionPresetsSrc = readFileSync(PERMISSION_PRESETS_PATH, 'utf8');
-const builtInMcpTemplatesSrc = readFileSync(BUILT_IN_MCP_TEMPLATES_PATH, 'utf8');
-const rendererEnvironmentSrc = readFileSync(RENDERER_ENVIRONMENT_PATH, 'utf8');
 
 describe('Extensions & Authority settings shell', () => {
   it('mounts the section inside SettingsView', () => {
@@ -121,15 +103,21 @@ describe('Extensions & Authority settings shell', () => {
     expect(extensionsSectionSrc).toContain('Add MCP');
   });
 
-  it('keeps Settings extension helpers safe for the packaged renderer sandbox', () => {
-    for (const src of [permissionPresetsSrc, builtInMcpTemplatesSrc]) {
-      expect(src).not.toContain('process.env');
-      expect(src).not.toContain('process.platform');
-      expect(src).not.toContain('process.cwd');
+  it('keeps the retired marketplace helper modules deleted', () => {
+    // The sandbox-safety sweep that used to live here guarded
+    // `data/permission-presets.ts`, `data/built-in-mcp-templates.ts` and
+    // `lib/renderer-environment.ts`. All three were reachable only from the
+    // unmounted marketplace / simplified-permission components asserted
+    // above, so they were deleted with them. Pin their absence rather than
+    // re-testing files that no longer ship.
+    const rendererRoot = join(currentDirname, '..', '..');
+    for (const relative of [
+      join('data', 'permission-presets.ts'),
+      join('data', 'built-in-mcp-templates.ts'),
+      join('data', 'built-in-skills.ts'),
+      join('lib', 'renderer-environment.ts'),
+    ]) {
+      expect(existsSync(join(rendererRoot, relative))).toBe(false);
     }
-    expect(permissionPresetsSrc).toContain('@/lib/renderer-environment.js');
-    expect(builtInMcpTemplatesSrc).toContain('@/lib/renderer-environment.js');
-    expect(rendererEnvironmentSrc).toContain('getRendererPlatform');
-    expect(rendererEnvironmentSrc).toContain('globalThis.navigator');
   });
 });

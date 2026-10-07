@@ -64,6 +64,7 @@ import {
   createRerankerService,
   createSlotFiller,
 } from '@team-x/intelligence';
+import { runProbeCommand, sampleNvidiaVramMb } from '@team-x/local-gguf-runtime';
 import {
   type StreamContentPart,
   type StreamMessage,
@@ -113,6 +114,8 @@ import {
 } from './db/repos/extensions.js';
 import { createGoalsRepo } from './db/repos/goals.js';
 import { createLocalModelAdvancedParamsRepo } from './db/repos/local-model-advanced-params.js';
+import { createLocalModelBenchmarksRepo } from './db/repos/local-model-benchmarks.js';
+import { createLocalModelEndpointsRepo } from './db/repos/local-model-endpoints.js';
 import { createLocalModelWatchFoldersRepo } from './db/repos/local-model-watch-folders.js';
 import { createLocalModelsRepo } from './db/repos/local-models.js';
 import {
@@ -153,8 +156,11 @@ import { registerLocalGgufEndpointHandlers } from './ipc/local-gguf-endpoint-han
 import { registerLocalGgufHfHandlers } from './ipc/local-gguf-hf-handlers.js';
 import { registerLocalGgufLibraryHandlers } from './ipc/local-gguf-library-handlers.js';
 import { registerLocalGgufRuntimeHandlers } from './ipc/local-gguf-runtime-handlers.js';
+import { buildPaperclipHandlers } from './ipc/paperclip-handlers.js';
+import { buildPrivateOperatorHandlers } from './ipc/private-operator-handlers.js';
 import { buildRagHandlers } from './ipc/rag-handlers.js';
 import { registerIpcHandlers } from './ipc/register.js';
+import { registerSystemDialogHandlers } from './ipc/system-dialogs.js';
 import { setupApplicationMenu } from './menu.js';
 import { createAgentWakeupQueue } from './orchestrator/agent-wakeup-queue.js';
 import { createEventBus } from './orchestrator/event-bus.js';
@@ -164,6 +170,7 @@ import {
   type ResolveProvider,
   type ResolveTools,
   buildOrchestrator,
+  createProactiveDispatcher,
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
@@ -211,6 +218,15 @@ import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
 import {
+  type BenchmarkService,
+  createBenchmarkService,
+} from './services/local-gguf/benchmark-service.js';
+import {
+  type EndpointService,
+  createEndpointService,
+} from './services/local-gguf/endpoint-service.js';
+import { type HfService, createHfService } from './services/local-gguf/hf-service.js';
+import {
   type LibraryFs,
   type LibraryService,
   createLibraryService,
@@ -226,6 +242,11 @@ import {
   defaultAllowlistPath as mcpDefaultAllowlistPath,
 } from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import {
+  loadPaperclipExportFolder,
+  previewPaperclipImportBridge,
+} from './services/paperclip-import-bridge.js';
+import { createPrivateOperatorAccessService } from './services/private-operator-access-service.js';
 import {
   type ProactiveTriggerService,
   createProactiveTriggerService,
@@ -655,6 +676,14 @@ let poolServiceInstance: PoolService | null = null;
  * network-share resilience monitors before the SQLite handle closes.
  */
 let libraryServiceInstance: LibraryService | null = null;
+/**
+ * Hugging Face download manager (v3.3.0 Phase 7). Held at module scope so the
+ * will-quit handler can pause every in-flight transfer: `dispose()` aborts the
+ * requests but leaves each `.part` file on disk, so a quit mid-download costs
+ * the user nothing but the seconds since the last byte — the next launch
+ * resumes from the same offset.
+ */
+let hfServiceInstance: HfService | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
@@ -733,6 +762,9 @@ app
     // Phase 3 (library + scanning): folder sources scanned for GGUF files; the
     // LibraryService owns the watcher/monitor lifecycle for each registered row.
     const localModelWatchFoldersRepo = createLocalModelWatchFoldersRepo(db);
+    // Phase 5 (remote LAN endpoints) + Phase 10 (benchmark history).
+    const localModelEndpointsRepo = createLocalModelEndpointsRepo(db);
+    const localModelBenchmarksRepo = createLocalModelBenchmarksRepo(db);
 
     // Adapter: the app settings repo (getRaw → string | null / set → JSON) →
     // the get<T>() | undefined / set<T>() shape the local-gguf accessor expects.
@@ -933,6 +965,51 @@ app
     // call until a method is actually invoked).
     const testMode = isTestMode();
     const secretsStore = new SecretsStore();
+
+    // ── Local & Networked GGUF: endpoints, HF browser, benchmarks ─────────
+    // These three complete the `localGguf.*` surface. Until now their channels
+    // were registered but threw a Phase 1 not-implemented error, so the whole
+    // namespace looked live from the preload bridge while a third of it could
+    // only fail. Constructed here rather than beside the Phase 2/3 services
+    // above because all three need `secretsStore`, which is created at this
+    // point in the boot sequence.
+    const endpointService: EndpointService = createEndpointService({
+      repo: localModelEndpointsRepo,
+      // Read-only slice: the service resolves an endpoint's stored auth header
+      // for its reachability probe and never writes to the keychain.
+      secrets: {
+        getEndpointAuthHeader: (keyRef) => secretsStore.getEndpointAuthHeader(keyRef),
+      },
+    });
+
+    const hfService: HfService = createHfService({
+      // `hfTokenKeyRef` names the keychain entry; the token itself never
+      // touches the settings store. Read per call so rotating it in Settings
+      // takes effect on the next request rather than the next launch.
+      getToken: async () => {
+        const ref = localGgufSettings.get().hfTokenKeyRef;
+        if (!ref) return null;
+        try {
+          return await secretsStore.getHfToken(ref);
+        } catch (err) {
+          console.warn('[main] could not read the Hugging Face token from the keychain', err);
+          return null;
+        }
+      },
+    });
+    hfServiceInstance = hfService;
+
+    const benchmarkService: BenchmarkService = createBenchmarkService({
+      pool: poolService,
+      models: localModelsRepo,
+      benchmarks: localModelBenchmarksRepo,
+      runtime: { getSettings: async () => localGgufSettings.get() },
+      // Real peak-VRAM sampling on NVIDIA hardware; every other backend (and
+      // any box without nvidia-smi) resolves to null, which the benchmark row
+      // records as "not measured" rather than as zero.
+      sampleVramMb: () => sampleNvidiaVramMb({ runCommand: runProbeCommand, timeoutMs: 3000 }),
+    });
+
     const providersService = getProvidersService();
     const runtimeProfilesService = createRuntimeProfilesService({
       runtimeProfilesRepo,
@@ -1648,6 +1725,25 @@ app
                 .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
           },
           llmComplete,
+          // Audit F5 — the seven Settings → Enhanced AI switches used to be
+          // write-only: `settings.getEnhancedAiConfig` / `setEnhancedAiConfig`
+          // were the only readers of these rows, so every toggle persisted a
+          // value that nothing consumed. Reading them through a closure means
+          // the per-call gates (memory, knowledge graph, streaming, chunking,
+          // planning) pick up a change immediately; query expansion and
+          // tracing are baked into the pipeline at construction and take
+          // effect on the next launch.
+          features: () => ({
+            queryExpansionEnabled: settingsRepo.get<boolean>('query_expansion_enabled', true),
+            semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
+            longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
+            knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
+            planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
+            planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
+            streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
+            tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
+            tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
+          }),
         });
         console.log('[enhanced-ai] service ready — Phase 2 & 3 features available');
       } catch (err) {
@@ -1855,6 +1951,14 @@ app
         isEnabled: (companyId) => {
           if (!proactiveTriggerServiceInstance) return false;
           return proactiveTriggerServiceInstance.isEnabled(companyId);
+        },
+        getState: (companyId) => {
+          // Before the instance comes online nothing has been scanned and
+          // nothing is in flight — that is the true state, not a placeholder.
+          if (!proactiveTriggerServiceInstance) {
+            return { activeWork: 0, queuedWork: 0, lastScanAt: null };
+          }
+          return proactiveTriggerServiceInstance.getState(companyId);
         },
       },
       // Event bus — used by `companies.archive` to emit `company.archived`
@@ -2171,12 +2275,12 @@ app
         // system-agent, delegate+review for Management/Supervisor/Lead/
         // system-agent. ICs receive an empty write-side array.
 
-        // Conservative workload provider — open-ticket count is a real
-        // repo lookup; in-meeting + completion-history are stubbed for
-        // T3 and tightened in M33 (per agentic-tools-write.ts §T3 notes
-        // and Phase 5 follow-ups). Conservative defaults still produce
-        // a deterministic workload score; emptier inboxes still rank
-        // higher, which is the load-balancing intent.
+        // Workload provider — every signal is a real repo lookup:
+        // open-ticket count here, in-meeting and completion-history in the
+        // Track 2 block below. All three degrade to conservative defaults
+        // on a repo error rather than aborting the agentic loop, so an
+        // emptier inbox still ranks higher, which is the load-balancing
+        // intent.
         const workload: WriteSideWorkloadProvider = {
           openTicketCount: (eid) => {
             try {
@@ -2662,6 +2766,77 @@ app
       settingsRepo: {
         getProactive: () => settingsRepo.getProactive(),
       },
+      // ---- Governed proactive dispatch (audit F3) ----------------------
+      //
+      // `scanForWork` used to synthesize `proactive-thread-*` /
+      // `proactive-msg-*` ids for rows that were never inserted and call
+      // `orchestrator.enqueueChat` directly, which meant proactive work
+      // bypassed budget admission entirely. `createProactiveDispatcher`
+      // already implemented the correct path (thread + trigger-message
+      // creation, `budgetGovernance.assertExecutionAllowed`, pause
+      // re-check, `proactive.*` lifecycle events) and was fully tested,
+      // but had never been instantiated. It is now the only dispatch
+      // route — the dep is required, so there is no ungoverned fallback.
+      dispatcher: createProactiveDispatcher({
+        orchestrator: {
+          enqueueChat: async (args) => {
+            if (!orchestrator) {
+              throw new Error('[proactive] orchestrator not available for enqueueChat');
+            }
+            await orchestrator.enqueueChat(args);
+          },
+          isCompanyPaused: (cid) => orchestrator?.isCompanyPaused(cid) ?? false,
+        },
+        threadsRepo: {
+          create: (input) =>
+            threadsRepo.create({
+              companyId: input.companyId,
+              kind: input.kind as Parameters<typeof threadsRepo.create>[0]['kind'],
+              createdBy: input.createdBy,
+            }),
+          getById: (id) => {
+            const row = threadsRepo.getById(id);
+            return row ? { companyId: row.companyId, kind: row.kind } : null;
+          },
+        },
+        messagesRepo: {
+          append: (input) =>
+            messagesRepo.append({
+              threadId: input.threadId,
+              authorId: input.authorId,
+              authorKind: input.authorKind as Parameters<
+                typeof messagesRepo.append
+              >[0]['authorKind'],
+              content: input.content,
+            }),
+        },
+        employeesRepo: {
+          getById: (id) => {
+            const row = employeesRepo.getById(id);
+            if (!row) return null;
+            return { id: row.id, companyId: row.companyId, isSystem: row.isSystem ?? false };
+          },
+        },
+        companiesRepo: {
+          getById: (id) => {
+            const row = companiesRepo.getById(id);
+            return row ? { id: row.id } : null;
+          },
+        },
+        bus: {
+          emit: (input) =>
+            bus.emit({
+              ...input,
+              actorKind: input.actorKind as Parameters<typeof bus.emit>[0]['actorKind'],
+            }),
+        },
+        budgetGovernance: budgetGovernanceServiceInstance,
+        // Audit F6 — the blocked-event payload must carry the operator's
+        // real autonomy posture, not a hardcoded 'balanced'.
+        settingsRepo: {
+          getProactive: () => settingsRepo.getProactive(),
+        },
+      }),
     });
 
     // ---- Copilot analyzer (M33 T4) --------------------------------------
@@ -2957,6 +3132,48 @@ app
       ragHandlers.deleteForCompany(companyId),
     );
 
+    // ---- Paperclip import bridge IPC handler -----------------------------
+    //
+    // Preview only. Converts a Paperclip export folder into a CompanyPackage
+    // plus the same CompanyImportPreview the portability panel already renders,
+    // and writes nothing — committing stays with
+    // `companyPortability.importPackage`, which owns secret binding and the
+    // per-entity plan. Two write paths that can create a workspace would be one
+    // too many.
+    const paperclipHandlers = buildPaperclipHandlers({
+      loadExportFolder: loadPaperclipExportFolder,
+      previewBridge: previewPaperclipImportBridge,
+      appVersion: app.getVersion(),
+    });
+    ipcMain.handle('paperclip.preview', async (_evt, request) =>
+      paperclipHandlers.preview(request),
+    );
+
+    // ---- Private operator access IPC handlers ----------------------------
+    //
+    // Read-only planning for supervising this workspace from a device that is
+    // not the workstation running it. The service is pure: it reads operator
+    // membership and runtime state and returns a decision record — which
+    // actions the requested exposure mode would permit, which it blocks, and
+    // the guardrails that stay true regardless. It opens no listener, so
+    // registering these channels does not put the workspace on a network.
+    //
+    // Registered here rather than through `createIpcHandlers` for the same
+    // reason the rag block above is: two read-only channels backed by a pure
+    // function do not justify growing the `IpcHandlers` DI surface.
+    const privateOperatorHandlers = buildPrivateOperatorHandlers({
+      privateOperatorAccessService: createPrivateOperatorAccessService({
+        operatorAccessService,
+        runtimeOperationsService,
+      }),
+    });
+    ipcMain.handle('privateOperator.plan', async (_evt, request) =>
+      privateOperatorHandlers.plan(request),
+    );
+    ipcMain.handle('privateOperator.snapshot', async (_evt, request) =>
+      privateOperatorHandlers.snapshot(request),
+    );
+
     // ---- Enhanced AI IPC handlers (Phase 5 — M32) ------------------------
     //
     // Exposes semantic chunking, query expansion, long-term memory,
@@ -2982,22 +3199,16 @@ app
     );
     ipcMain.handle('enhancedAi.getStats', async () => enhancedAiHandlers.getStats());
 
-    ipcMain.handle('system.selectDirectory', async (event) => {
-      const owner =
-        BrowserWindow.fromWebContents(event.sender) ??
-        BrowserWindow.getFocusedWindow() ??
-        undefined;
-      const options: Electron.OpenDialogOptions = {
-        title: 'Select skill folder',
-        properties: ['openDirectory', 'createDirectory'],
-      };
-      const result = owner
-        ? await dialog.showOpenDialog(owner, options)
-        : await dialog.showOpenDialog(options);
-      return {
-        canceled: result.canceled,
-        folderPath: result.filePaths[0] ?? null,
-      };
+    // Native pickers. The handlers live in `ipc/system-dialogs.ts` so they are
+    // unit-testable without Electron; the window-owner lookup stays here,
+    // because this is the only layer that knows about BrowserWindow. Parenting
+    // the dialog to the owning window is what makes it modal to Team-X rather
+    // than a stray OS-level sheet.
+    registerSystemDialogHandlers(ipcMain, {
+      showOpenDialog: (options) => {
+        const owner = BrowserWindow.getFocusedWindow() ?? undefined;
+        return owner ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
+      },
     });
 
     // ---- Command palette IPC handlers (Phase 5 — M30 T5, M31 T6) -----------
@@ -3102,17 +3313,16 @@ app
         copilotHandlers.configure(req),
     );
 
-    // Local & Networked GGUF Support (v3.3.0). The remaining handlers register
-    // the `localGguf.*` channel surface so the preload bridge has live handlers
-    // to invoke; each still-stubbed handler throws a not-implemented error until
-    // its owning phase lands the real service (endpoint -> P5, hf -> P7,
-    // benchmark -> P10). Phase 2 (runtime/pool) and Phase 3 (library) are now
-    // LIVE: their handlers delegate to the services constructed above.
+    // Local & Networked GGUF Support (v3.3.0) — the whole `localGguf.*` surface
+    // is LIVE. Every handler delegates to a real service: library + runtime +
+    // pool (Phases 2-3), endpoints (Phase 5), the Hugging Face browser and its
+    // resumable download manager (Phase 7), and the benchmark runner
+    // (Phase 10). No channel in this namespace throws not-implemented any more.
     registerLocalGgufLibraryHandlers(ipcMain, { library: libraryService });
     registerLocalGgufRuntimeHandlers(ipcMain, { runtime: runtimeService, pool: poolService });
-    registerLocalGgufHfHandlers(ipcMain);
-    registerLocalGgufBenchmarkHandlers(ipcMain);
-    registerLocalGgufEndpointHandlers(ipcMain);
+    registerLocalGgufHfHandlers(ipcMain, { hf: hfService });
+    registerLocalGgufBenchmarkHandlers(ipcMain, { benchmark: benchmarkService });
+    registerLocalGgufEndpointHandlers(ipcMain, { endpoints: endpointService });
 
     // Pre-warm the GPU probe + persist the active backend / binaries version in
     // the background. Fire-and-forget by design: the probe must never delay
@@ -3314,6 +3524,18 @@ app.on('will-quit', (event) => {
       }
     } catch (err) {
       console.error('[main] local-gguf pool shutdown failed:', err);
+    }
+    // Pause every in-flight Hugging Face download BEFORE the DB close. The
+    // abort leaves each `.part` file intact, so quitting mid-download costs
+    // only the bytes in flight and the next launch resumes from that offset.
+    // Non-fatal: a failure here must never block the quit.
+    try {
+      if (hfServiceInstance !== null) {
+        await hfServiceInstance.dispose();
+        hfServiceInstance = null;
+      }
+    } catch (err) {
+      console.error('[main] local-gguf HF download dispose failed:', err);
     }
     // Tear down the library service's live chokidar folder watchers and
     // network-share resilience monitors BEFORE the DB close: they hold FS

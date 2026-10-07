@@ -9,6 +9,359 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Approximate retrieval for large corpora.** RAG ranked by scoring every
+  stored chunk on every query (`rag/service.ts`, `listByCompany` then a full
+  cosine scan) — O(N·D), which at 10k chunks and 768 dimensions is ~7.7M
+  multiply-adds before a single result comes back.
+  `packages/intelligence/src/rag/ann-index.ts:122` adds an IVF index in plain
+  TypeScript: k-means partitions the vectors, and a query scans only the
+  nearest `nProbe` partitions. No native extension, so it is exercised under
+  Vitest — the constraint that ruled out reinstating sqlite-vec.
+  `rag/service.ts:258` drives it, reachable from
+  `apps/desktop/src/main/index.ts:1298`.
+
+  It is approximate, so two properties are pinned rather than assumed.
+  Probing every partition reproduces brute force *exactly* — same ids, same
+  order — so the index is a relaxation of the exact path, not a different
+  ranking. And recall is measured against brute-force ground truth:
+  `ann-index.test.ts` records 62.3% @ nProbe=1, 93.3% @ 6, 97.5% @ 10, 100% @
+  all 32, and fails below 90% at the tested setting.
+
+  It engages only above `ann.minVectors` (default 4096). Below that the corpus
+  keeps today's exact behaviour unchanged, because trading recall for speed on
+  a small corpus costs answer quality for no measurable gain.
+
+- **Private Operator Access — the Settings panel for supervising this workspace
+  from a device that is not the workstation.** `private-operator-access-service.ts`
+  computed a full decision record — which capabilities an exposure mode would
+  permit, which it refuses, and the guardrails that hold either way — and
+  nothing in the app had ever called it. It now reaches the renderer through
+  `privateOperator.plan` and `privateOperator.snapshot`
+  (`apps/desktop/src/main/ipc/private-operator-handlers.ts:90`), mounted at
+  `apps/desktop/src/renderer/src/features/settings/settings-view.tsx` behind an
+  error boundary. Refusals render at the same weight as permissions, and the
+  panel opens on `localhost` — the only mode that never leaves the machine.
+  Nothing here opens a listener; asking for a plan is a pure read.
+
+- **Paperclip Import — read a Paperclip export folder and see what it would
+  become before anything is created.** `paperclip-import-bridge.ts` converted an
+  export folder into a `CompanyPackage` and had no caller. It is now reachable
+  through `paperclip.preview`
+  (`apps/desktop/src/main/ipc/paperclip-handlers.ts:41`) and the panel at
+  `apps/desktop/src/renderer/src/features/settings/paperclip-import-section.tsx`.
+  The panel previews and stops: adapters that will not convert and secrets that
+  must be re-entered are listed with their reasons, and committing stays with
+  `companyPortability.importPackage`, which already owns secret binding and the
+  per-entity plan.
+
+### Fixed
+
+- **Factory methods no longer depend on their call site.** 18 object literals
+  across the repos, the intelligence package and `ipc/handlers.ts` called their
+  own siblings through `this.`, which resolves via the receiver — so
+  `const { get } = settingsRepo; get(k)` threw `TypeError: Cannot read
+  properties of undefined`. 87 call sites now resolve lexically against a named
+  local. Latent rather than live (nothing destructured them yet), and pinned by
+  21 detached-call cases in
+  `apps/desktop/src/main/db/repos/factory-this-binding.test.ts:75`, every one of
+  which failed before the change.
+
+- **IPC channel drift is now caught at test time.** A channel could sit in the
+  preload table with no handler behind it and fail only when a user clicked the
+  control that called it — the shape of the fourteen `localGguf.*` stubs.
+  `apps/desktop/src/main/ipc/channel-parity.test.ts` cross-checks the preload
+  table, `REQUEST_CHANNELS` and every registered handler.
+
+- **Shutdown now tears down every IPC handler it mounted.** 37 channels —
+  `system.selectGgufFile` and all 36 `localGguf.*` — were registered from
+  `index.ts` but never listed in `REQUEST_CHANNELS`, so the `unregisterIpc()`
+  closure that `app.will-quit` invokes walked straight past them. Latent, not
+  live: registration happens once, so nothing outlived anything. It would have
+  become a crash the moment anything re-registered, because Electron throws on
+  a second `handle` for the same channel. `register.ts:68` now composes the
+  teardown list by spreading each registrar's own exported tuple
+  (`SYSTEM_DIALOG_CHANNELS`, `LOCAL_GGUF_*_CHANNELS`) instead of restating the
+  strings, so a channel added to a registrar is torn down without a second
+  edit. `apps/desktop/src/main/ipc/teardown.test.ts:115` proves it
+  behaviourally — it mounts the real registrars against a recording `IpcMain`
+  and asserts the real teardown closure removes what was mounted. The earlier
+  changelog entry describing this gap as "recorded rather than closed", and its
+  count of 26 `localGguf.*` channels, were both wrong and are corrected here.
+
+- **The intermittent suite failure is identified and fixed.** A previous run
+  showed one failure that could not be attributed because its output was not
+  captured. Five consecutive full-workspace runs reproduced it once, with
+  output: `library-panel.test.tsx` → "does not carry one model's unsaved
+  prompt into another", `Test timed out in 5000ms`. Not an assertion failure —
+  the test types the longest string in the suite, and userEvent's default 0ms
+  delay still yields a macrotask between every keystroke, so 24 characters cost
+  24 event-loop turns on top of the events each dispatches through `act()`.
+  Measured 1,163ms idle and 5,280ms under a parallel sweep. The three tests
+  that type long strings now use `userEvent.setup({ delay: null })`, which
+  dispatches the same events without the artificial turns: that test dropped to
+  485ms. Separately, `apps/desktop/vitest.config.ts` raises `testTimeout` to
+  15s, because the slowest remaining test under the same load was 4,412ms —
+  12% headroom against the 5s default, which is not enough to be stable. No
+  assertion changed; a hung test still fails.
+
+- **Concurrent model loads can no longer be handed the same port.**
+  `allocatePort` picked a random candidate, probed it by binding and then
+  *closing* the socket, and returned the number while holding nothing — so two
+  callers drawing the same candidate both saw it free and both received it.
+  `pool-service.ts:212` takes exactly that path for every model load, so with
+  `maxConcurrent > 1` one llama-server could fail to bind. Measured collision
+  rate for four concurrent draws over the 16,384-port range: 0.037%, or about
+  1 in 2,674. `packages/local-gguf-runtime/src/runtime/port-allocator.ts:52`
+  now records handed-out ports, claiming each *before* awaiting the probe
+  (claiming after is a check-then-act race across the await, which reproduced
+  the collision in test). Reservations expire after a spawn window rather than
+  needing release, and a probe that throws releases its claim.
+
+- **A Models tab — the local GGUF subsystem is now something you can use.**
+  Everything below existed as tested main-process code and IPC channels with no
+  way to reach it. It now has four panels:
+  - **Library** — register a `.gguf` file or point Team-X at a folder to watch,
+    see each model's architecture, quantization, parameter count and size, load
+    and unload against the pool, and open a per-model drawer for its system
+    prompt, chat-template override and advanced tuning. A model whose header
+    could not be parsed reads as "Unknown" rather than showing zeroes, and a
+    broken split set explains itself in the row.
+  - **Discover** — search Hugging Face for GGUF repositories, open a repo to see
+    its files and sizes, and queue downloads. Transfers can be paused, resumed
+    and cancelled; a paused transfer keeps the bytes already on disk, and
+    quitting the app pauses rather than discards.
+  - **Endpoints** — add an LM Studio, Ollama, llama-server, KoboldCPP or vLLM
+    box on your network, probe it for reachability with a measured latency, and
+    edit or remove it. A non-local address is refused, and the refusal says why.
+  - **Runtime** — the GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU,
+    the active backend and any automatic fallback with its reason, the bundled
+    llama.cpp build, and the LRU pool with its capacity.
+
+  Per-model benchmarks record prompt-eval and generation throughput measured
+  from llama-server's own timings, a wall-clock time to first token, and peak
+  VRAM where the hardware can report it. Where a figure genuinely cannot be
+  measured the panel says so — "Not measured", "Unknown", or no percentage at
+  all — rather than printing a zero.
+
+- **`localGguf.library.listFolders`** — a new channel, and the reason watched
+  folders are manageable at all. `removeFolder` and `scanFolder` each take a
+  folder id, and nothing in the contract could produce one, so both were live
+  handlers with no reachable caller. The Library panel now lists every watched
+  folder with its reachability, rescans it on demand, and can stop watching it
+  (with a confirmation, since that drops the models it contributed).
+
+- **A native `.gguf` file picker** (`system.selectGgufFile`). The bridge had
+  only a directory picker, so there was no way to hand `library.addFile` a
+  path. The directory picker also hardcoded the title "Select skill folder",
+  which would have appeared over the model-folder dialog; the title is now the
+  caller's to supply.
+
+- **The local GGUF backend is complete end to end.** Fourteen of the twenty-six
+  `localGguf.*` IPC channels were registered handlers that threw
+  `"not implemented yet (Phase 1 stub)"`. The preload bridge advertised the
+  whole namespace, so the surface looked live while a third of it could only
+  fail at the moment anything reached it. All fourteen now delegate to real
+  services:
+  - **Remote LAN endpoints** (`endpoint.list/add/remove/test/update`) — add an
+    LM Studio, Ollama, llama-server, KoboldCPP or vLLM box on your network,
+    probe it over the OpenAI-compatible `/v1/models` route with a measured
+    latency, and store an optional auth header in the OS keychain. Endpoints
+    are validated as genuinely local-network: loopback, RFC1918, link-local,
+    `.local` mDNS or a bare LAN hostname. A public host is refused rather than
+    stored under a `Local` privacy-tier label it does not deserve.
+  - **Hugging Face browser** (`hf.search/modelCard/startDownload/pauseDownload/
+    resumeDownload/cancelDownload/activeDownloads`) — GGUF-scoped repository
+    search, model cards with real file sizes and a description read from the
+    repo README, and a resumable download manager. Bytes land in a `.part`
+    file and are renamed only once the transfer completes, so an interrupted
+    download is never mistaken for a usable model; resuming continues from the
+    byte offset instead of starting over, and quitting the app pauses rather
+    than discards.
+  - **Benchmark runner** (`benchmark.run/history`) — loads a model through the
+    pool, drives one fixed completion, and records prompt-eval and generation
+    throughput from llama-server's own timings, a wall-clock time-to-first-token,
+    and peak VRAM sampled from `nvidia-smi` where that is available.
+
+  Note this is backend and IPC only. **There is still no model-library UI**, so
+  none of it is reachable from the app yet.
+
+### Fixed
+
+- **Enhanced AI answered from a simulation layer instead of your model.** The
+  desktop Enhanced AI service accepted a fully-wired LLM completion function,
+  embedder, RAG repository and embedding dimension from the composition root
+  and then discarded all four. `enhancedQuery` returned the literal string
+  `"Found N relevant context items."` as its answer, `streamQuery` echoed your
+  own question back word by word on a 20ms timer, fact extraction returned 0,
+  the knowledge graph returned empty, plan creation returned
+  `{ id: 'placeholder' }`, and statistics were hardcoded zeros — all in front
+  of roughly 3,700 lines of complete, tested intelligence code that nothing
+  called. The service is now composed on that real stack.
+- **Every Settings → Enhanced AI toggle was inert.** All seven switches
+  (query expansion, semantic chunking, long-term memory, knowledge graph,
+  multi-turn planning, streaming, tracing) persisted a value that no code
+  read — the settings getter and setter were their only consumers. They now
+  gate real behaviour; the per-call gates take effect immediately, while
+  query expansion and tracing apply on next launch.
+- **Answer generation in `@team-x/intelligence` was fabricated.** The unified
+  AI service built its "answer" by concatenating the first 50 characters of
+  the top three retrieved chunks, never consulting the configured model.
+  Answers are now generated by the model, grounded in the retrieved context
+  and instructed to cite it and to say so when the context does not cover the
+  question. With no provider configured the service returns a clearly
+  labelled context digest rather than passing a synthesized string off as an
+  answer.
+- **Streamed answers silently lost about half their characters.** The
+  non-streaming query path and the result promise both iterated the same
+  async generator, so each received a disjoint subset of chunks.
+- **Indexing could hang the app.** The Enhanced AI chunker never terminated:
+  once a window reached the end of the input the cursor stopped advancing and
+  the same tail chunk was appended forever, exhausting the heap. It is
+  synchronous and reachable from a registered IPC handler, so it froze the
+  main process outright.
+- **Documents under ~200 characters were never indexed.** The semantic
+  chunker discarded any final chunk below `minChunkTokens` with no fallback,
+  so short tickets, messages and notes produced zero chunks and vanished from
+  retrieval without an error. The minimum is now a merge threshold: an
+  undersized tail merges into its predecessor and an undersized document
+  still produces one chunk.
+- **Proactive Mode reported permanently-zero metrics.** The Active Work,
+  Queued Work and Last Scan tiles on the Mission Control rail and in
+  Settings → Extensions were fed by hardcoded `0 / 0 / null`. They now report
+  observed runtime state.
+- **Proactive work bypassed budget governance.** The work scanner synthesized
+  thread and message ids for rows it never created and called the
+  orchestrator directly, skipping the budget-admission check, thread creation
+  and trigger-message creation that the already-implemented (and fully
+  tested, but never instantiated) proactive dispatcher performs. That
+  dispatcher is now the only dispatch route, and round-robin assignment
+  actually rotates instead of always selecting the first eligible employee.
+- **Blocked-work audit events recorded a false autonomy mode.** Every
+  `proactive.blocked` payload carried a hardcoded `balanced`, so operators
+  running in conservative or autonomous mode had an audit trail describing a
+  posture they were never in.
+- **`LoggerOptions.file` was silently ignored.** The RAG structured logger
+  documented a `{ path, maxSize, maxFiles }` file sink that was never read;
+  callers configuring a log file lost their logs with no error. File logging
+  now works, with size-based rotation and a one-shot warning if the path is
+  unwritable.
+- **GPU detection did nothing on macOS and Linux.** Both platforms reported
+  "no GPU" regardless of hardware, despite shipping installers, and despite a
+  complete cross-platform probe already living in
+  `@team-x/local-gguf-runtime`. The profiler now uses that probe's parsers via
+  `system_profiler` on macOS and `nvidia-smi` (with an `lspci` fallback) on
+  Linux.
+- **A company-provider sync helper destroyed explicit employee settings.**
+  `syncProviderToEmployees` cleared `providerPref` for *every* employee in a
+  company rather than only inherited ones, and its set path matched a value
+  the schema never stores, so it silently updated nothing. It had no callers
+  and was superseded by read-time resolution in the provider factory; it has
+  been removed rather than repaired.
+
+### Removed
+
+- **The `localGguf` Phase 1 stub thrower.** With every channel delegating to a
+  real service, the shared `notImplemented()` helper has no callers and is
+  deleted. A source-pin guard keeps it from coming back: a reintroduced stub
+  would still register a handler, so counting channels would not catch it.
+
+- 3,640 lines of unreachable renderer code: the skills and MCP marketplaces,
+  the custom skill/MCP install dialogs, the simplified-permissions panel, the
+  three built-in catalog data modules that only they imported, a renderer
+  environment helper orphaned with them, the retired `CardsView`, an unmounted
+  grant-authority dialog, and an unused avatar primitive. The install dialogs
+  fabricated their manifest preview — inventing tool names and capability
+  grants the user was shown before approving an install — while the real,
+  security-hardened manifest loader sat unused behind the live dialogs. Tests
+  now pin these paths as absent.
+- The unreachable "Coming soon" disabled state on the top-bar navigation: no
+  tab ever set it.
+
+- **The entire sqlite-vec "accelerated" retrieval path — it never once ran.**
+  `embeddings.similaritySearch`, `populateVecTable` and `findDuplicates`
+  (`apps/desktop/src/main/db/repos/embeddings.ts`) all queried an
+  `embeddings_vec` virtual table that does not exist in any database Team-X
+  has ever created. Four independent reasons, any one of which is fatal:
+  `0022_sqlite_vec_integration.sql` was absent from
+  `migrations/meta/_journal.json`, so drizzle never applied it; it collided on
+  index 0022 with the journaled `0022_long_run_resume_origin.sql`; it INSERTed
+  into a `migration_metadata` table defined nowhere in the schema; and the
+  `sqlite-vec` extension was never loaded — `db/client.ts` opens
+  better-sqlite3, sets three pragmas, and calls no `loadExtension`. On top of
+  that the query never referenced the caller's `queryVector` at all (no vec0
+  `MATCH` clause), and its `NOT IN` exclusion clause was built without
+  parentheses. Every call threw `no such table: embeddings_vec` and was
+  swallowed by the brute-force fallback in
+  `packages/intelligence/src/rag/service.ts`, so RAG has always ranked by
+  in-process cosine similarity. Removed the three methods, the unjournaled
+  migration, the orphan `scripts/migrate-embeddings-to-vec.ts` backfill CLI,
+  the now-meaningless `forceBruteForce` option and `RagRepo.similaritySearch`
+  member, and the unused `sqlite-vec` dependency. **Retrieval behaviour is
+  unchanged** — the fallback that already served every query is now the only
+  path, minus one spurious `console.warn` per retrieval.
+
+- **`orchestrator/queue.ts` and its test.** The file's own header claimed it
+  was "the orchestrator's only scheduler primitive" through which "every agent
+  execution, every meeting turn, every background MCP call" flowed.
+  `orchestrator/index.ts` never imported it. Real dispatch is the closure at
+  `orchestrator/index.ts` (`pending` + `scheduleDispatch`), which the queue
+  could not have replaced: admission there depends on per-thread, per-provider
+  and per-company in-flight accounting plus budget admission. Corrected the
+  two comment blocks in `index.ts` that named the deleted module.
+
+- **`db/vec-init.ts` and its test.** Created a `vec_embeddings` table — note
+  the name, the opposite word order from the `embeddings_vec` the repo queried
+  — and was never called from anywhere. Unlike its sibling `initFts5`, which
+  runs at `main/index.ts:690`, `initVec` had no caller at all. The `schema.ts`
+  comment that pointed readers at it as the creator of the vector table has
+  been corrected.
+
+- **Four orphaned renderer components** — `features/dashboard/employee-card.tsx`
+  and the shadcn `ui/alert.tsx`, `ui/collapsible.tsx`, `ui/tabs.tsx`
+  primitives. All four survived the Phase 8 console-vocabulary sweep with zero
+  importers. Their two now-stranded dependencies, `@radix-ui/react-collapsible`
+  and `@radix-ui/react-tabs`, were dropped with them.
+
+### Fixed — correctness
+
+- **`embeddings.getStats().avgChunksPerSource` was mathematically meaningless.**
+  It divided the total row count by the total row count, so it returned exactly
+  `1.0` for every company and `total` when called without a company. It now
+  divides by `COUNT(DISTINCT source_id)` and returns `0` rather than `NaN` on
+  an empty set.
+
+- **`embeddings.batchUpsert` reached through `this`** inside the object
+  literal returned by `createEmbeddingsRepo`, so it threw whenever the repo
+  was destructured — which is exactly how `RagRepo` consumes it. `upsert` is
+  now a closure both call sites share.
+
+### Documentation — corrections
+
+- **README's RAG bullet claimed "sqlite-vec embeddings".** It never had them;
+  the line now says what the code does — BLOBs ranked by brute-force cosine
+  similarity in-process.
+- **README claimed 38 migrations.** There were 38 `.sql` files but only 37
+  journaled; with the dead one deleted, both numbers are 37. A new case in
+  `apps/desktop/src/readme-claims.test.ts` now asserts the README count, the
+  file count and the journal all agree, and that no migration file is
+  unjournaled — the specific gap that hid this for four months.
+- **`docs/plans/2026-04-28-team-x-autonomous-runtime-mechanics.md` marked P2.3
+  (Private Operator Access) and P2.4 (Paperclip Import Bridge) "Status:
+  shipped".** Both are library-only: `createPrivateOperatorAccessService`,
+  `previewPaperclipImportBridge` and `loadPaperclipExportFolder` have zero
+  importers outside their own tests — no IPC channel, no transport, no UI.
+  Both statuses now say so, and `docs/runtime/private-operator-access.md` and
+  `docs/runtime/paperclip-import-bridge.md` carry a status banner. The
+  Paperclip doc's "Operator Workflow" is relabelled as intended-not-yet-
+  reachable, because an operator cannot perform step 1 today.
+- **The `[1.0.0]` entry claimed "All docs include table of contents,
+  cross-references, and code examples".** 13 of 42 files under
+  `docs/user-guide/` carry an explicit table-of-contents heading. Narrowed to
+  the long-form guides, with the correction noted inline.
+
+
 ## [3.4.0] - 2026-07-11
 
 ### Added
@@ -24,12 +377,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Mission Control, Autonomy (shell + heavy panels), Boards & Planning,
   Work + Comms + Guide, Ops (Telemetry / Audit / Vault with console-token
   charts), and Settings (15 sections + 4 dialogs + provider cards).
-- **Proactive Mode dashboard widget.** The proactive execution controls now
-  mount on the Mission Control secondary rail beside Copilot Insights:
-  master enable toggle, autonomy-mode readout, Active/Queued Work and
-  Last-Scan LCD tiles (5-second live polling), and a Scan-for-Work-Now
-  action — previously backend-only surface, now operable from the flagship
-  view.
+- **Proactive Mode dashboard widget.** `ProactiveControls`
+  (`features/proactive/proactive-controls.tsx:29`) now mounts on the Mission
+  Control secondary rail beside Copilot Insights — imported at
+  `features/dashboard/mission-control-dashboard.tsx:48` and rendered at
+  `mission-control-dashboard.tsx:1746`, pinned by
+  `features/purge-release-sweep.test.ts:18`. Master enable toggle,
+  autonomy-mode readout, Active/Queued Work and Last-Scan LCD tiles (5-second
+  live polling), and a Scan-for-Work-Now action — previously backend-only
+  surface, now operable from the flagship view.
 - **`--display-fg-mute` token.** Muted text inside always-dark wells/displays
   now carries a dedicated shift-invariant token (≈5.9:1 on void) instead of
   the chassis-calibrated silver that fell to ~3.1:1 in Day Shift; applied
@@ -1963,7 +2319,11 @@ renderer hooks — out of scope).
 
 #### Changed
 - Documentation now organized under `docs/user-guide/` with clear categorization
-- All docs include table of contents, cross-references, and code examples
+- The long-form guides carry a table of contents, cross-references, and code
+  examples. (Corrected 2026-08-23: this line originally read "All docs include
+  table of contents, cross-references, and code examples". 13 of the 42 files
+  under `docs/user-guide/` carry an explicit table-of-contents heading, so
+  "all" was never true.)
 - AI discovery files (`llms.txt`, `long-llms.txt`) enable LLM systems to understand Team-X architecture and features
 
 ---

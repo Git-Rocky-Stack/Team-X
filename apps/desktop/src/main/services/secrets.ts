@@ -34,6 +34,43 @@ function providerAccount(providerId: string): string {
 }
 
 /**
+ * Namespace helper for remote-endpoint auth-header account keys.
+ *
+ * `local_model_endpoints.auth_header_key_ref` persists a reference, never the
+ * secret; the value lives here under `endpoint:<keyRef>`. The distinct prefix
+ * is what keeps an endpoint named `openai` from reading the `openai` provider
+ * key — the two namespaces cannot collide.
+ */
+function endpointAccount(keyRef: string): string {
+  return `endpoint:${keyRef}`;
+}
+
+/**
+ * Namespace helper for Hugging Face token account keys.
+ *
+ * `LocalGgufRuntimeSettings.hfTokenKeyRef` names the entry; the token itself
+ * lives here under `hf:<keyRef>`, disjoint from `provider:` and `endpoint:`.
+ */
+function hfAccount(keyRef: string): string {
+  return `hf:${keyRef}`;
+}
+
+/**
+ * Guard against empty / whitespace-only key references.
+ *
+ * Same failure mode as {@link assertProviderId}: `endpointAccount('')` yields
+ * the non-empty string `"endpoint:"`, which slips past keytar's own required
+ * check and would silently store every ref-less endpoint's header under one
+ * shared account. `hfAccount('')` has the identical problem, so both
+ * namespaces share this guard.
+ */
+function assertKeyRef(keyRef: string): void {
+  if (!keyRef || keyRef.trim().length === 0) {
+    throw new Error('[secrets] keyRef is required and must be non-empty.');
+  }
+}
+
+/**
  * Guard against empty / whitespace-only provider ids.
  *
  * keytar has its own `checkRequired` that throws on empty service or
@@ -58,9 +95,11 @@ function assertProviderId(providerId: string): void {
  * auditable and makes the class safe to instantiate ad-hoc from any
  * main-process caller.
  *
- * Phase 1 only supports LLM-provider API keys. Additional secret types
- * (MCP server tokens, backup passphrases, etc.) will extend this class in
- * later phases with their own namespaced accessors that follow the same
+ * Three namespaces exist today: `provider:<id>` for LLM API keys,
+ * `endpoint:<keyRef>` for remote GGUF endpoint auth headers, and
+ * `hf:<keyRef>` for Hugging Face access tokens. Additional
+ * secret types (MCP server tokens, backup passphrases, etc.) extend this
+ * class with their own namespaced accessors following the same
  * `SERVICE` + namespaced-account pattern.
  *
  * **Security posture:** API keys never hit disk in plaintext. The renderer
@@ -113,5 +152,87 @@ export class SecretsStore {
   async deleteApiKey(providerId: string): Promise<boolean> {
     assertProviderId(providerId);
     return keytar.deletePassword(SERVICE, providerAccount(providerId));
+  }
+
+  /**
+   * Look up the auth-header value for a remote GGUF endpoint.
+   *
+   * The stored secret is the complete `Authorization` header value — e.g.
+   * `"Bearer lan-token-123"` — not a bare token, so the caller sends it
+   * verbatim and this class never has to guess a scheme.
+   *
+   * @param keyRef - The endpoint row's `authHeaderKeyRef`.
+   * @returns the stored header value, or `null` if none is configured.
+   * @throws if `keyRef` is empty or whitespace-only.
+   */
+  async getEndpointAuthHeader(keyRef: string): Promise<string | null> {
+    assertKeyRef(keyRef);
+    return keytar.getPassword(SERVICE, endpointAccount(keyRef));
+  }
+
+  /**
+   * Store or replace the auth-header value for a remote GGUF endpoint.
+   * Always overwrites any existing value for the same `keyRef`.
+   *
+   * @param keyRef - The endpoint row's `authHeaderKeyRef`.
+   * @param headerValue - The complete header value to send.
+   * @throws if `keyRef` is empty or whitespace-only, or if `headerValue` is
+   *   empty (keytar's own required check).
+   */
+  async setEndpointAuthHeader(keyRef: string, headerValue: string): Promise<void> {
+    assertKeyRef(keyRef);
+    await keytar.setPassword(SERVICE, endpointAccount(keyRef), headerValue);
+  }
+
+  /**
+   * Remove the auth-header value for a remote GGUF endpoint. Safe to call
+   * when nothing is stored — acts as an idempotent "ensure absent".
+   *
+   * @param keyRef - The endpoint row's `authHeaderKeyRef`.
+   * @returns `true` if a value existed and was removed, `false` otherwise.
+   * @throws if `keyRef` is empty or whitespace-only.
+   */
+  async deleteEndpointAuthHeader(keyRef: string): Promise<boolean> {
+    assertKeyRef(keyRef);
+    return keytar.deletePassword(SERVICE, endpointAccount(keyRef));
+  }
+
+  /**
+   * Look up the Hugging Face access token behind a settings key reference.
+   *
+   * Used by the `localGguf.hf.*` channels for gated repositories and for the
+   * higher authenticated rate limit. Anonymous browsing works without one, so
+   * `null` is a normal result, not an error.
+   *
+   * @param keyRef - `LocalGgufRuntimeSettings.hfTokenKeyRef`.
+   * @throws if `keyRef` is empty or whitespace-only.
+   */
+  async getHfToken(keyRef: string): Promise<string | null> {
+    assertKeyRef(keyRef);
+    return keytar.getPassword(SERVICE, hfAccount(keyRef));
+  }
+
+  /**
+   * Store or replace a Hugging Face access token.
+   *
+   * @param keyRef - `LocalGgufRuntimeSettings.hfTokenKeyRef`.
+   * @param token - The raw `hf_...` token.
+   * @throws if `keyRef` is empty or whitespace-only, or if `token` is empty.
+   */
+  async setHfToken(keyRef: string, token: string): Promise<void> {
+    assertKeyRef(keyRef);
+    await keytar.setPassword(SERVICE, hfAccount(keyRef), token);
+  }
+
+  /**
+   * Remove a Hugging Face access token. Idempotent.
+   *
+   * @param keyRef - `LocalGgufRuntimeSettings.hfTokenKeyRef`.
+   * @returns `true` if a token existed and was removed, `false` otherwise.
+   * @throws if `keyRef` is empty or whitespace-only.
+   */
+  async deleteHfToken(keyRef: string): Promise<boolean> {
+    assertKeyRef(keyRef);
+    return keytar.deletePassword(SERVICE, hfAccount(keyRef));
   }
 }

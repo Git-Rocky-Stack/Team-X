@@ -8,6 +8,8 @@ import type {
   CompanyPackageSection,
   Employee,
   ExtensionSummary,
+  PaperclipImportBridgePreview,
+  PaperclipUnsupportedAdapter,
   RuntimeProfileKind,
   RuntimeProfileSecretRef,
   RuntimeProfileSummary,
@@ -31,28 +33,15 @@ export interface PaperclipExportBundle {
   sourcePath?: string | null;
 }
 
-export interface PaperclipUnsupportedAdapter {
-  id: string;
-  name: string;
-  type: string;
-  reason: string;
-}
-
-export interface PaperclipImportBridgePreview {
-  packageData: CompanyPackage;
-  importPreview: CompanyImportPreview;
-  warnings: string[];
-  unsupportedAdapters: PaperclipUnsupportedAdapter[];
-  missingSecretRefs: CompanyPackageMissingSecretRef[];
-  counts: {
-    agents: number;
-    runtimeProfiles: number;
-    tickets: number;
-    skills: number;
-    unsupportedAdapters: number;
-    missingSecrets: number;
-  };
-}
+// The preview shape moved to `@team-x/shared-types/paperclip.ts` when this
+// bridge was wired to IPC: the renderer shows the operator what an import would
+// produce, so both sides of the boundary need it. The raw `PaperclipExportBundle`
+// deliberately did NOT move — the untyped shape of someone else's export folder
+// is not something the renderer should ever reason about.
+export type {
+  PaperclipImportBridgePreview,
+  PaperclipUnsupportedAdapter,
+} from '@team-x/shared-types';
 
 export interface PaperclipImportBridgeOptions {
   sourceAppVersion?: string;

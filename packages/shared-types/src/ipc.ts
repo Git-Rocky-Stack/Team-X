@@ -120,6 +120,12 @@ import type {
   DashboardEvent,
 } from './events.js';
 import type { LocalGgufApi } from './local-gguf.js';
+import type { PaperclipImportBridgePreview, PaperclipPreviewRequest } from './paperclip.js';
+import type {
+  PrivateOperatorAccessPlan,
+  PrivateOperatorAccessRequest,
+  PrivateOperatorMissionControlSnapshot,
+} from './private-operator.js';
 import type { PrivacyTier, ProviderConfig, ProviderKind } from './providers.js';
 
 export type { CopilotCategoryWeights } from './events.js';
@@ -1335,6 +1341,12 @@ export interface TestMcpConnectionResponse {
 export interface SelectDirectoryResponse {
   canceled: boolean;
   folderPath: string | null;
+}
+
+/** Result of the native single-file picker (`system.selectGgufFile`). */
+export interface SelectFileResponse {
+  canceled: boolean;
+  filePath: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -2820,6 +2832,21 @@ export interface IpcContract {
     request: string;
     response: RagDeleteForCompanyResponse;
   };
+  // Paperclip import bridge (preview only — the commit path is
+  // companyPortability.importPackage)
+  'paperclip.preview': {
+    request: PaperclipPreviewRequest;
+    response: PaperclipImportBridgePreview;
+  };
+  // Private operator access (read-only supervision planning)
+  'privateOperator.plan': {
+    request: PrivateOperatorAccessRequest;
+    response: PrivateOperatorAccessPlan;
+  };
+  'privateOperator.snapshot': {
+    request: PrivateOperatorAccessRequest;
+    response: PrivateOperatorMissionControlSnapshot;
+  };
   // Command palette channels (Phase 5 — M30)
   'command.parse': {
     request: CommandParseRequest;
@@ -2962,8 +2989,19 @@ export type UnsubscribeFn = () => void;
  */
 export interface TeamXApi {
   system: {
-    /** Open a native directory picker and return the selected folder path, if any. */
-    selectDirectory(): Promise<SelectDirectoryResponse>;
+    /**
+     * Open a native directory picker and return the selected folder path.
+     *
+     * `title` names what is being picked — pass it. The handler's fallback is
+     * deliberately generic; a caller-specific title is what stops one feature's
+     * wording appearing in another feature's dialog.
+     */
+    selectDirectory(options?: { title?: string }): Promise<SelectDirectoryResponse>;
+    /**
+     * Open a native single-file picker filtered to `.gguf` and return the
+     * selected path. Feeds `localGguf.library.addFile`.
+     */
+    selectGgufFile(options?: { title?: string }): Promise<SelectFileResponse>;
   };
   companies: {
     /** Return every company. Phase 1 + Phase 5.6 onwards may return many. */
@@ -3520,6 +3558,23 @@ export interface TeamXApi {
     rebuildAll(companyId: string): Promise<RagRebuildAllResponse>;
     /** Destructive: wipe every embedding row for the company (no re-index). */
     deleteForCompany(companyId: string): Promise<RagDeleteForCompanyResponse>;
+  };
+  paperclip: {
+    /**
+     * Read a Paperclip export folder and report what importing it would
+     * produce. Preview only — nothing is written. Feed the returned
+     * `packageData` to `companyPortability.importPackage` to commit.
+     */
+    preview(req: PaperclipPreviewRequest): Promise<PaperclipImportBridgePreview>;
+  };
+  privateOperator: {
+    /**
+     * Compute what a non-workstation device would be allowed to do against this
+     * workspace, and why. Pure planning — nothing here opens a listener.
+     */
+    plan(req: PrivateOperatorAccessRequest): Promise<PrivateOperatorAccessPlan>;
+    /** The plan plus the workspace state that plan authorises reading. */
+    snapshot(req: PrivateOperatorAccessRequest): Promise<PrivateOperatorMissionControlSnapshot>;
   };
   command: {
     /**

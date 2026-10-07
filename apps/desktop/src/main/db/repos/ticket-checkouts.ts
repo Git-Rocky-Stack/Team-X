@@ -52,6 +52,9 @@ function isSelfClaim(existing: TicketCheckoutRow, input: ClaimTicketCheckoutInpu
 }
 
 export function createTicketCheckoutsRepo<TRunResult>(db: TicketCheckoutsDb<TRunResult>) {
+  // Named so sibling calls resolve lexically instead of through the receiver:
+  // `this.x()` breaks the moment a method is destructured or passed as a
+  // callback, which is a trap this object literal has no reason to carry.
   const repo = {
     getById(id: string): TicketCheckoutRow | null {
       return db.select().from(ticketCheckouts).where(eq(ticketCheckouts.id, id)).get() ?? null;
@@ -166,7 +169,7 @@ export function createTicketCheckoutsRepo<TRunResult>(db: TicketCheckoutsDb<TRun
       input: { now?: number; expiresAt?: number },
     ): TicketCheckoutRow | null {
       const now = input.now ?? Date.now();
-      const existing = this.getById(checkoutId);
+      const existing = repo.getById(checkoutId);
       if (!existing || existing.status !== 'active') return existing;
       db.update(ticketCheckouts)
         .set({
@@ -176,12 +179,12 @@ export function createTicketCheckoutsRepo<TRunResult>(db: TicketCheckoutsDb<TRun
         })
         .where(eq(ticketCheckouts.id, checkoutId))
         .run();
-      return this.getById(checkoutId);
+      return repo.getById(checkoutId);
     },
 
     release(input: ReleaseTicketCheckoutInput): TicketCheckoutRow | null {
       const now = input.now ?? Date.now();
-      const existing = this.getById(input.checkoutId);
+      const existing = repo.getById(input.checkoutId);
       if (!existing) return null;
       if (existing.status !== 'active') return existing;
       db.update(ticketCheckouts)
@@ -193,13 +196,13 @@ export function createTicketCheckoutsRepo<TRunResult>(db: TicketCheckoutsDb<TRun
         })
         .where(eq(ticketCheckouts.id, input.checkoutId))
         .run();
-      return this.getById(input.checkoutId);
+      return repo.getById(input.checkoutId);
     },
 
     expireStale(input: { companyId?: string; now?: number }): TicketCheckoutRow[] {
       const now = input.now ?? Date.now();
       const activeRows = input.companyId
-        ? this.listActiveByCompany(input.companyId)
+        ? repo.listActiveByCompany(input.companyId)
         : db.select().from(ticketCheckouts).where(eq(ticketCheckouts.status, 'active')).all();
       const staleRows = activeRows.filter((row) => row.expiresAt <= now);
       for (const row of staleRows) {
@@ -214,7 +217,7 @@ export function createTicketCheckoutsRepo<TRunResult>(db: TicketCheckoutsDb<TRun
           .run();
       }
       return staleRows
-        .map((row) => this.getById(row.id))
+        .map((row) => repo.getById(row.id))
         .filter((row): row is TicketCheckoutRow => row !== null);
     },
   };
