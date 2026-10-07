@@ -30,6 +30,7 @@ import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-
 import { Faceplate, LampTile } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
+import { OPERATOR_LABEL } from '@/features/audit/actor-label.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
 
@@ -42,9 +43,6 @@ const MAX_ROWS = 10;
 
 /** Skeleton row count during the initial query. */
 const SKELETON_COUNT = 5;
-
-/** Actor label for the user row (Rocky). Matches AuditView convention. */
-const USER_LABEL = 'Rocky';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -114,7 +112,9 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
     }
   }, [entry.text]);
 
-  const actorLabel = entry.actorId === 'user' ? USER_LABEL : entry.actorId;
+  // CommandService records palette commands under the `user` actor id —
+  // the human operator, labelled the same way as in the audit log.
+  const actorLabel = entry.actorId === 'user' ? OPERATOR_LABEL : entry.actorId;
   const label = intentLabel(entry.intent);
   const outcomeOk = entry.outcome === 'ok';
   const previewText = entry.text?.trim() || `(${label})`;

@@ -29,11 +29,13 @@
  *    enqueueChat returns immediately and never waits on disk I/O.
  *
  * 2. `resolveSystemPrompt` and `resolveProvider` are injected async
- *    callbacks, not inlined logic. The real implementations land in T32
- *    (parse role.md, render template vars, consult provider-router
- *    registry + keytar). Keeping them as injection points means this
- *    module and its tests stay deterministic and have zero dependency
- *    on the filesystem or the keychain.
+ *    callbacks, not inlined logic. The composition root (`main/index.ts`)
+ *    supplies the real ones: the role loader + installed-skills bundle +
+ *    execution policy for the prompt, and the runtime-profile provider
+ *    service (provider registry + keychain secrets) for the provider.
+ *    Keeping them as injection points means this module and its tests
+ *    stay deterministic and have zero dependency on the filesystem or
+ *    the keychain.
  *
  * 3. Repos are narrowed to structural interfaces rather than importing
  *    the full `createXRepo` return types. Same rationale as
@@ -169,12 +171,13 @@ export interface OrchestratorTicketsRepo {
 
 /**
  * Resolver that turns an employee + company pair into a rendered system
- * prompt. The real implementation (T32) will:
+ * prompt. The production implementation (wired in `main/index.ts`):
  *
- *   1. Look up `role.md` on disk via `employee.rolePackId` + `employee.roleId`,
- *   2. Parse it with `parseRoleMarkdown`,
- *   3. Substitute template vars via `renderRoleBody` using the company's
- *      parsed settings JSON.
+ *   1. Renders the employee's `role.md` via the role loader
+ *      (`roleLoader.resolveSystemPrompt` — role-pack lookup, parse, and
+ *      company template-var substitution),
+ *   2. Appends the employee's installed skills bundle when non-empty,
+ *   3. Appends the execution policy (`appendExecutionPolicy`).
  *
  * Returning a pre-rendered string keeps `runAgent` free of disk and
  * role-pack concerns.
@@ -186,10 +189,12 @@ export type ResolveSystemPrompt = (args: {
 }) => Promise<string>;
 
 /**
- * Resolver that picks a provider + model for a given employee. The real
- * implementation (T32) will consult the provider-router registry, apply
- * the user's privacy-tier filter, and load API keys from keytar. Phase 1
- * tests inject a fake that returns a stub async generator.
+ * Resolver that picks a provider + model for a given employee. Production
+ * wires the runtime-profile provider service (`main/index.ts`): an enabled
+ * runtime profile bound to the employee wins, otherwise the provider
+ * factory resolves the employee's configured provider from the registry,
+ * applying the privacy-tier rule and loading API keys from the keychain.
+ * Test mode wires a canned stream; unit tests inject a stub async generator.
  */
 export type ResolveProvider = (employee: EmployeeRow) => Promise<{
   providerName: string;
@@ -309,9 +314,9 @@ export interface Orchestrator {
   updateConcurrency(args: UpdateConcurrencyArgs): void;
 
   /**
-   * Escape hatch for T36 / main process wiring that wants to subscribe
-   * to the bus (for forwarding events to the renderer). Tests use this
-   * directly too.
+   * Escape hatch for main-process wiring that wants to subscribe to the
+   * bus (for forwarding events to the renderer). Tests use this directly
+   * too.
    */
   readonly bus: EventBus;
 }
@@ -540,12 +545,25 @@ export interface BuildOrchestratorOptions {
       createdAt?: number;
     }): unknown;
   };
+  /** Static pack budget; superseded per turn by `getContextMemorySettings`. */
   contextTargetTokenBudget?: number;
+  /** Static recent-turn window; superseded per turn by `getContextMemorySettings`. */
   contextRecentTurnLimit?: number;
   /**
-   * Concurrent dispatch cap. Phase 1 default is intentionally low (2)
-   * so local ollama never gets stampeded; T36 reads the real number
-   * from the provider settings service.
+   * Settings → Memory snapshot, read at the start of every turn's context
+   * preparation so a change applies to the next turn without a restart.
+   * The composition root maps `settingsRepo.getMemory()` here. A field the
+   * getter omits falls back to the static option above, then to the
+   * assembler/packer defaults.
+   */
+  getContextMemorySettings?: () => {
+    targetTokenBudget?: number;
+    recentTurnLimit?: number;
+  };
+  /**
+   * Concurrent dispatch cap. The composition root passes the
+   * `orchestrator_slots` setting (defaulting to the hardware-derived
+   * runtime strategy); `updateConcurrency` applies later changes.
    */
   slots: number;
   /** Optional per-provider-kind concurrent dispatch caps. */
@@ -867,6 +885,7 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
     runCheckpointService,
     contextTargetTokenBudget,
     contextRecentTurnLimit,
+    getContextMemorySettings,
     slots,
     providerCaps,
     now,
@@ -947,15 +966,20 @@ export function buildOrchestrator(opts: BuildOrchestratorOptions): Orchestrator 
       };
     }
 
+    // Read per turn — Settings → Memory changes apply to the next turn.
+    const memorySettings = getContextMemorySettings?.() ?? {};
     const effectiveContextTargetTokenBudget =
-      contextTargetTokenBudget ?? MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1];
+      memorySettings.targetTokenBudget ??
+      contextTargetTokenBudget ??
+      MEMORY_TARGET_TOKEN_BUDGET_OPTIONS[1];
+    const effectiveRecentTurnLimit = memorySettings.recentTurnLimit ?? contextRecentTurnLimit;
 
     try {
       const assembled = await contextAssemblerService.assembleThreadContext({
         companyId: args.companyId,
         threadId: args.threadId,
         employeeId: args.employeeId,
-        recentTurnLimit: contextRecentTurnLimit,
+        recentTurnLimit: effectiveRecentTurnLimit,
       });
       const packed = contextPackerService.packContext({
         context: assembled,

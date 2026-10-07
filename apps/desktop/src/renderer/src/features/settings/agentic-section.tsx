@@ -1,13 +1,15 @@
 /**
  * AgenticSection — agentic-loop budget caps (max steps, max tokens, timeout ms).
  *
- * Backs the three `agentic_*` settings keys introduced in M31. Read by
- * `AgenticLoopService` at run-start so every new complex_request observes
- * the user's current preference without a restart.
+ * Backs the three `agentic_*` settings keys introduced in M31. The main
+ * process reads them through `AgenticLoopService`'s `getBudgets` seam at
+ * each run start, so every new complex_request observes the user's current
+ * preference without a restart. "Max Steps" counts tool turns (one model
+ * call plus the tools it requests) and maps to the loop's `maxIterations`
+ * — see `budgetsFromAgenticSettings` in `agentic-loop-service.ts`.
  *
- * NOTE: Team-X has no jsdom/@testing-library infrastructure in the
- * renderer. The component is covered end-to-end by the M31 T8
- * `agentic-loop.spec.ts` Playwright spec (canned test-mode provider).
+ * The component is covered end-to-end by the M31 T8 `agentic-loop.spec.ts`
+ * Playwright spec (canned test-mode provider).
  *
  * Phase 5 — M31 T7.
  */
@@ -134,9 +136,9 @@ export function AgenticSection() {
             className="h-8 text-code-sm"
           />
           <p className="text-caption text-muted-foreground/70">
-            Maximum ReAct steps before the loop terminates with{' '}
-            <span className="font-mono">budget_exhausted</span> ({maxSteps.min}–{maxSteps.max},
-            default {maxSteps.default}).
+            Maximum tool turns (one model call plus the tools it requests) before the loop
+            terminates with <span className="font-mono">budget_exhausted</span> ({maxSteps.min}–
+            {maxSteps.max}, default {maxSteps.default}).
           </p>
         </div>
 

@@ -11,12 +11,13 @@
  *   4. Fill in agenda, verify chair (CEO default), check both employees
  *   5. Start the meeting → detail panel opens with agenda system message
  *   6. Verify "Active" status badge
- *   7. Rocky interjects with a message → message appears in thread
+ *   7. The operator interjects with a message → message appears in thread
  *   8. End the meeting → minutes appear, status changes to "Ended"
  *
  * The meeting flow exercises: orchestrator pause/drain, meeting thread
  * creation, system messages, user interjection, minutes generation
- * (transcript-based), and orchestrator resume — all end-to-end through
+ * (transcript fallback — the test-mode provider does not reply with
+ * minutes JSON), and orchestrator resume — all end-to-end through
  * the real IPC bridge and React Query polling.
  *
  * Same isolation model as smoke.spec.ts: each test gets a fresh
@@ -111,7 +112,7 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     rmSync(userDataDir, { recursive: true, force: true });
   });
 
-  test('calls a meeting, Rocky interjects, ends meeting, verifies minutes', async () => {
+  test('calls a meeting, operator interjects, ends meeting, verifies minutes', async () => {
     const log = (msg: string) => console.log(`[e2e:meeting] ${msg}`);
     log('test body entered');
 
@@ -200,7 +201,7 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     );
     log('agenda system message visible in meeting thread');
 
-    // --- 7. Rocky interjects with a message ----------------------------------
+    // --- 7. The operator interjects with a message ---------------------------
     const interjection = 'What about the mobile release timeline?';
     const interjectInput = window.locator('textarea[placeholder*="Interject"]');
     await expect(interjectInput).toBeVisible();
@@ -211,14 +212,15 @@ test.describe('Team-X Phase 3 meeting flow', () => {
     await interjectInput.press('Enter');
     log('interjection sent via Enter');
 
-    // Verify Rocky's message appears in the thread. The detail panel polls
+    // Verify the operator's message appears in the thread. The detail panel polls
     // every 2s (useMeetingDetail refetchInterval). Wait up to 10s.
     await expect(detailPanel.getByText(interjection)).toBeVisible({ timeout: 10_000 });
     log('interjection visible in thread');
 
-    // Verify the "Rocky" author label appears for the interjection.
-    await expect(detailPanel.getByText('Rocky')).toBeVisible();
-    log('Rocky author label visible');
+    // Verify the "You" operator label appears for the interjection. Exact
+    // match so it cannot be satisfied by any other text containing "you".
+    await expect(detailPanel.getByText('You', { exact: true })).toBeVisible();
+    log('operator author label visible');
 
     // --- 8. End the meeting --------------------------------------------------
     const endBtn = detailPanel.getByText('End Meeting');
@@ -244,7 +246,7 @@ test.describe('Team-X Phase 3 meeting flow', () => {
 
     // Minutes content is rendered in a div.max-h-32 (unique to the minutes
     // section — message bubbles don't use this class). The format is:
-    // "# Meeting Minutes\n\n**Agenda:** {agenda}\n\n## Discussion\n\n**Rocky:** {msg}"
+    // "# Meeting Minutes\n\n**Agenda:** {agenda}\n\n## Discussion\n\n**You:** {msg}"
     const minutesContent = detailPanel.locator('div.max-h-32');
     await expect(minutesContent).toBeVisible({ timeout: 10_000 });
     await expect(minutesContent).toContainText('Meeting Minutes');

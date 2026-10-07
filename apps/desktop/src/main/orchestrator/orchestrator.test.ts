@@ -162,6 +162,7 @@ function buildDefaultOrchestrator(
     runIdleTimeoutMs?: number;
     contextTargetTokenBudget?: number;
     contextRecentTurnLimit?: number;
+    getContextMemorySettings?: Parameters<typeof buildOrchestrator>[0]['getContextMemorySettings'];
   } = {},
 ): Orchestrator {
   const defaultProvider =
@@ -205,6 +206,7 @@ function buildDefaultOrchestrator(
     runCheckpointService: overrides.runCheckpointService,
     contextTargetTokenBudget: overrides.contextTargetTokenBudget,
     contextRecentTurnLimit: overrides.contextRecentTurnLimit,
+    getContextMemorySettings: overrides.getContextMemorySettings,
     slots: overrides.slots ?? 2,
     now: overrides.now,
     runTimeoutMs: overrides.runTimeoutMs,
@@ -1007,6 +1009,89 @@ describe('buildOrchestrator', () => {
           userMessageId: oversizedUserMessageId,
         }),
       ).rejects.toThrow(/minimum viable packed context could not be assembled/i);
+    });
+  });
+
+  // Settings → Memory (pack budget + recent-turn limit) used to be read
+  // only by the renderer preview: the composition root never passed them,
+  // so every agent turn packed at the 4096-token default with the
+  // assembler's default turn window. Pin that the orchestrator reads the
+  // getter on every turn, so a settings change applies to the next turn.
+  describe('Settings → Memory reaches agent turns', () => {
+    it('packs each turn with the configured target budget and recent-turn limit, read per turn', async () => {
+      const recentTurnLimits: Array<number | undefined> = [];
+      const targetBudgets: Array<number | undefined> = [];
+      let memory = { targetTokenBudget: 2048, recentTurnLimit: 6 };
+      const orchestrator = buildDefaultOrchestrator(f, {
+        contextAssemblerService: {
+          assembleThreadContext: async (input) => {
+            recentTurnLimits.push(input.recentTurnLimit);
+            return {
+              companyId: f.companyId,
+              threadId: f.threadId,
+              generatedAt: 1,
+              retrievalQueries: [],
+              recentTurns: [],
+              blocks: [],
+            };
+          },
+        },
+        contextPackerService: {
+          packContext: (input) => {
+            targetBudgets.push(input.targetTokenBudget);
+            return {
+              companyId: f.companyId,
+              threadId: f.threadId,
+              generatedAt: 1,
+              targetTokenBudget: input.targetTokenBudget ?? 0,
+              usedTokens: 4,
+              recentTurnTokens: 4,
+              blockTokens: 0,
+              retrievalTokens: 0,
+              packedTurns: [
+                {
+                  messageId: f.userMessageId,
+                  role: 'user',
+                  authorId: 'rocky',
+                  authorKind: 'user',
+                  content: 'hi',
+                  createdAt: 1,
+                  estimatedTokens: 4,
+                  truncated: false,
+                },
+              ],
+              systemAddendum: '',
+              includedBlocks: [],
+              droppedBlocks: [],
+              retrievalQueries: [],
+              resumeOrigin: null,
+            };
+          },
+        },
+        getContextMemorySettings: () => memory,
+      });
+
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: f.userMessageId,
+      });
+
+      memory = { targetTokenBudget: 8192, recentTurnLimit: 20 };
+      const followUpId = f.messagesRepo.append({
+        threadId: f.threadId,
+        authorId: 'rocky',
+        authorKind: 'user',
+        content: 'follow-up',
+      });
+      await orchestrator.enqueueChat({
+        threadId: f.threadId,
+        employeeId: f.employeeId,
+        userMessageId: followUpId,
+      });
+
+      expect(recentTurnLimits).toEqual([6, 20]);
+      expect(targetBudgets).toEqual([2048, 8192]);
     });
   });
 

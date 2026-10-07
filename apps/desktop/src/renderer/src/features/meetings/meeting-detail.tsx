@@ -3,6 +3,8 @@ import { useState } from 'react';
 
 import { LampTile, RecessedWell, SubviewState } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
+import { actorLabel } from '@/features/audit/actor-label.js';
+import { useEmployees } from '@/hooks/use-employees.js';
 import { useEndMeeting, useInterjectMeeting, useMeetingDetail } from '@/hooks/use-meetings.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -12,6 +14,10 @@ interface MeetingDetailPanelProps {
 
 export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
   const { data: detail, isLoading } = useMeetingDetail(meetingId);
+  // Speaker names come from the company's employees list (already cached
+  // by the rest of the app); the chair row on the detail covers the brief
+  // window before that list resolves.
+  const { data: employees = [] } = useEmployees(detail?.companyId ?? null);
   const endMeeting = useEndMeeting();
   const interject = useInterjectMeeting();
   const setActiveMeetingId = useAppStore((s) => s.setActiveMeetingId);
@@ -26,6 +32,7 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
   }
 
   const isActive = detail.status === 'active';
+  const knownSpeakers = detail.chair ? [...employees, detail.chair] : employees;
 
   const handleInterject = async () => {
     if (!message.trim()) return;
@@ -114,7 +121,11 @@ export function MeetingDetailPanel({ meetingId }: MeetingDetailPanelProps) {
                   ) : (
                     <div className={`well px-3 py-2 ${isUser ? 'border-[var(--armed-edge)]' : ''}`}>
                       <p className="text-eyebrow-sm text-silver-mute mb-0.5">
-                        {isUser ? 'Rocky' : msg.authorId.slice(0, 8)}
+                        {actorLabel(
+                          { id: msg.authorId, kind: msg.authorKind },
+                          knownSpeakers,
+                          'Employee',
+                        )}
                       </p>
                       <p className="text-body text-[var(--display-fg)] whitespace-pre-wrap">
                         {msg.content}
