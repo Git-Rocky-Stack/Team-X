@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { getLevelRank } from '@team-x/shared-types';
 import { UserPlus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Tag } from '@/components/console/index.js';
+import { SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import {
   Dialog,
@@ -15,48 +16,22 @@ import {
 import { Input } from '@/components/ui/input.js';
 import { useEmployeeEventSync, useEmployees } from '@/hooks/use-employees.js';
 import { useHireEmployee } from '@/hooks/use-hire.js';
+import { type RoleOption, useRoles } from '@/hooks/use-roles.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 
-interface RoleOption {
-  roleId: string;
-  name: string;
-  level: string;
-  levelLabel: string;
-  responsibilities: string[];
-}
+/** Display label per role-pack level (frontmatter is hyphenated lowercase). */
+const LEVEL_LABEL: Record<string, string> = {
+  officer: 'Officer',
+  'senior-management': 'Senior Management',
+  management: 'Management',
+  supervisor: 'Supervisor',
+  lead: 'Lead',
+  ic: 'IC',
+};
 
-/**
- * Phase 1 hardcoded role options. The seed creates these two roles
- * from the strategia-official pack. Phase 2 will dynamically load
- * the full ~55-role library from the role-loader.
- */
-const PHASE_1_ROLES: RoleOption[] = [
-  {
-    roleId: 'chief-executive-officer',
-    name: 'Chief Executive Officer',
-    level: 'officer',
-    levelLabel: 'Officer',
-    responsibilities: [
-      'Set company vision and strategic direction',
-      'Make high-level organizational decisions',
-      'Coordinate cross-functional initiatives',
-      'Report on company health and trajectory',
-    ],
-  },
-  {
-    roleId: 'senior-fullstack-engineer',
-    name: 'Senior Fullstack Engineer',
-    level: 'ic',
-    levelLabel: 'IC',
-    responsibilities: [
-      'Design and implement full-stack features',
-      'Write clean, tested, production-ready code',
-      'Review code and mentor junior engineers',
-      'Drive technical decisions within the team',
-    ],
-  },
-];
+/** Unknown levels (a future role pack) sort after every ranked level. */
+const UNRANKED = Number.MAX_SAFE_INTEGER;
 
 interface HireDialogProps {
   open: boolean;
@@ -65,7 +40,9 @@ interface HireDialogProps {
 }
 
 export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
+  const { rolesByLevel } = useRoles();
   const [selectedRole, setSelectedRole] = useState<RoleOption | null>(null);
+  const [roleQuery, setRoleQuery] = useState('');
   const [name, setName] = useState('');
   const [managerId, setManagerId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -75,8 +52,28 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
   const queryClient = useQueryClient();
   const hireMutation = useHireEmployee();
 
+  // Catalog grouped most-senior-first (LEVEL_RANK), filtered by the search
+  // box. Empty groups drop out so a narrow query reads as a short list.
+  const visibleGroups = useMemo(() => {
+    const needle = roleQuery.trim().toLowerCase();
+    return Array.from(rolesByLevel.entries())
+      .map(([level, roles]) => ({
+        level,
+        label: LEVEL_LABEL[level] ?? level,
+        roles:
+          needle.length === 0
+            ? roles
+            : roles.filter(
+                (role) => role.name.toLowerCase().includes(needle) || role.id.includes(needle),
+              ),
+      }))
+      .filter((group) => group.roles.length > 0)
+      .sort((a, b) => (getLevelRank(a.level) ?? UNRANKED) - (getLevelRank(b.level) ?? UNRANKED));
+  }, [rolesByLevel, roleQuery]);
+
   function handleClose() {
     setSelectedRole(null);
+    setRoleQuery('');
     setName('');
     setManagerId('');
     setSubmitError(null);
@@ -93,7 +90,7 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
     try {
       const result = await hireMutation.mutateAsync({
         companyId,
-        roleId: selectedRole.roleId,
+        roleId: selectedRole.id,
         name: name.trim(),
       });
       if (managerId.length > 0) {
@@ -123,42 +120,69 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
           <DialogDescription>Choose a role and assign a name.</DialogDescription>
         </DialogHeader>
 
-        {/* Role selection */}
-        <div className="grid gap-3 py-2">
-          {PHASE_1_ROLES.map((role) => {
-            const isSelected = selectedRole?.roleId === role.roleId;
-            return (
-              <button
-                key={role.roleId}
-                type="button"
-                onClick={() => {
-                  setSelectedRole(role);
-                  if (name.length === 0) setName(role.name);
-                }}
-                className={cn(
-                  'flex flex-col gap-2 rounded-card border p-4 text-left transition-all',
-                  isSelected
-                    ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)]'
-                    : 'border-[var(--hairline)] hover:border-[var(--hairline-strong)]',
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-body-strong text-foreground">{role.name}</span>
-                  <Tag>{role.levelLabel}</Tag>
-                </div>
-                <ul className="space-y-1">
-                  {role.responsibilities.map((r) => (
-                    <li
-                      key={r}
-                      className="text-caption text-muted-foreground before:mr-1.5 before:content-['•']"
-                    >
-                      {r}
-                    </li>
-                  ))}
-                </ul>
-              </button>
-            );
-          })}
+        {/* Role selection — the full non-system catalog, grouped by level */}
+        <div className="space-y-2 py-2">
+          <Input
+            type="search"
+            value={roleQuery}
+            onChange={(e) => setRoleQuery(e.target.value)}
+            placeholder="Search roles"
+            aria-label="Search roles"
+            data-hire-role-search=""
+          />
+          <div className="max-h-72 space-y-3 overflow-y-auto pr-1" data-hire-role-list="">
+            {visibleGroups.length === 0 ? (
+              <SubviewState
+                lampLabel="STBY"
+                lampTone="off"
+                title="No roles match that search."
+                className="min-h-0 p-4"
+              />
+            ) : (
+              visibleGroups.map((group) => (
+                <fieldset
+                  key={group.level}
+                  aria-label={group.label}
+                  className="space-y-1.5 border-0 p-0"
+                >
+                  <legend className="flex w-full items-center justify-between">
+                    <span className="text-label text-silver-mute">{group.label}</span>
+                    <Tag mono>{group.roles.length}</Tag>
+                  </legend>
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {group.roles.map((role) => {
+                      const isSelected = selectedRole?.id === role.id;
+                      return (
+                        <label
+                          key={role.id}
+                          className={cn(
+                            'cursor-pointer rounded-control border px-3 py-2 text-body-strong transition-colors focus-within:ring-2 focus-within:ring-brand/60',
+                            isSelected
+                              ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
+                              : 'border-[var(--hairline)] text-muted-foreground hover:border-[var(--hairline-strong)] hover:text-foreground',
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="hire-role"
+                            value={role.id}
+                            checked={isSelected}
+                            data-hire-role={role.id}
+                            onChange={() => {
+                              setSelectedRole(role);
+                              if (name.length === 0) setName(role.name);
+                            }}
+                            className="sr-only"
+                          />
+                          <span>{role.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Name input — shown when a role is selected */}
