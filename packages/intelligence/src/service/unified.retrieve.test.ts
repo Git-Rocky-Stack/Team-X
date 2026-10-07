@@ -286,3 +286,29 @@ describe('createAiService — shared RAG service', () => {
     expect(service.getRagService()).toBe(shared);
   });
 });
+
+describe('createAiService — query expansion reaches retrieval', () => {
+  // `retrieveHits` used `expansions[0]` — and the expander always puts the
+  // original query first — so expansion was computed and then discarded, and
+  // the Query Expansion switch changed nothing about what was retrieved.
+  it('finds a passage only an expansion matches', async () => {
+    const { service } = await buildService({
+      // 0.9: the hashed 16-dim test embedder gives unrelated text some
+      // similarity, so only the HyDE document (an exact match) clears it.
+      rag: { repo: createInMemoryRagRepo(), topK: 5, threshold: 0.9, enableExpansion: true },
+      llm: {
+        model: 'test-model',
+        provider: 'test',
+        complete: async (prompt: string) =>
+          prompt.includes('hypothetical document')
+            ? 'The release is blocked because the signing certificate expired last Friday.'
+            : 'generated answer',
+      },
+    });
+    await seedPassage(service);
+
+    const result = await service.retrieve('co-1', 'what stops shipping?');
+
+    expect(result.context.map((h) => h.sourceId)).toEqual(['msg-1']);
+  });
+});

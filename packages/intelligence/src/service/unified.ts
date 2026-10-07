@@ -442,6 +442,12 @@ function toExtractedFacts(
 }
 
 /**
+ * Most query variants (the original plus expansions) retrieved per question.
+ * Each costs one embedding call and one ranking pass.
+ */
+const MAX_RETRIEVAL_VARIANTS = 4;
+
+/**
  * Create unified AI service.
  */
 export function createAiService(config: AiServiceConfig): AiService {
@@ -668,19 +674,50 @@ Respond with JSON array:
     topK: number,
     threshold: number,
   ): Promise<RetrievalHit[]> {
-    let expandedQuery = query;
-    if (queryExpansion) {
-      const entityContext: EntityContext = { companyId };
-      const expanded = await queryExpansion.expand(query, entityContext);
-      const firstExpansion = expanded.expansions[0];
-      if (firstExpansion) {
-        expandedQuery = firstExpansion;
-      }
+    if (!queryExpansion) {
+      const hits = await rag.retrieve({ companyId, query, topK, threshold });
+      stats.rag.totalRetrievals += 1;
+      return hits;
     }
 
-    const hits = await rag.retrieve({ companyId, query: expandedQuery, topK, threshold });
+    // Retrieve for the original query and its expansions, then merge. This
+    // used to take `expansions[0]` — which the expander always sets to the
+    // original query — so expansion was computed and thrown away and the
+    // Query Expansion switch changed nothing about what came back.
+    const expanded = await queryExpansion.expand(query, { companyId } satisfies EntityContext);
+    const variants: Array<{ text: string; weight: number }> = [];
+    const seen = new Set<string>();
+    expanded.expansions.forEach((text, i) => {
+      const key = text.trim().toLowerCase();
+      if (key.length === 0 || seen.has(key) || variants.length >= MAX_RETRIEVAL_VARIANTS) return;
+      seen.add(key);
+      variants.push({ text, weight: expanded.weights[i] ?? 1 });
+    });
+    if (variants.length === 0) variants.push({ text: query, weight: 1 });
+
+    const perVariant = await Promise.all(
+      variants.map((v) => rag.retrieve({ companyId, query: v.text, topK, threshold })),
+    );
     stats.rag.totalRetrievals += 1;
-    return hits;
+
+    // One entry per chunk, ranked by its best weighted score. `similarity`
+    // stays the raw cosine of that best match, so the threshold keeps its
+    // meaning; the weight only orders an expansion's hits below the
+    // original's when both match.
+    const best = new Map<string, { hit: RetrievalHit; score: number }>();
+    perVariant.forEach((hits, i) => {
+      const weight = variants[i]?.weight ?? 1;
+      for (const hit of hits) {
+        const key = `${hit.sourceId}#${hit.chunkIndex}`;
+        const score = hit.similarity * weight;
+        const prior = best.get(key);
+        if (!prior || score > prior.score) best.set(key, { hit, score });
+      }
+    });
+    return [...best.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK)
+      .map((entry) => entry.hit);
   }
 
   /** Knowledge-graph entities a question mentions, plus their neighbours. */
