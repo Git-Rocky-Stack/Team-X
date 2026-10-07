@@ -4229,16 +4229,12 @@ Access via **Settings → Extensions & Authority**.
 **Installing a Skill:**
 
 1. Navigate to **Settings → Extensions**
-2. Click **Skills Marketplace** button
-3. Browse or search available skills
-4. Click **Install** on a skill
-5. Review requested authority
-6. Grant or deny access
-
-**Or Install from Local Folder:**
-1. Click **Install from Local**
-2. Select skill package folder
-3. Install
+2. Click **Add Skill** — the **Install Skill** dialog opens
+3. Pick a source:
+   - **Local Folder** — browse to (or type) a folder path, then click **Install Local Skill**
+   - **Public URL** — paste a GitHub repo / tree / blob, raw GitHub, or direct HTTPS manifest URL, then click **Install from URL**
+4. The source must contain a `teamx-skill.json` or `team-x-skill.json` manifest. Team-X snapshots the manifest and its referenced prompt files into workspace app data and applies the current autonomy policy
+5. Review the skill's authority in **Settings → Extensions** and grant or deny access
 
 **Skills Provide:**
 - Custom behaviors for specific roles
@@ -4259,11 +4255,10 @@ Access via **Settings → Extensions & Authority**.
 **Adding an MCP Server:**
 
 1. Navigate to **Settings → Extensions**
-2. Click **Import MCP Server**
-3. Choose from templates or add custom:
-   - **Name**
-   - **Base URL**
-   - Configuration
+2. Click **Add MCP** — the **Import MCP** dialog opens
+3. Choose a **Source**:
+   - **Built-in Template** — pick a template from the list
+   - **Manual Entry** — **Server Name**, **Transport** (stdio or SSE), then **Command** / **Args** / **Environment JSON** for stdio, or **SSE URL** for SSE
 4. Review requested authority:
    - Filesystem paths
    - Network endpoints

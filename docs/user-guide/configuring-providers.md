@@ -61,9 +61,16 @@ In **Settings > Privacy**, set the maximum allowed tier:
 
 The provider router enforces this filter at call time. If a role requests a proprietary provider but your privacy max is "local only," the router falls back per the role's `fallback_providers` list.
 
-## Native GGUF models (in development)
+## Native GGUF models (Models tab)
 
-The local-GGUF runtime foundation (GPU probing and placement, the `llama.cpp` process lifecycle, and the model-library backend) already ships in the Team-X codebase. The in-app model-library UI (browsing, importing, watch-folder discovery, and GPU placement controls) arrives in a future release. Until it lands, **Ollama is the supported path for running models locally today**: point Team-X at your Ollama daemon and it appears as the Local-tier provider above.
+The **Models** tab (top bar) manages native GGUF models run through a bundled `llama.cpp` server. It has four panels:
+
+- **Library** — **Add file** (a single `.gguf`) or **Add folder** (watched, including subfolders); rescan or stop watching a folder; **Load** / **Unload** a model. Each model's detail view holds its system prompt, chat template, advanced tuning (context length, GPU layers, CPU threads, batch size, sampling), and **Run benchmark**, which records prompt-eval and generation throughput, TTFT, and peak VRAM from llama-server's own timings.
+- **Discover** — search Hugging Face for GGUF repositories, browse a repository's files, and queue resumable downloads (pause, resume, cancel). Only `.gguf` files are downloaded, into a folder that already exists, and only one transfer per destination file runs at a time.
+- **Endpoints** — register LM Studio, Ollama, llama-server, KoboldCPP or vLLM servers on your LAN and test them. Every address must be loopback, private (RFC1918), link-local or IPv6 unique-local; bare and `.local` hostnames are resolved and every resolved address is checked, and a probe that answers with a redirect counts as a failure.
+- **Runtime** — GPU inventory (CUDA / ROCm / Vulkan / Metal / CPU) with **Re-probe**, the active backend, the default download folder, the model-pool capacity (**Max concurrent models**), and the bundled `llama.cpp` build.
+
+**A GGUF model is not yet an agent provider.** Employees cannot be routed to a model loaded in the Models tab — there is no GGUF provider kind. **Ollama remains the local agent-provider path today**: point Team-X at your Ollama daemon and it appears as the Local-tier provider above.
 
 ## Runtime Strategy
 

@@ -74,7 +74,7 @@ Team-X/
     src/main/                 Main process
       db/                     SQLite schema, migrations, repos
       ipc/                    IPC handlers + channel registration
-      orchestrator/           Agent scheduler, event bus, work queue
+      orchestrator/           Agent scheduler + in-module dispatcher, event bus
       services/               Business logic (vault, backup, MCP, etc.)
     src/preload/              Context-isolated bridge
     src/renderer/             React UI
@@ -87,20 +87,24 @@ Team-X/
     role-schema/              Role.md frontmatter parser + template renderer
     provider-router/          LLM provider registry + streaming adapters
     telemetry-core/           Cost calculation math
+    intelligence/             RAG, NLU, agentic loop, Enhanced AI (memory, knowledge graph, planning)
+    local-gguf-runtime/       GPU probe, llama.cpp lifecycle, LRU pool, GGUF parser, folder watcher
   role-packs/
-    strategia-official/       55 curated roles (the default pack)
+    strategia-official/       57 curated roles — 55 user + 2 hidden system (the default pack)
   docs/                       Plans, audits, user guide
   scripts/                    Build helpers, smoke tests
 ```
 
 ### Workspace Packages
 
-Team-X uses pnpm workspaces. The four shared packages under `packages/` are consumed by `apps/desktop` via TypeScript project references:
+Team-X uses pnpm workspaces. The six shared packages under `packages/` are consumed by `apps/desktop` via TypeScript project references:
 
 - **shared-types** — the IPC contract (`TeamXApi` interface). Rebuild declarations after editing: `pnpm -F @team-x/shared-types exec tsc --build`
 - **role-schema** — parses `role.md` frontmatter and renders Handlebars-style template variables
 - **provider-router** — registry of LLM provider adapters, enforces privacy tiers + concurrency caps
 - **telemetry-core** — token-to-cost math for supported models
+- **intelligence** — RAG (chunking, embeddings, in-process cosine ranking with an IVF index for large corpora), NLU classifier + entity resolver, the agentic loop, and the Enhanced AI stack (long-term memory, knowledge graph, planning)
+- **local-gguf-runtime** — GPU probing, llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, and folder watching behind the Models tab
 
 ---
 
@@ -261,7 +265,7 @@ Setting `NODE_ENV=test` activates the canned-reply provider. This is how E2E tes
 
 ## Contributing Role Packs
 
-Role packs are the crown jewel of Team-X. The default pack (`role-packs/strategia-official/`) contains 55 hand-written roles.
+Role packs are the crown jewel of Team-X. The default pack (`role-packs/strategia-official/`) contains 57 hand-written roles: 55 user roles across six hierarchy levels plus 2 hidden system roles (`system-agent`, `system-copilot`).
 
 ### Role File Structure
 

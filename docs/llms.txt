@@ -8,7 +8,7 @@
 
 **Project:** Team-X
 **Description:** AI-powered workforce desktop application
-**Version:** 3.2.1
+**Version:** 3.4.0 (released 2026-07-11; unreleased work on `main` since)
 **Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **Documentation:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 
@@ -86,7 +86,8 @@ docs/
 **Copilot:** Proactive intelligence analyzer
 **Autonomy Control Plane:** Governance system (runtimes, routines, budgets)
 **Workspace:** Company container (employees, tickets, budgets)
-**Provider:** AI model provider (Anthropic, OpenAI, Ollama)
+**Provider:** AI model provider: 9 kinds (Ollama, Anthropic, OpenAI, Google, OpenRouter, Groq, Together, Fireworks, OpenAI-compatible)
+**Models tab:** Native GGUF library, Hugging Face discovery, LAN endpoints, runtime/GPU controls, benchmarks (a GGUF model is not yet an agent provider; Ollama is the local agent-provider path)
 **MCP:** Model Context Protocol for extending agent capabilities
 
 ---
@@ -99,10 +100,14 @@ docs/
 4. **Autonomous Execution:** Agents work independently on tickets
 5. **Budget Governance:** Per-ticket and monthly budget controls
 6. **Multi-Workspace:** Manage multiple clients/projects
-7. **Provider Routing:** Anthropic, OpenAI, Ollama with failover
+7. **Provider Routing:** 9 provider kinds with privacy-tier filtering
 8. **Routine Automation:** Scheduled recurring tasks
 9. **Copilot Insights:** Proactive recommendations
 10. **Audit Trail:** Complete event logging
+11. **Local GGUF Models:** Models tab (Library / Discover / Endpoints / Runtime)
+12. **Enhanced AI:** RAG-grounded Copilot answers, persistent long-term memory and knowledge graph
+13. **Paperclip Import:** Preview a Paperclip export and save it as a package for Portability
+14. **Private Operator Access:** Read-only access decision record (opens no listener)
 
 ---
 
@@ -111,11 +116,10 @@ docs/
 ### Keyboard Shortcuts
 
 - `Ctrl+K` / `Cmd+K` — Open Command Palette
-- `Ctrl+T` / `Cmd+T` — Tickets Panel
-- `Ctrl+E` / `Cmd+E` — Employees Panel
-- `Ctrl+A` / `Cmd+A` — Autonomy Control Plane
-- `Ctrl+D` / `Cmd+D` — Mission Control Dashboard
-- `Esc` — Close/go back
+- `Ctrl+Shift+K` / `Cmd+Shift+K` — Toggle Copilot sidebar
+- `Esc` — Close the palette
+
+These are the only global shortcuts (see docs/user-guide/keyboard-shortcuts.md); navigate with `/show <view>` in the palette.
 
 ### Command Palette Examples
 
@@ -190,5 +194,5 @@ MIT License — See LICENSE file for details
 
 ## Version
 
-Documentation Version: 3.2.1
-Last Updated: 2026-05-03
+Documentation Version: 3.4.0 (plus unreleased work on `main`)
+Last Updated: 2026-10-07

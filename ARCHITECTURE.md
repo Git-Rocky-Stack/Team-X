@@ -1,6 +1,6 @@
 # Team-X Architecture
 
-**Version:** 3.2.1 (v3.3.0 Local GGUF foundation + v3.4.0 Command Console sweep in progress on `main`)  
+**Version:** 3.4.0 (released 2026-07-11; unreleased work since on `main`)  
 **Description:** Run an AI company. Not a prompt.
 
 ## Overview
@@ -29,7 +29,7 @@ Team-X/
 │       └── package.json
 ├── packages/
 │   ├── intelligence/         # NLU, RAG, agentic loop
-│   ├── local-gguf-runtime/   # GPU probe, llama.cpp server lifecycle, GGUF parser, HF hub client
+│   ├── local-gguf-runtime/   # GPU probe, llama.cpp server lifecycle, LRU pool, GGUF parser, folder watcher
 │   ├── provider-router/      # AI provider adapters (Anthropic, OpenAI, etc.)
 │   ├── role-schema/          # Role pack parser + renderer + pack signing
 │   ├── shared-types/         # TypeScript types, IPC contracts
@@ -60,7 +60,7 @@ Team-X/
 ```
 @team-x/desktop
   ├─→ @team-x/intelligence        (NLU, RAG, agentic loop)
-  ├─→ @team-x/local-gguf-runtime  (native local-model runtime foundation)
+  ├─→ @team-x/local-gguf-runtime  (native GGUF runtime behind the Models tab)
   ├─→ @team-x/provider-router     (AI provider adapters)
   ├─→ @team-x/role-schema         (role pack loader)
   ├─→ @team-x/shared-types        (IPC contracts, entities)
@@ -83,7 +83,7 @@ Team-X/
 
 The orchestrator is the heart of Team-X. It:
 
-- Maintains a work queue for agent turns
+- Dispatches agent turns FIFO through an in-module dispatcher (`pending` list + `scheduleDispatch`) gated by per-thread, per-provider and per-company in-flight accounting plus budget admission
 - Manages concurrency (orchestrator slots, provider caps)
 - Routes work to providers (Anthropic, OpenAI, Ollama, etc.)
 - Emits events to the live dashboard
@@ -92,7 +92,7 @@ The orchestrator is the heart of Team-X. It:
 **Key Files:**
 - `apps/desktop/src/main/orchestrator/index.ts` — Orchestrator builder
 - `apps/desktop/src/main/orchestrator/event-bus.ts` — Event fan-out
-- `apps/desktop/src/main/orchestrator/queue.ts` — Work queue
+- `apps/desktop/src/main/orchestrator/index.ts` also holds the dispatcher (`pending` + `scheduleDispatch`); there is no standalone queue module
 
 ### 2. Provider Router
 
@@ -137,13 +137,14 @@ You are a Senior Full-Stack Engineer...
 
 ### 4. Database Layer (Drizzle ORM)
 
-SQLite database with full-text search (FTS5) and vector search (sqlite-vec):
+SQLite database with full-text search (FTS5). Embeddings are stored as BLOBs and ranked in-process by the intelligence package (no SQLite vector extension):
 
 **Repos** (thin data access layer):
 - `companies.ts`, `employees.ts`, `tickets.ts`, `goals.ts`, `projects.ts`
 - `threads.ts`, `messages.ts`, `runs.ts`, `events.ts`
 - `mcp-servers.ts`, `extensions.ts`, `authority.ts`
 - `embeddings.ts` (RAG), `copilot-insights.ts`
+- `enhanced-ai-memory.ts` (Enhanced AI long-term memory + knowledge graph, migration `0037`)
 
 **Migrations:**
 - `apps/desktop/src/main/db/migrations/` — SQL schema evolution
@@ -157,6 +158,9 @@ Request/response and event streaming between main and renderer:
 - `companies.*`, `employees.*`, `tickets.*`, `goals.*`, `projects.*`
 - `meetings.*`, `vault.*`, `backup.*`, `providers.*`
 - `command.*`, `copilot.*`, `rag.*`
+- `localGguf.*` (36 channels, registered by the `registerLocalGguf*Handlers` functions)
+- `paperclip.*` (preview + save a converted Paperclip export), `privateOperator.*` (read-only access plan + snapshot)
+- `enhancedAi.*` (7 channels registered in main but not bridged to the renderer)
 
 **Event Channel** (one-way push):
 - `events.dashboard` — Fanned out to all BrowserWindows
@@ -179,7 +183,14 @@ NLU, RAG, and agentic loop capabilities:
 - `embeddings.ts` — Text embedding (Ollama, OpenAI)
 - `chunker.ts` — Split long content into chunks
 - `retriever.ts` — Vector similarity search
-- `service.ts` — RAG orchestration
+- `ann-index.ts` — IVF approximate nearest-neighbour index (k-means clusters, no native dependency)
+- `service.ts` — RAG orchestration: exact cosine scan per company, switching to the IVF index once a company holds 4,096 or more vectors
+
+**Enhanced AI (long-term memory, knowledge graph, planning):**
+- `memory/long-term.ts` — LLM fact extraction with freshness scoring
+- `knowledge/graph.ts` — Cross-thread entity/relationship graph
+- `service/unified.ts` — Composes RAG, query expansion, memory, graph, planning and tracing
+- Desktop wiring: `apps/desktop/src/main/services/enhanced-ai.ts` (created whenever RAG is enabled with an embedding provider). Memory and the graph persist through `db/repos/enhanced-ai-memory.ts` into the four `0037_enhanced_ai_memory` tables (`memory_facts`, `memory_summaries`, `knowledge_nodes`, `knowledge_edges`). The stack grounds Copilot answers via the `search_company_knowledge` tool, and completed `copilot.ask` exchanges feed long-term memory
 
 **Agentic Loop (ReAct):**
 - `loop.ts` — Multi-step reasoning with tools
@@ -211,8 +222,8 @@ Team-X can launch external agent runtimes (Bash, HTTP, Codex, Cursor):
 ```
 1. Renderer sends IPC: chat.send({ threadId, employeeId, content })
 2. Handler creates message row → appends to thread
-3. Orchestrator enqueues WorkItem
-4. Queue worker:
+3. Orchestrator appends the task to its in-module `pending` list and calls `scheduleDispatch()`
+4. Dispatcher (once slot, provider, thread, company and budget admission allow):
    - Resolves provider for employee
    - Builds system prompt (role + skills + context)
    - Streams response via provider-router
@@ -302,7 +313,7 @@ Team-X can launch external agent runtimes (Bash, HTTP, Codex, Cursor):
 
 ### Database
 - **FTS5**: Full-text search on vault files
-- **sqlite-vec**: Vector similarity search for RAG
+- **RAG ranking**: in-process cosine similarity over BLOB embeddings — exact per company, IVF approximate index at 4,096+ vectors
 - **Indexes**: Strategic indexes on hot paths (company_id, status, created_at)
 - **WAL mode**: Enabled for concurrent read/write
 
@@ -376,18 +387,29 @@ pnpm dist:linux  # Linux
 - Agent wakeup queue
 - Routine-driven work
 
-**v3.3.0 — Local & Networked GGUF Support** (foundation on `main`; UI in a future release):
-- `@team-x/local-gguf-runtime` package: GPU probing (CUDA / ROCm / Vulkan / Metal / CPU),
-  llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, Hugging Face hub client,
-  folder scanning + network-share-resilient watchers, benchmark runner
-- `0036_local_gguf` migration (model library, watch folders, remote endpoints)
-- `localGguf.*` IPC channel family registered in the main process
-
-**v3.4.0 — Command Console aesthetic sweep** (in progress on `main`):
+**v3.4.0 — Command Console aesthetic sweep** (released 2026-07-11):
 - Renderer recomposed onto the Command Console / Carbon Pro design system (`DESIGN.md`):
   faceplates, recessed wells, LCD readouts, stencil word-lamps, data-bound VU meters
 - Dual-shift theming — Night Ops (default) + Day Shift silver; displays stay dark in both
+- Local GGUF groundwork (the v3.3.0 scope) shipped inside this release as backend-only
+  infrastructure: `@team-x/local-gguf-runtime`, `0036_local_gguf`, `localGguf.*` IPC
+
+**Unreleased (on `main` since v3.4.0):**
+- **Models tab** — Library / Discover (Hugging Face) / Endpoints / Runtime panels plus per-model
+  benchmarks over the 36 `localGguf.*` channels. The `@team-x/local-gguf-runtime` package holds
+  GPU probing (CUDA / ROCm / Vulkan / Metal / CPU), llama.cpp server lifecycle, LRU model pool,
+  GGUF metadata parser and folder scanning + network-share-resilient watchers; the Hugging Face
+  client and the benchmark runner live in `apps/desktop/src/main/services/local-gguf/`
+  (`hf-service.ts`, `benchmark-service.ts`). A GGUF model is not yet an agent provider
+  (`ProviderKind` has no GGUF member) — Ollama remains the local agent-provider path
+- **Enhanced AI** — the `@team-x/intelligence` stack is created whenever RAG is enabled with an
+  embedding provider; it grounds Copilot answers (`search_company_knowledge`), and completed
+  `copilot.ask` exchanges feed long-term memory. Memory and the knowledge graph persist in
+  SQLite (`0037_enhanced_ai_memory`)
+- **Private Operator Access** (`privateOperator.*`) — read-only decision record; nothing opens a listener
+- **Paperclip Import** (`paperclip.*`) — preview an export folder and save it as a package that
+  Portability's `companies.importPackage` commits
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-10-07*

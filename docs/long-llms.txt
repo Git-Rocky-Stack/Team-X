@@ -8,7 +8,7 @@
 
 **Name:** Team-X
 **Type:** AI-powered workforce desktop application
-**Version:** 3.2.1
+**Version:** 3.4.0 (released 2026-07-11; unreleased work on `main` since)
 **Status:** Production
 **Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **Documentation Root:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
@@ -26,7 +26,7 @@ Team-X is a desktop application (Electron + React) that provides an AI-powered w
 - **Curated Employee Roles:** Pre-configured AI agents with specialized skills, personalities, and work styles
 - **Autonomous Collaboration:** Agents work together, participate in ticket threads, and coordinate without human intervention
 - **Budget Governance:** Multi-layer budget controls (monthly caps, per-ticket limits, approval workflows)
-- **Provider Flexibility:** Switch between Anthropic (Claude), OpenAI (GPT), and Ollama (local) with automatic failover
+- **Provider Flexibility:** 9 provider kinds (Ollama, Anthropic, OpenAI, Google, OpenRouter, Groq, Together, Fireworks, OpenAI-compatible) filtered by privacy tier, plus a Models tab for native GGUF models
 - **Multi-Workspace:** Manage multiple companies/clients with data isolation and shared policies
 - **Complete Oversight:** Mission Control Dashboard shows all activity, Copilot provides proactive insights
 
@@ -64,7 +64,7 @@ Team-X is a desktop application (Electron + React) that provides an AI-powered w
 
 ### 1. Mission Control Dashboard
 
-**Location:** Main view (Ctrl+D / Cmd+D)
+**Location:** Dashboard in the top bar (or `/show dashboard` in the command palette)
 
 **Panels:**
 - **Active Runs:** Shows agents currently working, with progress bars and elapsed time
@@ -703,14 +703,14 @@ Team-X is open-source and community-supported. There is no hosted support email,
 
 **Cite Team-X as:**
 ```
-Team-X. (2026). AI-Powered Workforce Desktop Application (Version 3.1).
+Team-X. (2026). AI-Powered Workforce Desktop Application (Version 3.4.0).
 Retrieved from https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **APA Citation:**
 ```
 Team-X. (2026). Team-X: AI-powered workforce desktop application
-(Version 3.1) [Computer software]. https://github.com/Git-Rocky-Stack/Team-X
+(Version 3.4.0) [Computer software]. https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **BibTeX:**
@@ -718,7 +718,7 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 @software{teamx_2026,
   author = {Team-X},
   title = {Team-X: AI-Powered Workforce Desktop Application},
-  version = {3.2.1},
+  version = {3.4.0},
   year = {2026},
   url = {https://github.com/Git-Rocky-Stack/Team-X}
 }
@@ -728,19 +728,25 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 
 ## Version History
 
-**v3.2.1** (2026-05-12) — current release
+**Unreleased on main** (since v3.4.0)
+- Models tab: native GGUF Library / Discover (Hugging Face) / Endpoints (LAN) / Runtime panels plus per-model benchmarks over 36 `localGguf.*` channels. A GGUF model is not yet an agent provider; Ollama remains the local agent-provider path
+- Enhanced AI: active whenever RAG is enabled with an embedding provider; grounds Copilot answers (`search_company_knowledge`); long-term memory and knowledge graph persist in SQLite (migration 0037)
+- RAG ranks in-process by cosine similarity: exact per company, IVF approximate index at 4,096+ vectors (no sqlite-vec)
+- Settings → Paperclip Import (preview + save as package for Portability) and Settings → Private Operator Access (read-only decision record; opens no listener)
+
+**v3.4.0** (2026-07-11) — current release
+- Command Console / Carbon Pro design system across every renderer surface — dual-shift Night Ops + Day Shift
+- Local GGUF groundwork (the v3.3.0 scope) shipped inside this release as backend-only infrastructure
+
+**v3.2.1** (2026-05-12)
 - Release-engineering patch: differential auto-update path validated
 - Canonical 14-asset release shape (installers, blockmaps, updater manifests, SHA256SUMS)
 
-**v3.2.0** (2026-05-12)
+**v3.2.0** (2026-05-11)
 - Copilot proactive analyst + sidebar UI, task planner write-side, telemetry run-kind filters
 - Cross-platform CI matrix (Ubuntu / macOS / Windows) + Electron E2E smoke
 
-**Unreleased on main**
-- v3.3.0 Local & Networked GGUF foundation (backend: GPU probe, llama.cpp lifecycle, model library, HF downloads)
-- v3.4.0 Command Console / Carbon Pro design system — dual-shift Night Ops + Day Shift
-
-**v1.0.0** (2026-05-03)
+**v1.0.0** (2026-04-13)
 - Initial public release
 - 57 curated employee roles
 - Multi-workspace support
@@ -761,6 +767,6 @@ For complete documentation, see: https://github.com/Git-Rocky-Stack/Team-X/tree/
 
 ---
 
-*Generated: 2026-05-03*
-*Version: 3.2.1*
+*Generated: 2026-10-07*
+*Version: 3.4.0 (plus unreleased work on `main`)*
 *Platform: Team-X Desktop Application*

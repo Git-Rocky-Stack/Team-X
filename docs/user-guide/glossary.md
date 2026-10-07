@@ -7,7 +7,7 @@
 ## A
 
 ### Agent
-An AI entity that autonomously works on tickets. Agents are powered by LLM providers (Anthropic, OpenAI, Ollama) and use tools to read files, write code, run commands, and collaborate with other agents.
+An AI entity that autonomously works on tickets. Agents are powered by LLM providers (Anthropic, OpenAI, Ollama, and six more — see [Provider](#provider)) and use tools to read files, write code, run commands, and collaborate with other agents.
 
 **See also:** [Agent Run](#agent-run), [Employee](#employee), [Provider](#provider)
 
@@ -257,9 +257,9 @@ An employee added to a ticket for collaboration, not as the primary assignee. Pa
 **See also:** [Assignee](#assignee), [Ticket](#ticket), [Employee](#employee)
 
 ### Provider
-An AI model provider that powers agents. Team-X supports Anthropic (Claude), OpenAI (GPT), and Ollama (local models).
+An AI model provider that powers agents. Team-X supports nine provider kinds: Ollama (local), Anthropic, OpenAI, Google (Gemini), OpenRouter, Groq, Together AI, Fireworks AI, and any OpenAI-compatible endpoint (`custom-openai`). Native GGUF models in the Models tab are not a provider kind — Ollama is the local agent-provider path.
 
-**Comparison:**
+**Comparison (three common choices):**
 | Provider | Models | Strength | Cost |
 |----------|--------|----------|------|
 | Anthropic | Claude Opus, Sonnet, Haiku | Complex reasoning | $$ |

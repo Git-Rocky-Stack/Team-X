@@ -1,6 +1,6 @@
 # Team-X API Endpoints
 
-**Version:** 3.2.1 (plus unreleased v3.3.0/v3.4.0 work on `main`)  
+**Version:** 3.4.0 (released 2026-07-11; plus unreleased work on `main`)  
 **Protocol:** Electron IPC (invoke/handle + event streaming)
 
 ## Overview
@@ -18,7 +18,8 @@ All channels are typed in `@team-x/shared-types/src/ipc.ts`.
 
 | Channel | Request | Response |
 |---------|---------|----------|
-| `system.selectDirectory` | — | `{ canceled: boolean; folderPath: string \| null }` |
+| `system.selectDirectory` | `{ title?: string }` (optional) | `{ canceled: boolean; folderPath: string \| null }` |
+| `system.selectGgufFile` | `{ title?: string }` (optional) | `{ canceled: boolean; filePath: string \| null }` (native single-file picker filtered to `.gguf`; feeds `localGguf.library.addFile`) |
 
 ### Companies
 
@@ -424,18 +425,40 @@ type MeetingMode = 'round-robin' | 'chair-directed' | 'freeform';
 |---------|---------|----------|
 | `orgchart.get` | `{ companyId: string }` | `OrgChartProjection` |
 
-### Local GGUF (v3.3.0 foundation — backend only; renderer UI ships in a later release)
+### Paperclip Import
 
-35 channels across six families, registered in `apps/desktop/src/main/ipc/local-gguf-*-handlers.ts`
-with contracts in `packages/shared-types/src/local-gguf.ts`:
+Preview and save only — committing is Portability's `companies.importPackage`. The loader refuses a
+missing path, a path that is not a folder, a folder with no Paperclip export files, and export files
+larger than 50 MB.
+
+| Channel | Request | Response |
+|---------|---------|----------|
+| `paperclip.preview` | `PaperclipPreviewRequest` (`{ folderPath: string }`) | `PaperclipImportBridgePreview` (nothing is written) |
+| `paperclip.savePackage` | `PaperclipPreviewRequest` (`{ folderPath: string }`) | `{ canceled: boolean; packagePath: string \| null }` (writes the converted package where a native save dialog points — default `<slug>.teamx-package.json` in Portability's export folder; `packagePath: null` when cancelled) |
+
+### Private Operator Access
+
+Read-only planning. Nothing here opens a listener, and no remote transport exists.
+
+| Channel | Request | Response |
+|---------|---------|----------|
+| `privateOperator.plan` | `PrivateOperatorAccessRequest` | `PrivateOperatorAccessPlan` |
+| `privateOperator.snapshot` | `PrivateOperatorAccessRequest` | `PrivateOperatorMissionControlSnapshot` |
+
+### Local GGUF (Models tab — Library / Discover / Endpoints / Runtime)
+
+36 channels across six families, registered in `apps/desktop/src/main/ipc/local-gguf-*-handlers.ts`
+with contracts in `packages/shared-types/src/local-gguf.ts`. The renderer's **Models** tab
+(`apps/desktop/src/renderer/src/features/models/`) drives all of them. A GGUF model is not yet an
+agent provider (`ProviderKind` has no GGUF member) — Ollama remains the local agent-provider path.
 
 | Family | Channels | Purpose |
 |--------|----------|---------|
 | `localGguf.runtime.*` | `settings`, `setSettings`, `gpuInventory`, `reprobeGpu`, `binariesVersion` | Runtime settings, GPU probe (CUDA / ROCm / Vulkan / Metal / CPU), llama.cpp binary info |
 | `localGguf.pool.*` | `load`, `unload`, `status`, `setMaxConcurrent` | LRU model pool load/swap and status |
-| `localGguf.library.*` | `list`, `get`, `addFile`, `addFolder`, `scanFolder`, `removeFolder`, `removeModel`, `listBySourceType`, `setAdvancedParams`, `resetAdvanced`, `setChatTemplate`, … (12) | Model library, watch folders, GGUF metadata, per-model params + auto-tune |
-| `localGguf.hf.*` | `search`, `modelCard`, `startDownload`, `pauseDownload`, `resumeDownload`, `cancelDownload`, `activeDownloads` | Hugging Face hub search and resumable downloads |
-| `localGguf.endpoint.*` | `list`, `add`, `update`, `remove`, `test` | Networked (LAN) GGUF endpoints |
+| `localGguf.library.*` | `list`, `get`, `addFile`, `addFolder`, `listFolders`, `scanFolder`, `removeFolder`, `removeModel`, `listBySourceType`, `setSystemPrompt`, `setChatTemplate`, `setAdvancedParams`, `resetAdvanced` (13) | Model library, watch folders, GGUF metadata, per-model system prompt / chat template / params + auto-tune |
+| `localGguf.hf.*` | `search`, `modelCard`, `startDownload`, `pauseDownload`, `resumeDownload`, `cancelDownload`, `activeDownloads` | Hugging Face hub search and resumable downloads. Only `.gguf` files, into an absolute folder that already exists; one transfer per destination file |
+| `localGguf.endpoint.*` | `list`, `add`, `update`, `remove`, `test` | Networked (LAN) GGUF endpoints. Bare and `.local` hostnames are resolved via DNS and every address must be loopback / RFC1918 / link-local / ULA; probes do not follow redirects |
 | `localGguf.benchmark.*` | `run`, `history` | Throughput / TTFT / VRAM benchmarking |
 
 ## Event Channel
@@ -549,4 +572,4 @@ Common error types:
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-10-07*

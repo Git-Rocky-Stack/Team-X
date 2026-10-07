@@ -7,7 +7,7 @@
   <meta name="description" content="Open-source, privacy-first desktop app for running AI-agent organizations. Hire employees, build org charts, manage projects, and watch your AI team work in real-time.">
   <meta name="keywords" content="AI agents, local-first, desktop app, LLM orchestration, Electron, open-source, privacy-first">
   <meta property="og:title" content="Team-X — Run an AI Company. Not a Prompt.">
-  <meta property="og:description" content="Open-source, privacy-first desktop app for running AI-agent organizations with 55 curated roles, real-time cockpit, and 10 LLM providers.">
+  <meta property="og:description" content="Open-source, privacy-first desktop app for running AI-agent organizations with 57 curated roles, real-time cockpit, and 9 LLM providers.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://strategia-x.github.io/team-x/">
   <meta name="twitter:card" content="summary_large_image">
@@ -114,8 +114,8 @@
           <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">55 Curated Roles</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Hand-written F10-quality role specs across 6 hierarchy levels. Officers, managers, leads, and ICs — each with unique decision frameworks and communication styles.</p>
+          <h3 class="font-semibold text-lg mb-2">57 Curated Roles</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Hand-written F10-quality role specs: 55 hireable roles across 6 hierarchy levels plus 2 hidden system roles. Officers, managers, leads, and ICs — each with unique decision frameworks and communication styles.</p>
         </div>
 
         <!-- Feature 2 -->
@@ -159,7 +159,7 @@
           <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">10 LLM Providers</h3>
+          <h3 class="font-semibold text-lg mb-2">9 LLM Providers</h3>
           <p class="text-sm text-zinc-400 leading-relaxed">Ollama, Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint. Adaptive runtime picks the best strategy.</p>
         </div>
 
@@ -204,14 +204,14 @@
 
       <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-8 font-mono text-sm leading-relaxed overflow-x-auto">
 <pre class="text-zinc-300"><span class="text-zinc-500">Renderer (React 19)</span>
-  <span class="text-rose-400">|</span> typed IPC bridge (50+ channels)
+  <span class="text-rose-400">|</span> typed IPC bridge (229 channels)
   <span class="text-rose-400">v</span>
 <span class="text-zinc-500">Main Process (Node.js + TypeScript)</span>
-  <span class="text-amber-400">|--- Orchestrator</span> <span class="text-zinc-600">(agent scheduler, event bus, work queue)</span>
-  <span class="text-amber-400">|      |--- Provider Router</span> <span class="text-zinc-600">(10 adapters, privacy tiers, concurrency caps)</span>
-  <span class="text-amber-400">|      |--- Role Loader</span> <span class="text-zinc-600">(55 roles, template rendering)</span>
+  <span class="text-amber-400">|--- Orchestrator</span> <span class="text-zinc-600">(agent scheduler, event bus, dispatcher)</span>
+  <span class="text-amber-400">|      |--- Provider Router</span> <span class="text-zinc-600">(9 adapters, privacy tiers, concurrency caps)</span>
+  <span class="text-amber-400">|      |--- Role Loader</span> <span class="text-zinc-600">(57 roles, template rendering)</span>
   <span class="text-amber-400">|      |--- MCP Host</span> <span class="text-zinc-600">(singleton, stdio/SSE pool, tool enforcement)</span>
-  <span class="text-emerald-400">|--- SQLite + Drizzle</span> <span class="text-zinc-600">(8 migrations, append-only events)</span>
+  <span class="text-emerald-400">|--- SQLite + Drizzle</span> <span class="text-zinc-600">(38 migrations, append-only events)</span>
   <span class="text-blue-400">|--- Vault Service</span> <span class="text-zinc-600">(filesystem blobs, SHA256, FTS5)</span>
   <span class="text-violet-400">|--- Secrets Store</span> <span class="text-zinc-600">(OS keychain via keytar)</span></pre>
       </div>
@@ -234,7 +234,7 @@
           <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Backend</h3>
           <div class="flex flex-wrap gap-2">
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Electron</span>
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Node.js 20</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Node.js 22</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">better-sqlite3</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Drizzle ORM</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vercel AI SDK</span>
@@ -245,8 +245,8 @@
         <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
           <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Quality</h3>
           <div class="flex flex-wrap gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vitest (602 tests)</span>
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Playwright (3 E2E)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vitest (4,252 tests)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Playwright (19 E2E specs)</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Biome</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">GitHub Actions CI</span>
           </div>
@@ -262,6 +262,7 @@
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenRouter</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Together</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Fireworks</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenAI-compatible</span>
           </div>
         </div>
       </div>
