@@ -11,6 +11,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Settings → Privacy is enforced.** "Local Only" promised "No data leaves
+  your machine", but `max_privacy_tier` only drew an "allowed" flag in the
+  panel; nothing that chose a provider read it. Now every path that reaches a
+  model checks the tier at call time, so a change applies to the next call:
+  - the provider factory (`create`, `resolveForEmployee`) at every
+    construction site in `main/index.ts` — chat, tickets, delegation,
+    meetings, Copilot, Enhanced AI — pinned by
+    `apps/desktop/src/main/composition-root-wiring.test.ts`;
+  - every embedding call (checked per `embed()`, because RAG builds its
+    adapter once at startup);
+  - external runtime profiles, which never went through the factory. Codex,
+    Claude Code and Cursor count as Proprietary Cloud (command or endpoint),
+    a command runtime counts as Proprietary Cloud because its destination is
+    unknowable, and an HTTP runtime is Local only when its host is provably
+    on the local network — the same rule Local model endpoints follow
+    (`runtime-profile-provider-service.ts`).
+
+  A refused provider is never silently re-routed. The run fails before any
+  key is read or process spawned, with a `PrivacyTierViolationError` that
+  names the provider, both tiers and the way out, e.g. `Provider "Anthropic
+  (claude-haiku-4-5)" is Proprietary Cloud-tier, but Settings → Privacy
+  allows Local Only. Choose a local provider (Ollama) for this employee or
+  raise the privacy tier.` An unrecognised tier on either side is refused.
+  The Privacy panel lists the configured providers the current tier refuses
+  (GO / NO-GO lamps) before anything runs, and tags the retrieval embedding
+  provider when it is one of them.
+
+- **Turn failures are shown where you are looking.** The renderer never
+  displayed the reason in a `work.failed` event — a refusal looked like an
+  employee ignoring you, and a direct-line drawer waiting on a refused turn
+  stayed busy for good (queued follow-ups never sent). The direct line now
+  shows the reason under the transcript (`TurnFailureNotice`) and stops
+  waiting; timeline rows name the employee and give the reason. The
+  orchestrator also reports a turn refused at provider resolution itself, so
+  ticket creation, assignment, participant wake-ups, delegation pickups and
+  meetings no longer fail silently (chat.send, which already reported them,
+  does not repeat it).
+
+- **Meeting minutes summarise and file action items.** Minutes were the raw
+  transcript and action items a literal empty array, so the ticket-creation
+  loop never ran. The chair's model (budget-checked, 60 s timeout, capped
+  transcript) now writes a summary and action items; assignees must have
+  attended and at most 20 tickets are filed. Any failure falls back to the
+  transcript and the meeting still ends.
+
+- **Installed Extensions panel.** MCP servers and skills could be added but
+  never disabled or removed, so an added MCP server's subprocess could not
+  be stopped from the app. Settings → Extensions now enables, disables and
+  removes (with confirmation) each server and skill.
+
+- **Proactive Mode autonomy control.** `settings.setProactive` had no caller.
+  The dashboard control offers conservative / balanced / autonomous and says
+  what each does today: only conservative changes behaviour (it blocks goal
+  breakdown); autonomous currently runs like balanced and is recorded on
+  audit events.
+
 - **Copilot answers are grounded in Enhanced AI.** A new system-copilot tool,
   `search_company_knowledge` (`apps/desktop/src/main/services/agentic-tools-copilot.ts`),
   gives `copilot.ask` semantic search over the company's indexed messages,
@@ -153,6 +209,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The command palette never used a model.** Production classified every
+  command with a closure that ignored its input and answered
+  `complex_request` at confidence 0, so no structured intent (hire, assign,
+  …) ever resolved. `palette-classifier.ts` streams the classifier prompts
+  through the company's system-agent provider, gives up after 15 s, skips
+  the model for a company over a budget hard cap, and falls back to the
+  agentic loop whenever it cannot classify.
+- **Settings → Agentic Loop and Settings → Memory did nothing.** Max Steps,
+  Max Tokens and Timeout were never passed to the loop, and the memory
+  budget and recent-turn limit shaped only the renderer's preview. Both are
+  now read per run / per turn.
+- **Query expansion was computed and discarded.** Retrieval used the first
+  expansion, which is always the original query. It now retrieves for the
+  original plus up to three expansions and keeps each chunk's best weighted
+  score; `similarity` stays the raw cosine, so the threshold keeps its
+  meaning.
+- **Semantic Chunking reached only an indexer nothing calls.** The switch
+  now chooses the chunker of the RAG index the app uses (read per indexing
+  call; Rebuild re-chunks existing content).
+- **A refused embedding provider failed every chat turn.** Retrieval now
+  continues without vector search — tickets, goals, projects and vault still
+  match — and indexing pauses, with one log line instead of one per message
+  (`embedding-refusal-reporter.ts`).
+- **Proactive Mode's per-company switch turned every company off**, and the
+  per-company state was lost on restart. Each company's opt-out is stored in
+  its settings; Settings → Extensions holds the master switch.
+- **Re-enabling an MCP server left its tools invisible** until restart: it
+  reconnected with the row's stale `enabled: false`.
+- **The Hire dialog offered two roles.** It lists the full catalog, grouped
+  by level and searchable.
+- **The operator was hard-coded as "Rocky"** in minutes, the meeting detail,
+  the audit view and the Commands card, and meeting messages were filed
+  under `user-rocky` while everything else uses `rocky`. The operator is
+  "You", employees are named from the roster, Copilot-issued commands read
+  "Copilot", and meetings use the local owner id.
+- **Trace sampling, cache invalidation and stats in `@team-x/intelligence`.**
+  `traceSampleRate` was never read (every trace was recorded); per-company
+  and per-source cache invalidation flushed everything; and
+  `avgExpansionsPerQuery` returned a total. `minConfidence`, the planning
+  threshold and the GPU probe timeout are now honoured.
+- **An intermittent port-allocator test failure** was test pollution:
+  default-range allocations stayed reserved inside the fixed-range tests'
+  windows. Those tests now use 40xxx.
+
 - **Factory methods no longer depend on their call site.** 18 object literals
   across the repos, the intelligence package and `ipc/handlers.ts` called their
   own siblings through `this.`, which resolves via the receiver — so
@@ -231,7 +331,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   service now reads them; the per-call gates take effect immediately, while
   query expansion and tracing apply on next launch. (Reading them was not
   enough on its own — see "Enhanced AI was unreachable and off by default"
-  below.)
+  below. Streaming and planning were later removed instead — see Removed —
+  and Semantic Chunking now drives the app's RAG index.)
 - **Answer generation in `@team-x/intelligence` was fabricated.** The unified
   AI service built its "answer" by concatenating the first 50 characters of
   the top three retrieved chunks, never consulting the configured model.
@@ -384,6 +485,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the test filesystem double seeded unresolved paths.
 
 ### Removed
+
+- **The `team-x-ai` CLI and the eval entry points.** Every CLI command printed
+  fabricated output (and ran twice); `ai:eval` pointed at a missing script and
+  the golden dataset held only placeholder ids. The tested evaluator stays,
+  reachable through `AiService.evaluate`.
+- **Settings → Enhanced AI → Streaming Responses and Multi-Turn Planning.**
+  Only Enhanced AI paths the app never calls read them, so they changed
+  nothing. A sweep guard keeps them out until a reachable path uses them.
+- **Unread options**: `rag.enableRerank`, `knowledge.enableInference`, the
+  four `ExtractionOptions` switches, `StreamOptions.transport` and
+  `TracerOptions.schemaUrl`.
 
 - **The `localGguf` Phase 1 stub thrower.** With every channel delegating to a
   real service, the shared `notImplemented()` helper has no callers and is

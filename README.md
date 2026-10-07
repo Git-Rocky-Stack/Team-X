@@ -189,7 +189,7 @@ Team-X/
 - **Orchestrator is the only scheduler.** Pause semantics (e.g., during meetings) are race-free because nothing dispatches without the orchestrator's consent.
 - **MCP Host is a singleton.** One pool of connections shared across all agents — no N-client sprawl.
 - **Storage is SQLite + filesystem.** Metadata in SQLite, blobs on disk, SHA256 integrity. File blobs never go in the database.
-- **Provider router is the single LLM gateway.** Enforces privacy tiers, concurrency caps, and cost tracking in one place.
+- **Provider resolution is the single LLM gateway.** The provider factory and runtime-profile resolver enforce the privacy tier on every run; the provider router carries concurrency caps and cost tracking.
 - **Events table is append-only.** Source of truth for the real-time dashboard and audit log.
 - **The design system is law.** Every surface follows `DESIGN.md` (Command Console / Carbon Pro): four-layer hardware depth, dual-shift theming, displays-stay-dark, data-bound instrumentation only.
 - **Zero phone-home. Ever.** No telemetry, no analytics, no auto-update checks. Updates are explicitly user-triggered.
@@ -350,7 +350,7 @@ Team-X is built with a privacy-first posture:
 - **Local-first by default.** Runs entirely on local models (Ollama) with no cloud dependency.
 - **Zero phone-home.** No analytics, no telemetry, no crash reporting, no auto-update checks.
 - **OS keychain for secrets.** API keys are stored in the system keychain via keytar, never in plaintext config files.
-- **Privacy tier filtering.** Choose which provider tiers (local, open-source cloud, proprietary cloud) your agents are allowed to use.
+- **Enforced privacy tiers.** Choose which provider tiers (local, open-source cloud, proprietary cloud) may be used. Every model call and external runtime is checked; a provider above the tier is refused with a reason, never silently swapped.
 - **Your data stays yours.** All data lives in a local SQLite database and filesystem vault on your machine.
 
 ---

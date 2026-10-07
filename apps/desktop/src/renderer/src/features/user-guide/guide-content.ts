@@ -711,7 +711,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'callout',
         tone: 'warning',
         title: 'Readiness check',
-        text: 'If employees stop responding or return empty output, check the enabled provider, provider test result, model name, privacy tier, concurrency cap, agentic loop caps, and budget settings before assuming the chat surface is broken. The fault is almost always upstream of the renderer.',
+        text: 'If a turn fails, the direct line shows why under the transcript and the timeline records the reason, including a privacy-tier refusal. If employees stop responding or return empty output without a reason, check the enabled provider, provider test result, model name, privacy tier, concurrency cap, agentic loop caps, and budget settings before assuming the chat surface is broken. The fault is almost always upstream of the renderer.',
       },
       {
         kind: 'callout',
@@ -1583,7 +1583,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         items: [
           'Updater checks for available app updates and surfaces update status. Apply updates before tuning anything downstream.',
           'Runtime Strategy chooses Auto, Hybrid (4 slots), Always-On (8 slots), or Lean (2 slots). Auto profiles hardware before deciding; the others are explicit.',
-          'Privacy Tier caps whether Local Only, Open-Source Cloud (Groq, Together, Fireworks, OpenRouter), or All Providers (including Anthropic, OpenAI, Google) can be used. Tier caps block providers above the limit even if individually enabled.',
+          'Privacy Tier caps whether Local Only, Open-Source Cloud (Groq, Together, Fireworks), or All Providers (including Anthropic, OpenAI, Google, OpenRouter) can be used. A provider above the cap is refused even if individually enabled, and the refusal says which provider and what to change. External runtimes count too: Codex, Claude Code, Cursor and command runtimes are Proprietary Cloud, and an HTTP runtime is Local only on your local network.',
           'RAG controls retrieval-augmented context from the vault: enablement, top K (1-20), threshold (0-1, 0.05 step), context budget (100-4000 tokens, 100 step), embedding provider, embedding model, and embedding dimension (1-4096). Rebuild and Delete are explicit, confirmed actions. Turning RAG on or off and changing the embedding provider apply on the next launch.',
           'Enhanced AI configures Phase 2 & 3 capabilities: query expansion, semantic chunking v2, long-term memory (facts, summaries), knowledge graph (entities, relationships), multi-turn planning with auto-revision, streaming responses, and distributed tracing with W3C compliance. It is active only while RAG is on, and its settings are global across workspaces.',
           'Concurrency caps keep provider calls within local hardware limits, cloud plan limits, and budget expectations. Orchestrator slots set the global ceiling; per-provider caps keep any single kind from saturating the pool.',

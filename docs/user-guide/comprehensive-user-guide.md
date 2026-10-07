@@ -4347,9 +4347,9 @@ Access **Settings** via top navigation.
 | **Proprietary Cloud** | Third-party servers, proprietary models | Anthropic, OpenAI, Google |
 
 **Set Privacy Maximum:**
-1. Choose your max tier
-2. Provider router enforces filter at call time
-3. Roles fall back to approved providers
+1. Choose your max tier in Settings → Privacy; the panel lists the configured providers it refuses
+2. Every model call — runs, Copilot, Enhanced AI, minutes, the palette, retrieval embeddings, external runtimes — is checked at call time
+3. A refused provider is not swapped for another: the run fails with a reason naming the provider and the fix, shown in the chat and on the timeline
 
 ### RAG Configuration
 

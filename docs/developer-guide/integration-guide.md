@@ -40,8 +40,12 @@ Team-X is provider-agnostic. The default provider router ships with adapters for
 
 Every provider is tagged with a tier (`PrivacyTier` in
 `packages/shared-types/src/providers.ts`). The active workspace has a
-configurable tier ceiling; a provider above the ceiling is hidden from routing
-and from the model picker. Team-X tracks **three** tiers:
+configurable tier ceiling (`max_privacy_tier`), read at call time. A provider
+above it is refused with a `PrivacyTierViolationError`
+(`apps/desktop/src/main/services/provider-factory.ts`) — by the provider
+factory for runs, by the embed adapter per `embed()` call, and by the
+runtime-profile resolver for external runtimes — never silently re-routed.
+An unrecognised tier on either side is refused. Team-X tracks **three** tiers:
 
 - **`local`**: traffic never leaves the host. Ollama and a custom
   OpenAI-compatible provider pointed at a localhost endpoint both qualify.
@@ -56,7 +60,7 @@ Set the ceiling via `settings.setPrivacy`:
 await invoke('settings.setPrivacy', { maxTier: 'local' });
 ```
 
-With `maxTier: 'local'`, Team-X refuses to add or use any cloud provider for the active workspace. This is the posture local-first deployments use to guarantee no exfiltration regardless of misconfiguration.
+With `maxTier: 'local'`, Team-X refuses to use any cloud provider: runs fail with the refusal as their reason (a `work.failed` event), and retrieval continues without vector search if the embedding provider is refused. Providers can still be added — `settings.getPrivacy` returns `blockedProviders`, the configured ones the tier refuses, and `retrievalEmbeddingProviderId` when that includes the embedding provider.
 
 ### Registering a provider
 

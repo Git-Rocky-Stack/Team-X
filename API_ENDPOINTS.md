@@ -296,8 +296,8 @@ type MeetingMode = 'round-robin' | 'chair-directed' | 'freeform';
 |---------|---------|----------|
 | `settings.getRuntime` | — | `RuntimeStrategy` |
 | `settings.setRuntime` | `{ strategy: RuntimeStrategy }` | — |
-| `settings.getPrivacy` | — | `PrivacyTier` |
-| `settings.setPrivacy` | `{ maxTier: PrivacyTier }` | — |
+| `settings.getPrivacy` | — | `SettingsGetPrivacyResponse` — `maxTier`, per-provider `allowed`, `blockedProviders` (configured providers the tier refuses) and `retrievalEmbeddingProviderId` |
+| `settings.setPrivacy` | `{ maxTier: PrivacyTier }` | — (rejects an unrecognised tier) |
 | `settings.getConcurrency` | — | `ConcurrencySettings` |
 | `settings.setConcurrency` | `{ orchestratorSlots?: number; providerCaps?: Record<string, number> }` | — |
 | `settings.getExtensions` | — | `ExtensionsSettings` |

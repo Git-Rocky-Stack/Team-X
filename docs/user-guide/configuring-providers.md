@@ -59,7 +59,7 @@ In **Settings > Privacy**, set the maximum allowed tier:
 - **Open-Source Cloud**: agents can use local or open-source cloud providers.
 - **Proprietary Cloud**: agents can use any provider (default).
 
-The provider router enforces this filter at call time. If a role requests a proprietary provider but your privacy max is "local only," the router falls back per the role's `fallback_providers` list.
+The tier is enforced at call time for everything that reaches a model — employee runs, Copilot, Enhanced AI, meeting minutes, the command palette and retrieval embeddings — and for external runtime profiles: Codex, Claude Code, Cursor and command runtimes count as Proprietary Cloud, and an HTTP runtime counts as Local only when its address is on your local network. A provider above the tier is **refused, never silently swapped**: the run fails before any key is read, and the reason (which provider, which tiers, what to change) appears in the chat and on the timeline. The Privacy panel lists the configured providers your current tier refuses, so you can see the consequence before anything runs. If the refused provider is your retrieval embedding provider, chats keep ticket, goal, project and vault context but semantic search pauses until you choose an allowed embedding provider or raise the tier.
 
 ## Native GGUF models (Models tab)
 
