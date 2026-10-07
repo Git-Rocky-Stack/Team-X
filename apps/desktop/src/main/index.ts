@@ -58,12 +58,14 @@ import {
   type LoopProviderToolCall,
   type RagRepo,
   type RagService,
+  chunkTextV1,
   createEntityResolver,
   createMockCrossEncoder,
   createQueryExpansionService,
   createRagService,
   createRerankerService,
   createSlotFiller,
+  chunkText as semanticChunkText,
 } from '@team-x/intelligence';
 import { runProbeCommand, sampleNvidiaVramMb } from '@team-x/local-gguf-runtime';
 import {
@@ -80,6 +82,7 @@ import type {
   Employee,
   LocalModel,
   Meeting,
+  PrivacyTier,
   RuntimeStrategy,
   Ticket,
 } from '@team-x/shared-types';
@@ -757,6 +760,13 @@ app
     const vaultRepo = createVaultRepo(db);
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
+    // Settings → Privacy, read on every provider resolution and embedding
+    // call so a change applies to the next call. Every provider factory and
+    // embedding adapter below must receive it — one that does not fails open
+    // and can reach a cloud provider under "Local Only"
+    // (composition-root-wiring.test.ts pins each site).
+    const getMaxPrivacyTier = (): PrivacyTier =>
+      settingsRepo.get<PrivacyTier>('max_privacy_tier', 'proprietary-cloud');
     const threadDigestsRepo = createThreadDigestsRepo(db);
     const runCheckpointsRepo = createRunCheckpointsRepo(db);
     const embeddingsRepo = createEmbeddingsRepo(db);
@@ -1252,6 +1262,7 @@ app
         providersService,
         secretsStore,
         companiesRepo,
+        getMaxPrivacyTier,
       });
       const runtimeProfileProviderService = createRuntimeProfileProviderService({
         runtimeProfilesService,
@@ -1331,6 +1342,7 @@ app
         dimension,
         providersService,
         secretsStore,
+        getMaxPrivacyTier,
       });
       if (!adapter) return null;
 
@@ -1350,7 +1362,20 @@ app
             .listByCompany(cid)
             .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
       };
-      return createRagService({ embedText, dimension, repo: ragRepo });
+      return createRagService({
+        embedText,
+        dimension,
+        repo: ragRepo,
+        // Settings → Enhanced AI → Semantic Chunking, read per indexing call:
+        // on, documents split on headings, paragraphs and code fences; off,
+        // the built-in fixed window. It applies to content indexed from then
+        // on (Rebuild re-chunks the rest). This switch used to reach only
+        // Enhanced AI's own indexer, which nothing in the app calls.
+        chunk: (content) =>
+          settingsRepo.get<boolean>('semantic_chunking_enabled', true)
+            ? semanticChunkText(content)
+            : chunkTextV1(content, { maxTokens: 512, overlapTokens: 64 }),
+      });
     }
 
     const ragService: RagService | null = await buildRagService();
@@ -1672,6 +1697,7 @@ app
           dimension: settingsRepo.get<number>('embedding_dimension', 768),
           providersService,
           secretsStore,
+          getMaxPrivacyTier,
         });
         if (!adapter) throw new Error('Embedding adapter not available');
         const embedFn = createEmbedText(adapter);
@@ -1783,9 +1809,6 @@ app
             semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
             longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
             knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
-            planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
-            planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
-            streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
             tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
             tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
           }),
@@ -2494,7 +2517,12 @@ app
               `[agentic-loop] Write-side actor "${employee.id}" not found in employees repo.`,
             );
           }
-          const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+          const factory = createProviderFactory({
+            providersService,
+            secretsStore,
+            companiesRepo,
+            getMaxPrivacyTier,
+          });
           const resolved = await factory.resolveForEmployee(actorRow);
           let text = '';
           for await (const chunk of streamAgent({
@@ -2586,7 +2614,12 @@ app
         if (!emp) {
           throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
         }
-        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+        const factory = createProviderFactory({
+          providersService,
+          secretsStore,
+          companiesRepo,
+          getMaxPrivacyTier,
+        });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: LoopCompleteFn = async ({ system, messages, tools, signal }) => {
@@ -2966,7 +2999,12 @@ app
             `[copilot-analyzer] system-copilot employee ${systemCopilotId} not found for company ${companyId}`,
           );
         }
-        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+        const factory = createProviderFactory({
+          providersService,
+          secretsStore,
+          companiesRepo,
+          getMaxPrivacyTier,
+        });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: CopilotAnalyzerCompleteFn = async ({ system, user, signal }) => {
