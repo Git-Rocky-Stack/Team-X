@@ -120,6 +120,16 @@ export interface RetrievalOrchestratorDeps {
   reranker?: RerankerService;
   /** Options for the reranker integration. `topN` defaults to `RERANKER_DEFAULT_TOP_N`. Audit H10. */
   rerankerOptions?: { topN?: number };
+  /**
+   * Decides whether a `vectorRetrieve` failure may be absorbed. Return true
+   * and the call continues WITHOUT vector hits — tickets, goals, projects and
+   * vault files still match lexically — and skips the vector path for its
+   * remaining queries. Return false (or leave unwired) and the error fails
+   * the call, as before. The composition root accepts only a Settings →
+   * Privacy refusal of the embedding provider: that one is a policy, not a
+   * fault, and must not fail every chat turn.
+   */
+  onVectorRetrievalError?: (companyId: string, err: unknown) => boolean;
 }
 
 export interface RetrieveEvidenceInput {
@@ -652,14 +662,23 @@ export function createRetrievalOrchestrator(deps: RetrievalOrchestratorDeps) {
       const candidateList: RankedCandidate[] = [];
       const seenVectorHits = new Set<string>();
 
+      let vectorRefused = false;
       for (const query of queries) {
-        const vectorHits = await deps.vectorRetrieve({
-          companyId: input.companyId,
-          query,
-          topK: Math.max(input.config.topK, 4),
-          threshold: input.config.threshold,
-          excludeSourceIds: input.excludeSourceIds,
-        });
+        let vectorHits: RetrievalHit[] = [];
+        if (!vectorRefused) {
+          try {
+            vectorHits = await deps.vectorRetrieve({
+              companyId: input.companyId,
+              query,
+              topK: Math.max(input.config.topK, 4),
+              threshold: input.config.threshold,
+              excludeSourceIds: input.excludeSourceIds,
+            });
+          } catch (err) {
+            if (!deps.onVectorRetrievalError?.(input.companyId, err)) throw err;
+            vectorRefused = true;
+          }
+        }
 
         for (const hit of vectorHits) {
           const key = `${hit.sourceType}:${hit.sourceId}:${hit.chunkIndex}`;

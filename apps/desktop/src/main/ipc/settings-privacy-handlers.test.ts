@@ -53,14 +53,21 @@ const ROWS: ProviderConfig[] = [
 
 const CONFIGURED = new Set(['ollama-local', 'anthropic', 'groq', 'google']);
 
-function makeDeps(maxTier: string | undefined): {
+function makeDeps(
+  maxTier: string | undefined,
+  settings: Record<string, unknown> = {},
+): {
   deps: IpcHandlerDeps;
   settingsRepo: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
 } {
   const noop = {} as never;
   const settingsRepo = {
     get: vi.fn((key: string, fallback: unknown) =>
-      key === 'max_privacy_tier' && maxTier !== undefined ? maxTier : fallback,
+      key === 'max_privacy_tier' && maxTier !== undefined
+        ? maxTier
+        : Object.hasOwn(settings, key)
+          ? settings[key]
+          : fallback,
     ),
     set: vi.fn(),
   };
@@ -110,6 +117,28 @@ describe('settings.getPrivacy IPC handler', () => {
       { id: 'anthropic', name: 'Anthropic', kind: 'anthropic', privacyTier: 'proprietary-cloud' },
       { id: 'groq', name: 'Groq', kind: 'groq', privacyTier: 'open-source-cloud' },
     ]);
+  });
+
+  it('names the retrieval embedding provider when the tier refuses it', async () => {
+    const handlers = createIpcHandlers(
+      makeDeps('local', { rag_enabled: true, embedding_provider: 'groq' }).deps,
+    );
+
+    const result = await handlers.settingsGetPrivacy();
+
+    expect(result.retrievalEmbeddingProviderId).toBe('groq');
+  });
+
+  it('reports no retrieval consequence when the embedding provider is allowed or RAG is off', async () => {
+    const allowed = await createIpcHandlers(
+      makeDeps('local', { rag_enabled: true, embedding_provider: 'ollama-local' }).deps,
+    ).settingsGetPrivacy();
+    const ragOff = await createIpcHandlers(
+      makeDeps('local', { rag_enabled: false, embedding_provider: 'groq' }).deps,
+    ).settingsGetPrivacy();
+
+    expect(allowed.retrievalEmbeddingProviderId).toBeNull();
+    expect(ragOff.retrievalEmbeddingProviderId).toBeNull();
   });
 
   it('narrows the blocked list as the tier rises', async () => {

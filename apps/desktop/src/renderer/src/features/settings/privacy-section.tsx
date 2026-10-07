@@ -83,7 +83,9 @@ export function PrivacySection() {
     );
   }
 
-  const { maxTier, availableProviders, blockedProviders } = data;
+  const { maxTier, availableProviders, blockedProviders, retrievalEmbeddingProviderId } = data;
+  const retrievalProvider =
+    blockedProviders.find((p) => p.id === retrievalEmbeddingProviderId) ?? null;
   const maxTierLabel = TIERS.find((t) => t.value === maxTier)?.label ?? maxTier;
 
   return (
@@ -139,10 +141,17 @@ export function PrivacySection() {
           ) : (
             <>
               <p className="max-w-[72ch] px-4 pt-3 pb-2 text-caption text-[var(--display-fg-mute)] leading-relaxed">
-                Employees on these providers will refuse to run under {maxTierLabel}, and retrieval
-                embeddings through them are refused too. Move them to an allowed provider or raise
-                the tier.
+                Employees on these providers will refuse to run under {maxTierLabel}. Move them to
+                an allowed provider or raise the tier.
               </p>
+              {retrievalProvider ? (
+                <p className="max-w-[72ch] px-4 pb-2 text-caption text-[var(--display-fg-mute)] leading-relaxed">
+                  Retrieval embeds through {retrievalProvider.name}: chats keep ticket, goal,
+                  project and vault context, but semantic search pauses and new content is not
+                  indexed. Choose an allowed embedding provider in Settings → Retrieval, or raise
+                  the tier and rebuild the index there.
+                </p>
+              ) : null}
               <ul className="divide-y divide-[var(--hairline)] border-[var(--hairline)] border-t">
                 {blockedProviders.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2">
@@ -151,6 +160,7 @@ export function PrivacySection() {
                         {p.name}
                       </span>
                       <Tag>{PROVIDER_TIER_NAME[p.privacyTier] ?? p.privacyTier}</Tag>
+                      {p.id === retrievalEmbeddingProviderId ? <Tag>Retrieval</Tag> : null}
                     </div>
                     <LampTile small interactive={false} label="NO-GO" tone="nogo" />
                   </li>

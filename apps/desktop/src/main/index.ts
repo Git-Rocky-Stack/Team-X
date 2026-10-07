@@ -223,6 +223,7 @@ import {
 import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { createCopilotService } from './services/copilot-service.js';
+import { createEmbeddingRefusalReporter } from './services/embedding-refusal-reporter.js';
 import { type EnhancedAiService, createEnhancedAiService } from './services/enhanced-ai.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
@@ -1382,6 +1383,9 @@ app
     }
 
     const ragService: RagService | null = await buildRagService();
+    // A Settings → Privacy refusal of the embedding provider degrades RAG
+    // (no semantic search, indexing paused) instead of failing chat turns.
+    const reportEmbeddingRefusal = createEmbeddingRefusalReporter();
     if (ragService !== null) {
       console.log('[rag] service ready — RAG-enhanced prompts active');
     } else {
@@ -1408,6 +1412,8 @@ app
         ? null
         : createRetrievalOrchestrator({
             vectorRetrieve: (input) => ragService.retrieve(input),
+            onVectorRetrievalError: (companyId, err) =>
+              reportEmbeddingRefusal(`retrieval for company ${companyId}`, err),
             listTickets: (companyId) => ticketsRepo.listByCompany(companyId),
             listGoals: (companyId) => goalsRepo.listByCompany(companyId),
             listProjects: (companyId) => projectsRepo.listByCompany(companyId),
@@ -1671,6 +1677,12 @@ app
       getProject: (id) => projectsRepo.getById(id),
       getVaultFile: (id) => vaultRepo.getById(id),
       isEnabled: () => ragService !== null,
+      logger: {
+        error: (msg, err) => {
+          if (reportEmbeddingRefusal('indexing', err)) return;
+          console.error('[rag-indexer]', msg, err);
+        },
+      },
     });
     ragIndexer.start();
     ragIndexerInstance = ragIndexer;

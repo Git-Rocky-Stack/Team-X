@@ -675,3 +675,74 @@ describe('createRetrievalOrchestrator — H10 audit (2026-05-07): wired query ex
     });
   });
 });
+
+describe('createRetrievalOrchestrator — vector retrieval refused by policy', () => {
+  // With Settings → Privacy below the embedding provider's tier, every
+  // vectorRetrieve call throws. Before, that failed the whole context build
+  // and with it every chat turn; the structured sources (tickets, goals,
+  // projects, vault) need no embeddings and can still ground the answer.
+  const ticket = {
+    id: 'T-42',
+    title: 'CMO onboarding blocked',
+    description: 'Offer letter approval is missing, blocking onboarding.',
+    status: 'blocked',
+    priority: 'high',
+    assigneeId: 'emp-coo',
+    labelsJson: '["onboarding","cmo"]',
+    dueAt: null,
+    slaHours: 24,
+    updatedAt: Date.UTC(2026, 3, 21, 10, 0, 0),
+  };
+  const input = {
+    companyId: 'co-1',
+    recentMessages: [
+      { id: 'u1', content: 'Why is T-42 onboarding stuck for the CMO?', sourceId: 'u1' },
+    ],
+    excludeSourceIds: ['u1'],
+    config: { topK: 3, threshold: 0.3, maxTokens: 200 },
+    countTokens: (text: string) => text.split(/\s+/).filter(Boolean).length,
+  };
+
+  it('continues with structured evidence when the error handler accepts the refusal', async () => {
+    const refusal = new Error('Embedding provider is Proprietary Cloud-tier');
+    const vectorRetrieve = vi.fn(async () => {
+      throw refusal;
+    });
+    const onVectorRetrievalError = vi.fn(() => true);
+    const orchestrator = createRetrievalOrchestrator(
+      makeDeps({ vectorRetrieve, listTickets: () => [ticket], onVectorRetrievalError }),
+    );
+
+    const result = await orchestrator.retrieveEvidence(input);
+
+    expect(result.entries.map((e) => e.sourceId)).toContain('T-42');
+    expect(onVectorRetrievalError).toHaveBeenCalledWith('co-1', refusal);
+    // One refusal is enough: the remaining queries skip the vector path.
+    expect(vectorRetrieve).toHaveBeenCalledTimes(1);
+  });
+
+  it('still fails when the handler does not accept the error', async () => {
+    const orchestrator = createRetrievalOrchestrator(
+      makeDeps({
+        vectorRetrieve: async () => {
+          throw new Error('database is locked');
+        },
+        onVectorRetrievalError: () => false,
+      }),
+    );
+
+    await expect(orchestrator.retrieveEvidence(input)).rejects.toThrow(/database is locked/);
+  });
+
+  it('still fails when no handler is wired', async () => {
+    const orchestrator = createRetrievalOrchestrator(
+      makeDeps({
+        vectorRetrieve: async () => {
+          throw new Error('refused');
+        },
+      }),
+    );
+
+    await expect(orchestrator.retrieveEvidence(input)).rejects.toThrow(/refused/);
+  });
+});

@@ -69,3 +69,12 @@ describe('main/index.ts — Settings → Enhanced AI → Semantic Chunking', () 
     expect(src).not.toContain("'streaming_enabled'");
   });
 });
+
+describe('main/index.ts — an embedding refusal degrades RAG instead of failing turns', () => {
+  it('lets retrieval and the indexer absorb a Settings → Privacy refusal', () => {
+    const retrieval = callArguments('createRetrievalOrchestrator');
+    expect(retrieval.some((c) => c.includes('onVectorRetrievalError'))).toBe(true);
+    const indexer = callArguments('createRagIndexer');
+    expect(indexer.some((c) => c.includes("reportEmbeddingRefusal('indexing'"))).toBe(true);
+  });
+});

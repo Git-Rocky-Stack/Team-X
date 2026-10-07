@@ -44,6 +44,7 @@ function makePrivacy(
       { id: 'anthropic', name: 'Anthropic', kind: 'anthropic', privacyTier: 'proprietary-cloud' },
       { id: 'groq', name: 'Groq', kind: 'groq', privacyTier: 'open-source-cloud' },
     ],
+    retrievalEmbeddingProviderId: null,
     ...overrides,
   };
 }
@@ -108,6 +109,24 @@ describe('PrivacySection — blocked-provider readout', () => {
     expect(
       within(well).getByText(/Employees on these providers will refuse to run under Local Only/),
     ).toBeVisible();
+  });
+
+  it('says what happens to retrieval when the tier refuses its embedding provider', async () => {
+    getPrivacy.mockResolvedValue(makePrivacy({ retrievalEmbeddingProviderId: 'groq' }));
+    const { container } = renderSection();
+    const well = await blockedWell(container);
+
+    expect(
+      within(well).getByText(/Retrieval embeds through Groq: chats keep ticket, goal, project/),
+    ).toBeVisible();
+    expect(within(well).getByText('Retrieval')).toBeVisible();
+  });
+
+  it('says nothing about retrieval when its embedding provider is allowed', async () => {
+    const { container } = renderSection();
+    const well = await blockedWell(container);
+
+    expect(within(well).queryByText(/Retrieval embeds through/)).toBeNull();
   });
 
   it('shows an explicit all-clear when the tier refuses nothing', async () => {

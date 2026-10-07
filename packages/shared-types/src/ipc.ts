@@ -1793,6 +1793,12 @@ export interface SettingsGetPrivacyResponse {
     kind: ProviderKind;
     privacyTier: PrivacyTier;
   }>;
+  /**
+   * The RAG embedding provider's id when it is among `blockedProviders` (RAG
+   * on): retrieval then runs without semantic search and indexing pauses.
+   * Null when retrieval is unaffected.
+   */
+  retrievalEmbeddingProviderId: string | null;
 }
 
 export interface SettingsSetPrivacyRequest {

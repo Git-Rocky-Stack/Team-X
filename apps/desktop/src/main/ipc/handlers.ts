@@ -6418,7 +6418,16 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         if (!(await providersService.isConfigured(p.id))) continue;
         blockedProviders.push({ id: p.id, name: p.name, kind: p.kind, privacyTier: p.privacyTier });
       }
-      return { maxTier, availableProviders, blockedProviders };
+      // Retrieval degrades rather than fails when its embedding provider is
+      // refused (no semantic search, indexing paused) — say which, if any.
+      const embeddingProvider = settingsRepo.get<boolean>('rag_enabled', false)
+        ? settingsRepo.get<string>('embedding_provider', 'ollama-local')
+        : null;
+      const retrievalEmbeddingProviderId =
+        embeddingProvider !== null && blockedProviders.some((p) => p.id === embeddingProvider)
+          ? embeddingProvider
+          : null;
+      return { maxTier, availableProviders, blockedProviders, retrievalEmbeddingProviderId };
     },
 
     async settingsSetPrivacy(req) {
