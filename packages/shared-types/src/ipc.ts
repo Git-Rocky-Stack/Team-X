@@ -1783,6 +1783,16 @@ export interface SettingsGetPrivacyResponse {
     privacyTier: PrivacyTier;
     allowed: boolean;
   }>;
+  /**
+   * Configured + enabled providers above `maxTier` — the ones the provider
+   * factory would refuse at run time. Empty when the tier blocks nothing.
+   */
+  blockedProviders: Array<{
+    id: string;
+    name: string;
+    kind: ProviderKind;
+    privacyTier: PrivacyTier;
+  }>;
 }
 
 export interface SettingsSetPrivacyRequest {
@@ -2102,12 +2112,6 @@ export interface SettingsGetEnhancedAiConfigResponse {
   longTermMemoryEnabled: boolean;
   /** Enable knowledge graph for cross-thread entity relationships. */
   knowledgeGraphEnabled: boolean;
-  /** Enable multi-turn planning for complex queries. */
-  planningEnabled: boolean;
-  /** Minimum query length (chars) to trigger planning. */
-  planningThreshold: number;
-  /** Enable streaming responses for real-time output. */
-  streamingEnabled: boolean;
   /** Enable distributed tracing for observability. */
   tracingEnabled: boolean;
   /** Sample rate for tracing (0.0–1.0). */
@@ -2126,9 +2130,6 @@ export interface SettingsSetEnhancedAiConfigRequest {
   semanticChunkingEnabled?: boolean;
   longTermMemoryEnabled?: boolean;
   knowledgeGraphEnabled?: boolean;
-  planningEnabled?: boolean;
-  planningThreshold?: number;
-  streamingEnabled?: boolean;
   tracingEnabled?: boolean;
   tracingSampleRate?: number;
 }
@@ -3720,11 +3721,10 @@ export interface TeamXApi {
   };
 
   /**
-   * Local & Networked GGUF Support (v3.3.0). The full typed surface ships
-   * in Phase 1; every channel is a not-implemented stub until its owning
-   * phase lands the real handler (runtime/pool → P2, library → P3,
-   * endpoint → P5, hf → P7, benchmark → P10). See `LocalGgufApi` in
-   * `local-gguf.ts` for the per-area method contracts.
+   * Local & Networked GGUF Support (v3.3.0). Every channel is served by a
+   * real main-process handler (runtime/pool, library, endpoint, hf and
+   * benchmark); the Phase 1 not-implemented stubs are gone. See
+   * `LocalGgufApi` in `local-gguf.ts` for the per-area method contracts.
    */
   localGguf: LocalGgufApi;
 }

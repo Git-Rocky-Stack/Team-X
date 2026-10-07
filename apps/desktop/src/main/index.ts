@@ -59,7 +59,6 @@ import {
   type RagRepo,
   type RagService,
   createEntityResolver,
-  createIntentClassifier,
   createMockCrossEncoder,
   createQueryExpansionService,
   createRagService,
@@ -183,6 +182,7 @@ import type { CostCalculator } from './orchestrator/run-agent.js';
 import { createAgentImprovementService } from './services/agent-improvement-service.js';
 import {
   type AgenticLoopService,
+  budgetsFromAgenticSettings,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
@@ -248,6 +248,10 @@ import {
   defaultAllowlistPath as mcpDefaultAllowlistPath,
 } from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
+import {
+  createClassifierCompleteFor,
+  createPaletteIntentClassifier,
+} from './services/palette-classifier.js';
 import {
   loadPaperclipExportFolder,
   previewPaperclipImportBridge,
@@ -1581,6 +1585,15 @@ app
       contextPackerService,
       threadDigestService,
       runCheckpointService,
+      // Settings → Memory, read per turn so a change applies to the next
+      // turn. These rows used to feed only the renderer's pack preview.
+      getContextMemorySettings: () => {
+        const memory = settingsRepo.getMemory();
+        return {
+          targetTokenBudget: memory.defaultTargetTokenBudget,
+          recentTurnLimit: memory.recentTurnLimit,
+        };
+      },
       slots: initialSlots,
       providerCaps: initialProviderCaps,
       userDataDir: userDataDir(),
@@ -1791,11 +1804,10 @@ app
     // M33 T3. Subscribes to the same event bus the RAG indexer uses;
     // feeds the T4 CopilotAnalyzerService. Bounded at 100 events per
     // company, FIFO eviction, warm-start hydration from the events
-    // table on first snapshot per company. `clear(companyId)` is
-    // shipped as a public method but not yet wired — the
-    // `companies.archive` IPC referenced in the M33 plan does not
-    // exist today, so the archive-clear hookup is deferred to the
-    // milestone that adds it (tracked as an M33 T3 follow-up).
+    // table on first snapshot per company. `clear(companyId)` is wired
+    // into the IPC handlers below (`copilotEventWindow.clear`), so
+    // `companies.archive` drops the archived company's buffer and
+    // hydrated flag after its analyzer is stopped (M33 F3).
     const copilotEventWindow = createCopilotEventWindow({
       bus,
       eventsRepo,
@@ -1863,6 +1875,16 @@ app
       messagesRepo,
       employeesRepo,
       ticketsRepo,
+      // End-of-meeting minutes: the chair's provider (same `resolveProvider`
+      // the orchestrator uses) writes a summary + action items, admitted and
+      // recorded through the same budget governance as an agent turn. Any
+      // failure falls back to transcript-only minutes.
+      minutes: {
+        resolveProvider,
+        runsRepo,
+        calcCost,
+        budgetGovernance: budgetGovernanceServiceInstance ?? undefined,
+      },
     });
 
     const ipcHandlers = createIpcHandlers({
@@ -1941,7 +1963,8 @@ app
         },
       },
       // Direct handle — already live at this point in the bootstrap
-      // (created on line ~638 and started before handlers build). Used
+      // (created and started in the "Copilot event window" block above,
+      // before handlers build). Used
       // by `companies.archive` (M33 F3) to drop the per-company rolling
       // buffer + hydrated flag after the analyzer is stopped.
       copilotEventWindow: {
@@ -2079,40 +2102,26 @@ app
     // T5's `command.*` IPC layer can register its handlers on top of
     // this service without a second orchestration pass.
     //
-    // The NLU classifier uses the provider router through the provider
-    // factory — in test mode it runs against a stub complete() closure
-    // that echoes a canned complex_request back, which keeps all three
-    // existing E2E specs semantics-identical. The real completion path
-    // (M30 T1) is wired via `resolveProvider`.
-    const classifierComplete = async ({
-      system,
-      user,
-    }: {
-      system: string;
-      user: string;
-    }): Promise<string> => {
-      // Hook: wire into provider-router.streamCompletion once M30 T1 is
-      // fully integrated with the main-process provider factory. For now
-      // return a deterministic complex_request JSON so the classifier
-      // never crashes a palette invocation when no provider is configured.
-      void system;
-      void user;
-      return JSON.stringify({
-        intent: 'complex_request',
-        entities: {},
-        confidence: 0,
-        missingSlots: [],
-      });
-    };
+    // The NLU classifier calls the palette company's system-agent model
+    // through the same `resolveProvider` closure the orchestrator uses
+    // (see `palette-classifier.ts`). When no provider can be resolved the
+    // completer answers the canned `complex_request` reply and logs once,
+    // so the palette still routes the command to the agentic loop.
+    //
     // Test-mode swap: when `NODE_ENV === 'test'` we bypass the LLM
     // completion seam entirely and use `createTestClassifier()` — a
     // deterministic canned table + sentinel override that lets the
     // Playwright command-palette spec exercise the full parse → fill
-    // → execute → history loop without a live provider. Production
-    // and dev still use the real `createIntentClassifier`.
+    // → execute → history loop without a live provider.
     const commandClassifier = testMode
       ? createTestClassifier()
-      : createIntentClassifier({ complete: classifierComplete });
+      : createPaletteIntentClassifier({
+          completeFor: createClassifierCompleteFor({
+            findSystemAgent: (companyId) =>
+              employeesRepo.findSystemByRoleId(companyId, SYSTEM_AGENT_ROLE_ID),
+            resolveProvider,
+          }),
+        });
     // DB rows type `status` as `string`; shared-types narrows to the
     // `EmployeeStatus` / `TicketStatus` unions. The casts below are
     // safe — the DB schema's CHECK constraints and repo write paths
@@ -2176,9 +2185,8 @@ app
     // `LoopCompleteFn` mirroring the M30 `createTestClassifier` seam.
     // The production branch wraps `streamAgent` from the provider
     // router into the loop's non-streaming request/response shape by
-    // accumulating delta chunks + end-of-stream usage. T6 will thread
-    // live step deltas to the palette; T7 will plug the settings-
-    // driven budget overrides; T8 is the full E2E round-trip.
+    // accumulating delta chunks + end-of-stream usage. Budgets come from
+    // Settings → Agentic Loop via `getBudgets` below.
     //
     // `humanUserId: 'user'` matches CommandService's default actorId —
     // keeps audit events and thread memberships consistent with the
@@ -2687,6 +2695,11 @@ app
         };
         return { complete, provider: providerName, model };
       },
+      // Settings → Agentic Loop (Max Steps / Max Tokens / Timeout), read at
+      // each run start so a change applies to the next run. The UI's "Max
+      // Steps" is a tool-turn count and maps to the loop's `maxIterations`;
+      // see `budgetsFromAgenticSettings` for why it is not `maxSteps`.
+      getBudgets: () => budgetsFromAgenticSettings(settingsRepo.getAgentic()),
       humanUserId: 'user',
     });
 
@@ -2800,6 +2813,11 @@ app
       },
       settingsRepo: {
         getProactive: () => settingsRepo.getProactive(),
+      },
+      // Per-company proactive opt-out lives in companies.settings JSON.
+      companiesRepo: {
+        getById: (id) => companiesRepo.getById(id),
+        update: (id, patch) => companiesRepo.update(id, patch),
       },
       // ---- Governed proactive dispatch (audit F3) ----------------------
       //

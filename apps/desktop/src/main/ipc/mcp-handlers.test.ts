@@ -220,13 +220,16 @@ describe('MCP IPC handlers', () => {
 
     await handlers.mcpToggle({ serverId: 'server-1', enabled: true });
 
+    // Reconnected as enabled. Passing the stored row's stale `enabled: false`
+    // started the subprocess but left the host treating it as disabled, so
+    // `listTools` skipped it and agents could not see its tools until restart.
     expect(deps.mcpHost.connectToServer).toHaveBeenCalledWith({
       id: 'server-1',
       companyId: 'company-1',
       name: 'Filesystem MCP',
       transport: 'stdio',
       configJson: JSON.stringify({ command: 'npx', args: ['filesystem-mcp'] }),
-      enabled: false,
+      enabled: true,
       lastHealth: null,
     });
     expect(deps.mcpServersRepo.updateEnabled).toHaveBeenCalledWith('server-1', true);

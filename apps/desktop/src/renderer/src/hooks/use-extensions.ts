@@ -11,6 +11,12 @@ export function useInstalledExtensions(companyId: string | null) {
   });
 }
 
+/**
+ * Skill-assignment hooks (this, `useUpsertSkillAssignment`,
+ * `useDeleteSkillAssignment`) have no mount yet: per-employee assignment
+ * belongs on an employee-scoped surface (the profile dialog), not the
+ * workspace-wide Settings → Extensions inventory. Kept for that follow-up.
+ */
 export function useSkillAssignments(companyId: string | null) {
   return useQuery({
     queryKey: ['skill-assignments', companyId],
@@ -104,19 +110,6 @@ export function useReviewAuthorityRequest(companyId: string | null) {
       qc.invalidateQueries({ queryKey: ['extensions', companyId] });
       qc.invalidateQueries({ queryKey: ['audit'] });
     },
-  });
-}
-
-export function useEffectiveAuthority(companyId: string | null, employeeId: string | null) {
-  return useQuery({
-    queryKey: ['effective-authority', companyId, employeeId],
-    queryFn: () =>
-      ipc.authority.getEffective({
-        companyId: requireString(companyId, 'companyId'),
-        employeeId: requireString(employeeId, 'employeeId'),
-      }),
-    enabled:
-      companyId !== null && companyId.length > 0 && employeeId !== null && employeeId.length > 0,
   });
 }
 

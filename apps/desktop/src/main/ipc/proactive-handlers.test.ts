@@ -145,28 +145,40 @@ describe('proactive IPC handlers', () => {
       });
     });
 
-    it('persists `enabled` to the settings table so the optimistic Switch sticks', async () => {
-      // Regression: without this write the renderer's react-query
-      // invalidation refetches the unchanged DB value and snaps the
-      // Switch back to off. Both sources of truth (settings.proactive_enabled
-      // in the DB AND the trigger service's in-memory map) must move
-      // together. See `extensions-section.tsx` handleProactiveToggle for
-      // the consumer flow this test pins.
+    it('never writes the workspace-wide master flag from a per-company switch', async () => {
+      // Regression: this handler used to call settingsRepo.setProactive({ enabled })
+      // so flipping company A's switch silently enabled/disabled proactive
+      // work for EVERY company. The per-company choice is persisted by the
+      // trigger service in that company's settings; the global master flag
+      // is only written through settings.setProactive.
       const deps = makeDeps();
       const handlers = asProactiveHandlers(createIpcHandlers(deps));
 
-      await handlers.proactiveSetEnabled({
-        companyId: 'company-123',
-        enabled: true,
-      });
-      expect(deps.settingsRepo.setProactive).toHaveBeenCalledWith({ enabled: true });
+      await handlers.proactiveSetEnabled({ companyId: 'company-a', enabled: false });
+      await handlers.proactiveSetEnabled({ companyId: 'company-a', enabled: true });
 
-      await handlers.proactiveSetEnabled({
-        companyId: 'company-123',
+      expect(deps.settingsRepo.setProactive).not.toHaveBeenCalled();
+      expect(deps.proactiveTriggerService.setEnabled).toHaveBeenNthCalledWith(1, {
+        companyId: 'company-a',
         enabled: false,
       });
-      expect(deps.settingsRepo.setProactive).toHaveBeenCalledWith({ enabled: false });
-      expect(deps.settingsRepo.setProactive).toHaveBeenCalledTimes(2);
+      expect(deps.proactiveTriggerService.setEnabled).toHaveBeenNthCalledWith(2, {
+        companyId: 'company-a',
+        enabled: true,
+      });
+    });
+
+    it('rejects a non-boolean enabled flag', async () => {
+      const deps = makeDeps();
+      const handlers = asProactiveHandlers(createIpcHandlers(deps));
+
+      await expect(
+        handlers.proactiveSetEnabled({
+          companyId: 'company-a',
+          enabled: 'yes' as unknown as boolean,
+        }),
+      ).rejects.toThrow(/enabled must be a boolean/);
+      expect(deps.proactiveTriggerService.setEnabled).not.toHaveBeenCalled();
     });
 
     it('validates companyId is a non-empty string', async () => {

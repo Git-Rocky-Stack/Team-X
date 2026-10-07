@@ -335,6 +335,33 @@ class FakeSettingsRepo {
   }
 }
 
+/**
+ * Mirrors the companies repo boundary the service persists through: rows
+ * carry the raw `settingsJson` text column, `update` replaces it wholesale.
+ */
+class FakeCompaniesRepo {
+  readonly rows = new Map<string, { id: string; settingsJson: string }>();
+
+  seed(id: string, settings: Record<string, unknown> = {}): void {
+    this.rows.set(id, { id, settingsJson: JSON.stringify(settings) });
+  }
+
+  settingsOf(id: string): Record<string, unknown> {
+    const row = this.rows.get(id);
+    return row ? (JSON.parse(row.settingsJson) as Record<string, unknown>) : {};
+  }
+
+  getById(id: string): { id: string; settingsJson: string } | null {
+    return this.rows.get(id) ?? null;
+  }
+
+  update(id: string, patch: { settings?: Record<string, unknown> }): void {
+    const row = this.rows.get(id);
+    if (!row || patch.settings === undefined) return;
+    row.settingsJson = JSON.stringify(patch.settings);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Test fixture
 // ---------------------------------------------------------------------------
@@ -424,6 +451,7 @@ interface Fixture {
   clock: FakeClock;
   bus: FakeEventBus;
   settingsRepo: FakeSettingsRepo;
+  companiesRepo: FakeCompaniesRepo;
   deps: ProactiveTriggerServiceDeps;
   service: ProactiveTriggerService;
   companyId: string;
@@ -439,6 +467,7 @@ function buildFixture(): Fixture {
   const employeesRepo = new FakeEmployeesRepo();
   const bus = new FakeEventBus();
   const settingsRepo = new FakeSettingsRepo();
+  const companiesRepo = new FakeCompaniesRepo();
   const threadsRepo = new FakeThreadsRepo();
   const messagesRepo = new FakeMessagesRepo();
   const budgetGovernance = new FakeBudgetGovernance();
@@ -446,6 +475,8 @@ function buildFixture(): Fixture {
 
   const companyId = 'co-test';
   const systemAgentId = 'emp-system';
+  companiesRepo.seed(companyId);
+  companiesRepo.seed('co-other');
 
   // Set up system agent employee
   employeesRepo.setEmployee({
@@ -486,6 +517,10 @@ function buildFixture(): Fixture {
     },
     settingsRepo: {
       getProactive: () => settingsRepo.getProactive(),
+    },
+    companiesRepo: {
+      getById: (id) => companiesRepo.getById(id),
+      update: (id, patch) => companiesRepo.update(id, patch),
     },
     // The REAL dispatcher, backed by fake repos — `scanForWork` must run
     // through the same governed path production uses (thread + message
@@ -538,6 +573,7 @@ function buildFixture(): Fixture {
     clock,
     bus,
     settingsRepo,
+    companiesRepo,
     deps,
     service,
     companyId,
@@ -1329,5 +1365,88 @@ describe('proactive-trigger-service — overlapping scans', () => {
 
     fixture.orchestrator.releaseHeldTurns();
     await first;
+  });
+});
+
+describe('proactive-trigger-service — per-company enablement is persisted', () => {
+  let fixture: Fixture;
+
+  beforeEach(() => {
+    fixture = buildFixture();
+  });
+
+  it('disabling one company leaves every other company enabled', () => {
+    fixture.service.setEnabled({ companyId: fixture.companyId, enabled: false });
+
+    expect(fixture.service.isEnabled(fixture.companyId)).toBe(false);
+    expect(fixture.service.isEnabled('co-other')).toBe(true);
+    // The workspace-wide master flag is untouched by a per-company switch.
+    expect(fixture.settingsRepo.getProactive().enabled).toBe(true);
+  });
+
+  it('survives a restart (a fresh service instance over the same repos)', () => {
+    fixture.service.setEnabled({ companyId: fixture.companyId, enabled: false });
+
+    const restarted = createProactiveTriggerService(fixture.deps);
+    expect(restarted.isEnabled(fixture.companyId)).toBe(false);
+    expect(restarted.isEnabled('co-other')).toBe(true);
+
+    restarted.setEnabled({ companyId: fixture.companyId, enabled: true });
+    expect(createProactiveTriggerService(fixture.deps).isEnabled(fixture.companyId)).toBe(true);
+  });
+
+  it('persists into company settings without clobbering other keys', () => {
+    fixture.companiesRepo.seed(fixture.companyId, { mission: 'Ship it', theme: 'dark' });
+
+    fixture.service.setEnabled({ companyId: fixture.companyId, enabled: false });
+
+    expect(fixture.companiesRepo.settingsOf(fixture.companyId)).toEqual({
+      mission: 'Ship it',
+      theme: 'dark',
+      proactiveEnabled: false,
+    });
+  });
+
+  it('keeps the global flag as the master switch over a company opt-in', () => {
+    fixture.service.setEnabled({ companyId: fixture.companyId, enabled: true });
+    fixture.settingsRepo.setProactive(false);
+
+    expect(fixture.service.isEnabled(fixture.companyId)).toBe(false);
+  });
+
+  it('a persisted opt-out stops scans for that company only', async () => {
+    fixture.employeesRepo.setEmployee({
+      id: 'emp-dev-1',
+      companyId: fixture.companyId,
+      name: 'Developer',
+      level: 'ic',
+      isSystem: false,
+      status: 'active',
+    });
+    fixture.ticketsRepo.setTicket({
+      id: 'ticket-1',
+      companyId: fixture.companyId,
+      title: 'Ticket',
+      description: 'needs an owner',
+      status: 'open',
+      assigneeId: null,
+      reporterId: 'user-1',
+      reporterKind: 'user',
+      priority: 'high',
+    });
+    fixture.companiesRepo.seed(fixture.companyId, { proactiveEnabled: false });
+
+    const result = await createProactiveTriggerService(fixture.deps).scanForWork({
+      companyId: fixture.companyId,
+    });
+
+    expect(result.queuedCount).toBe(0);
+    expect(fixture.orchestrator.enqueuedChats).toHaveLength(0);
+  });
+
+  it('refuses to toggle a company that does not exist', () => {
+    expect(() => fixture.service.setEnabled({ companyId: 'co-missing', enabled: false })).toThrow(
+      /co-missing/,
+    );
   });
 });
