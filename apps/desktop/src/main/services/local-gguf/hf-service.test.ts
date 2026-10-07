@@ -36,7 +36,10 @@ import { type HfFileSink, type HfFs, HfServiceError, createHfService } from './h
 
 function makeFs() {
   const files = new Map<string, Uint8Array>();
-  const dirs = new Set<string>(['/models', 'C:\\models']);
+  // Seeded through `at()` like every other path in this file: the service
+  // resolves its target folder, so on Windows `/models` is `D:\models`, and a
+  // raw key here made every download test fail there with "does not exist".
+  const dirs = new Set<string>([at('/models'), at('C:\\models')]);
 
   function sink(path: string, initial: Uint8Array): HfFileSink {
     let buf = initial;
