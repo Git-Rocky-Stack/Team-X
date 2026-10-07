@@ -50,6 +50,13 @@ export interface RagServiceOptions {
   dimension: number;
   repo: RagRepo;
   chunker?: ChunkOptions;
+  /**
+   * Replaces the built-in fixed-window chunker. The desktop app passes the
+   * semantic chunker here while Settings → Enhanced AI → Semantic Chunking is
+   * on; `chunker` options are ignored when this is set. Blank chunks are
+   * skipped.
+   */
+  chunk?: (content: string) => string[] | Promise<string[]>;
   now?: () => number;
   idGen?: () => string;
   /**
@@ -182,7 +189,9 @@ export function createRagService(opts: RagServiceOptions): RagService {
     async indexSource(input: IndexSourceInput): Promise<number> {
       if (!input.content.trim()) return 0;
 
-      const chunks = chunkText(input.content, chunkerOpts);
+      const chunks = (
+        opts.chunk ? await opts.chunk(input.content) : chunkText(input.content, chunkerOpts)
+      ).filter((c) => c.trim().length > 0);
       if (chunks.length === 0) return 0;
 
       // Invalidate cache when indexing new content

@@ -4,7 +4,10 @@
  * memory, the knowledge graph), so it is active only while RAG is.
  *
  * Phase 5 — M32. Max Tokens and Temperature were removed: no provider adapter
- * accepts either, so both persisted values nothing could apply.
+ * accepts either, so both persisted values nothing could apply. Multi-Turn
+ * Planning and Streaming Responses were removed for the same reason: only
+ * Enhanced AI paths the app never calls read them (Copilot runs on the agent
+ * loop, which streams on its own and does not plan through Enhanced AI).
  *
  * NOTE: Like the RAG section, this component ships without a co-located
  * *.test.tsx file. The enhanced-ai E2E spec (M32 T7) drives the UI
@@ -25,16 +28,9 @@ import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhance
 import { useProviders } from '@/hooks/use-providers.js';
 import { useRagConfig } from '@/hooks/use-rag.js';
 
-const PLANNING_THRESHOLD_MIN = 50;
-const PLANNING_THRESHOLD_MAX = 1000;
 const TRACING_SAMPLE_RATE_MIN = 0;
 const TRACING_SAMPLE_RATE_MAX = 1;
 const TRACING_SAMPLE_RATE_STEP = 0.05;
-
-function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value)) return min;
-  return Math.max(min, Math.min(max, value));
-}
 
 export function EnhancedAiSection() {
   const { data: config, isLoading: configLoading, isError: configError } = useEnhancedAiConfig();
@@ -204,7 +200,8 @@ export function EnhancedAiSection() {
           <div className="min-w-0 flex-1">
             <p className="text-body-strong text-foreground">Semantic Chunking</p>
             <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
-              Structure-aware content splitting for better context.
+              Split indexed content on headings, paragraphs and code fences. Applies to content
+              indexed from now on; Rebuild in RAG re-chunks the rest.
             </p>
           </div>
           <Switch
@@ -244,80 +241,6 @@ export function EnhancedAiSection() {
             onCheckedChange={(checked) => commit('knowledgeGraphEnabled', checked)}
             disabled={setConfig.isPending}
             aria-label="Toggle knowledge graph"
-          />
-        </div>
-
-        {/* Multi-Turn Planning */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-body-strong text-foreground">Multi-Turn Planning</p>
-            <p className="text-caption text-muted-foreground mt-0.5 leading-snug mb-2">
-              Decompose complex queries into execution plans.
-            </p>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <label
-                  htmlFor="ai-planning-threshold"
-                  className="text-caption text-muted-foreground"
-                >
-                  Threshold
-                </label>
-                <span className="text-caption font-mono text-foreground tabular-nums">
-                  {draft.planningThreshold} chars
-                </span>
-              </div>
-              <Input
-                id="ai-planning-threshold"
-                type="number"
-                inputMode="numeric"
-                min={PLANNING_THRESHOLD_MIN}
-                max={PLANNING_THRESHOLD_MAX}
-                step={10}
-                value={draft.planningThreshold}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    planningThreshold: Number.parseInt(e.target.value, 10) || 0,
-                  })
-                }
-                onBlur={() => {
-                  const next = clamp(
-                    draft.planningThreshold,
-                    PLANNING_THRESHOLD_MIN,
-                    PLANNING_THRESHOLD_MAX,
-                  );
-                  if (next !== draft.planningThreshold) {
-                    setDraft({ ...draft, planningThreshold: next });
-                  }
-                  commit('planningThreshold', next);
-                }}
-                disabled={!draft.planningEnabled || setConfig.isPending}
-                className="h-7 text-code-sm"
-              />
-            </div>
-          </div>
-          <Switch
-            checked={draft.planningEnabled}
-            onCheckedChange={(checked) => commit('planningEnabled', checked)}
-            disabled={setConfig.isPending}
-            aria-label="Toggle multi-turn planning"
-            className="mt-5"
-          />
-        </div>
-
-        {/* Streaming Responses */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-body-strong text-foreground">Streaming Responses</p>
-            <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
-              Real-time token streaming for faster perceived response.
-            </p>
-          </div>
-          <Switch
-            checked={draft.streamingEnabled}
-            onCheckedChange={(checked) => commit('streamingEnabled', checked)}
-            disabled={setConfig.isPending}
-            aria-label="Toggle streaming responses"
           />
         </div>
 

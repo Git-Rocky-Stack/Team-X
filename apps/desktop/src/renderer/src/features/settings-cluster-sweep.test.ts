@@ -286,7 +286,6 @@ describe('enhanced-ai-section sweep', () => {
   it('preserves LLM config ids + feature toggles', () => {
     expect(src).toContain('id="ai-llm-provider"');
     expect(src).toContain('id="ai-llm-model"');
-    expect(src).toContain('id="ai-planning-threshold"');
     expect(src).toContain('id="ai-tracing-sample-rate"');
     expect(src).toContain("commit('queryExpansionEnabled'");
     expect(src).toContain('aria-label="Toggle distributed tracing"');
@@ -295,6 +294,16 @@ describe('enhanced-ai-section sweep', () => {
   // No provider adapter accepts a temperature or a token cap, so these two
   // controls persisted values nothing could apply. Keep them gone until the
   // provider stream contract can carry them.
+  // Only Enhanced AI paths the app never calls read these, so the switches
+  // changed nothing a user could observe. Keep them out until a reachable
+  // path consumes them.
+  it('offers no Multi-Turn Planning or Streaming Responses control', () => {
+    expect(src).not.toContain('ai-planning-threshold');
+    expect(src).not.toContain('planningEnabled');
+    expect(src).not.toContain('streamingEnabled');
+    expect(src).not.toContain('Toggle streaming responses');
+  });
+
   it('offers no Max Tokens or Temperature control', () => {
     expect(src).not.toContain('ai-llm-max-tokens');
     expect(src).not.toContain('ai-llm-temperature');
