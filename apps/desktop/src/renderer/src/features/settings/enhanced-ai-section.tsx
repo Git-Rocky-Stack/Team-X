@@ -1,8 +1,10 @@
 /**
- * Enhanced AI Settings panel — exposes LLM provider config + Phase 2 & 3
- * feature toggles.
+ * Enhanced AI Settings panel — the model Enhanced AI uses, plus the Phase 2 & 3
+ * feature toggles. Enhanced AI grounds Copilot answers (retrieval, long-term
+ * memory, the knowledge graph), so it is active only while RAG is.
  *
- * Phase 5 — M32.
+ * Phase 5 — M32. Max Tokens and Temperature were removed: no provider adapter
+ * accepts either, so both persisted values nothing could apply.
  *
  * NOTE: Like the RAG section, this component ships without a co-located
  * *.test.tsx file. The enhanced-ai E2E spec (M32 T7) drives the UI
@@ -21,12 +23,8 @@ import { Input } from '@/components/ui/input.js';
 import { Switch } from '@/components/ui/switch.js';
 import { useEnhancedAiConfig, useSetEnhancedAiConfig } from '@/hooks/use-enhanced-ai.js';
 import { useProviders } from '@/hooks/use-providers.js';
+import { useRagConfig } from '@/hooks/use-rag.js';
 
-const LLM_MAX_TOKENS_MIN = 1;
-const LLM_MAX_TOKENS_MAX = 32000;
-const LLM_TEMPERATURE_MIN = 0;
-const LLM_TEMPERATURE_MAX = 2;
-const LLM_TEMPERATURE_STEP = 0.1;
 const PLANNING_THRESHOLD_MIN = 50;
 const PLANNING_THRESHOLD_MAX = 1000;
 const TRACING_SAMPLE_RATE_MIN = 0;
@@ -42,6 +40,7 @@ export function EnhancedAiSection() {
   const { data: config, isLoading: configLoading, isError: configError } = useEnhancedAiConfig();
   const setConfig = useSetEnhancedAiConfig();
   const { data: providers, isLoading: providersLoading } = useProviders();
+  const { data: ragConfig } = useRagConfig();
 
   // Local draft state — mirrors server values on load and after each
   // successful save.
@@ -131,7 +130,7 @@ export function EnhancedAiSection() {
         aria-disabled={llmDisabled}
       >
         <h3 className="text-h3 text-foreground">LLM Provider</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label htmlFor="ai-llm-provider" className="text-label text-muted-foreground">
               Provider
@@ -164,73 +163,17 @@ export function EnhancedAiSection() {
             />
             <p className="text-caption text-muted-foreground">&apos;auto&apos; or model name</p>
           </div>
-          <div className="space-y-1">
-            <label htmlFor="ai-llm-max-tokens" className="text-label text-muted-foreground">
-              Max Tokens
-            </label>
-            <Input
-              id="ai-llm-max-tokens"
-              type="number"
-              inputMode="numeric"
-              min={LLM_MAX_TOKENS_MIN}
-              max={LLM_MAX_TOKENS_MAX}
-              step={100}
-              value={draft.llmMaxTokens}
-              onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  llmMaxTokens: Number.parseInt(e.target.value, 10) || 0,
-                })
-              }
-              onBlur={() => {
-                const next = clamp(draft.llmMaxTokens, LLM_MAX_TOKENS_MIN, LLM_MAX_TOKENS_MAX);
-                if (next !== draft.llmMaxTokens) {
-                  setDraft({ ...draft, llmMaxTokens: next });
-                }
-                commit('llmMaxTokens', next);
-              }}
-              disabled={setConfig.isPending}
-              className="h-8 text-code-sm"
-            />
-            <p className="text-caption text-muted-foreground">
-              Max tokens per completion ({LLM_MAX_TOKENS_MIN}–{LLM_MAX_TOKENS_MAX})
-            </p>
-          </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-4">
-              <label htmlFor="ai-llm-temperature" className="text-label text-muted-foreground">
-                Temperature
-              </label>
-              <span className="text-code-sm text-foreground tabular-nums">
-                {draft.llmTemperature.toFixed(1)}
-              </span>
-            </div>
-            <input
-              id="ai-llm-temperature"
-              type="range"
-              min={LLM_TEMPERATURE_MIN}
-              max={LLM_TEMPERATURE_MAX}
-              step={LLM_TEMPERATURE_STEP}
-              value={draft.llmTemperature}
-              onChange={(e) =>
-                setDraft({ ...draft, llmTemperature: Number.parseFloat(e.target.value) })
-              }
-              onMouseUp={() => commit('llmTemperature', draft.llmTemperature)}
-              onTouchEnd={() => commit('llmTemperature', draft.llmTemperature)}
-              onKeyUp={() => commit('llmTemperature', draft.llmTemperature)}
-              disabled={setConfig.isPending}
-              className="brand-range"
-              aria-valuemin={LLM_TEMPERATURE_MIN}
-              aria-valuemax={LLM_TEMPERATURE_MAX}
-              aria-valuenow={draft.llmTemperature}
-            />
-            <p className="text-caption text-muted-foreground">
-              Sampling temperature (0 = focused, 2 = creative)
-            </p>
-          </div>
-        </div>
+        <p className="text-caption text-muted-foreground leading-snug">
+          Used for fact extraction, conversation summaries and query expansion. &apos;auto&apos;
+          uses the system agent&apos;s provider; a change applies to the next call.
+        </p>
+        {ragConfig && !ragConfig.ragEnabled ? (
+          <p className="text-caption text-muted-foreground leading-snug">
+            Enhanced AI is inactive while RAG is off — it grounds Copilot answers in the same index.
+            Enable RAG and choose an embedding provider, then restart Team-X.
+          </p>
+        ) : null}
       </div>
 
       {/* Feature Toggles */}

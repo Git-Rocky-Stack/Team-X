@@ -6557,8 +6557,6 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return {
         llmProvider: settingsRepo.get<string>('llm_provider', 'auto'),
         llmModel: settingsRepo.get<string>('llm_model', 'auto'),
-        llmMaxTokens: settingsRepo.get<number>('llm_max_tokens', 4096),
-        llmTemperature: settingsRepo.get<number>('llm_temperature', 0.7),
         queryExpansionEnabled: settingsRepo.get<boolean>('query_expansion_enabled', true),
         semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
         longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
@@ -6583,26 +6581,6 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           throw new Error('[ipc] settings.setEnhancedAiConfig: llmModel must be non-empty');
         }
         settingsRepo.set('llm_model', req.llmModel);
-      }
-      if (req.llmMaxTokens !== undefined) {
-        if (
-          !Number.isFinite(req.llmMaxTokens) ||
-          req.llmMaxTokens < 1 ||
-          req.llmMaxTokens > 32000
-        ) {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: llmMaxTokens must be 1..32000');
-        }
-        settingsRepo.set('llm_max_tokens', Math.round(req.llmMaxTokens));
-      }
-      if (req.llmTemperature !== undefined) {
-        if (
-          !Number.isFinite(req.llmTemperature) ||
-          req.llmTemperature < 0 ||
-          req.llmTemperature > 2
-        ) {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: llmTemperature must be 0..2');
-        }
-        settingsRepo.set('llm_temperature', req.llmTemperature);
       }
       if (req.queryExpansionEnabled !== undefined) {
         if (typeof req.queryExpansionEnabled !== 'boolean') {

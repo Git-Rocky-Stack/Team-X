@@ -2089,10 +2089,6 @@ export interface SettingsGetEnhancedAiConfigResponse {
   llmProvider: string;
   /** Model name within the LLM provider. 'auto' lets the resolver pick. */
   llmModel: string;
-  /** Maximum tokens to generate per completion. */
-  llmMaxTokens: number;
-  /** Temperature for sampling (0.0–2.0). */
-  llmTemperature: number;
 
   /** Enable query expansion for better retrieval recall. */
   queryExpansionEnabled: boolean;
@@ -2122,8 +2118,6 @@ export interface SettingsGetEnhancedAiConfigResponse {
 export interface SettingsSetEnhancedAiConfigRequest {
   llmProvider?: string;
   llmModel?: string;
-  llmMaxTokens?: number;
-  llmTemperature?: number;
   queryExpansionEnabled?: boolean;
   semanticChunkingEnabled?: boolean;
   longTermMemoryEnabled?: boolean;

@@ -285,11 +285,21 @@ describe('enhanced-ai-section sweep', () => {
 
   it('preserves LLM config ids + feature toggles', () => {
     expect(src).toContain('id="ai-llm-provider"');
-    expect(src).toContain('id="ai-llm-temperature"');
+    expect(src).toContain('id="ai-llm-model"');
     expect(src).toContain('id="ai-planning-threshold"');
     expect(src).toContain('id="ai-tracing-sample-rate"');
     expect(src).toContain("commit('queryExpansionEnabled'");
     expect(src).toContain('aria-label="Toggle distributed tracing"');
+  });
+
+  // No provider adapter accepts a temperature or a token cap, so these two
+  // controls persisted values nothing could apply. Keep them gone until the
+  // provider stream contract can carry them.
+  it('offers no Max Tokens or Temperature control', () => {
+    expect(src).not.toContain('ai-llm-max-tokens');
+    expect(src).not.toContain('ai-llm-temperature');
+    expect(src).not.toContain('llmMaxTokens');
+    expect(src).not.toContain('llmTemperature');
   });
 });
 

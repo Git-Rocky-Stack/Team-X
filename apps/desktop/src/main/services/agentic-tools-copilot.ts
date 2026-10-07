@@ -1,8 +1,8 @@
 /**
- * Agentic copilot tools — read-only `query_copilot_insights` for the
- * `system-copilot` pseudo-employee.
- *
- * Phase 5 — M33 T6.
+ * Agentic copilot tools for the `system-copilot` pseudo-employee: read-only
+ * `query_copilot_insights` (Phase 5 — M33 T6) and `search_company_knowledge`,
+ * which grounds `copilot.ask` answers in the Enhanced AI stack — retrieved
+ * passages, remembered facts and knowledge-graph entities.
  *
  * Shape contract (locked to match the M31 read-side + M32 write-side
  * patterns so the loop, system prompt, registry, and canned test seam
@@ -144,6 +144,45 @@ export interface CopilotToolsDeps {
   /** Company the loop is scoped to. Passed through to every repo call. */
   readonly companyId: string;
   readonly copilotInsightsRepo: CopilotToolInsightsRepo;
+  /**
+   * Enhanced AI grounding. When absent (no embedding provider, so no Enhanced
+   * AI service), `search_company_knowledge` is simply not offered rather than
+   * offered and failing on every call.
+   */
+  readonly knowledge?: CopilotKnowledgeSource;
+}
+
+/** The grounding `search_company_knowledge` reads — `EnhancedAiService.retrieveContext`. */
+export interface CopilotKnowledgeContext {
+  passages: Array<{ sourceType: string; sourceId: string; content: string; similarity: number }>;
+  facts: Array<{ fact: string; type: string; confidence: number }>;
+  related: Array<{ entity: string; relation: string }>;
+}
+
+/** Narrow view of the Enhanced AI service so tests pass a plain double. */
+export interface CopilotKnowledgeSource {
+  retrieveContext(
+    query: string,
+    options: { companyId: string; topK?: number },
+  ): Promise<CopilotKnowledgeContext>;
+}
+
+/** Longest excerpt of one passage handed to the model, in characters. */
+export const MAX_KNOWLEDGE_EXCERPT_CHARS = 800;
+
+const DEFAULT_KNOWLEDGE_RESULTS = 6;
+const MAX_KNOWLEDGE_RESULTS = 10;
+
+export interface SearchCompanyKnowledgeArgs extends Record<string, unknown> {
+  query: string;
+  companyId?: string;
+  limit?: number;
+}
+
+export interface SearchCompanyKnowledgeResult {
+  passages: Array<{ sourceType: string; sourceId: string; excerpt: string; similarity: number }>;
+  facts: Array<{ fact: string; type: string; confidence: number }>;
+  related: Array<{ entity: string; relation: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +283,66 @@ export function buildQueryCopilotInsightsTool(
   };
 }
 
+const searchCompanyKnowledgeSchema = z
+  .object({
+    query: z.string().trim().min(1).max(500),
+    /** Accepted for symmetry with the other tools; the registry scope wins. */
+    companyId: z.string().min(1).optional(),
+    limit: z.number().int().optional(),
+  })
+  .strict();
+
+function excerpt(content: string): string {
+  return content.length > MAX_KNOWLEDGE_EXCERPT_CHARS
+    ? `${content.slice(0, MAX_KNOWLEDGE_EXCERPT_CHARS)}…`
+    : content;
+}
+
+/**
+ * Build `search_company_knowledge`: semantic search over the company's indexed
+ * messages, tickets, meeting minutes and vault files, plus the facts long-term
+ * memory has kept and the knowledge-graph entities the question mentions.
+ *
+ * Returns grounding only — the Copilot's own model writes the answer, so no
+ * second model call is spent. Whether facts and entities are included follows
+ * Settings → Enhanced AI (Long-Term Memory, Knowledge Graph).
+ */
+export function buildSearchCompanyKnowledgeTool(deps: {
+  readonly companyId: string;
+  readonly knowledge: CopilotKnowledgeSource;
+}): Tool<SearchCompanyKnowledgeArgs, SearchCompanyKnowledgeResult> {
+  return {
+    name: 'search_company_knowledge',
+    description:
+      'Semantic search over this company’s indexed messages, tickets, meeting minutes and ' +
+      'vault files, plus facts remembered from earlier conversations and related entities ' +
+      'from the knowledge graph. Use it to ground answers about what was said, decided or ' +
+      'written — cite `sourceType` + `sourceId` for passages. Args: `query` (required), ' +
+      '`limit` (1-10, default 6). Returns passages (excerpt, similarity), facts and related.',
+    schema: searchCompanyKnowledgeSchema,
+    async execute(args, ctx) {
+      checkAborted(ctx);
+      const requested = typeof args.limit === 'number' ? args.limit : DEFAULT_KNOWLEDGE_RESULTS;
+      const topK = Math.min(MAX_KNOWLEDGE_RESULTS, Math.max(1, Math.floor(requested)));
+      const context = await deps.knowledge.retrieveContext(args.query, {
+        companyId: deps.companyId,
+        topK,
+      });
+      checkAborted(ctx);
+      return {
+        passages: context.passages.map((p) => ({
+          sourceType: p.sourceType,
+          sourceId: p.sourceId,
+          excerpt: excerpt(p.content),
+          similarity: p.similarity,
+        })),
+        facts: context.facts,
+        related: context.related,
+      };
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Level-gated composer — analog of `buildWriteSideTools`
 // ---------------------------------------------------------------------------
@@ -278,13 +377,18 @@ export function buildCopilotToolRegistry(
   if (employee.roleId !== SYSTEM_COPILOT_ROLE_ID) {
     return [];
   }
-  return [buildQueryCopilotInsightsTool(deps)];
+  const queryInsights = buildQueryCopilotInsightsTool(deps);
+  if (!deps.knowledge) return [queryInsights];
+  return [
+    queryInsights,
+    buildSearchCompanyKnowledgeTool({ companyId: deps.companyId, knowledge: deps.knowledge }),
+  ];
 }
 
 /** Canonical tool name exported by this module. Parallel to
  *  `AGENTIC_TOOL_NAMES` + `WRITE_SIDE_TOOL_NAMES` in the sibling
  *  modules so the full workspace tool-name registry is three arrays
  *  unioned without cross-module imports. */
-export const COPILOT_TOOL_NAMES = ['query_copilot_insights'] as const;
+export const COPILOT_TOOL_NAMES = ['query_copilot_insights', 'search_company_knowledge'] as const;
 
 export type CopilotToolName = (typeof COPILOT_TOOL_NAMES)[number];

@@ -106,6 +106,10 @@ import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
+import {
+  createEnhancedAiKnowledgeRepo,
+  createEnhancedAiMemoryRepo,
+} from './db/repos/enhanced-ai-memory.js';
 import { createEventsRepo } from './db/repos/events.js';
 import {
   createAuthorityRepo,
@@ -253,6 +257,7 @@ import {
 } from './services/proactive-trigger-service.js';
 import { detectHardware } from './services/profiler.js';
 import {
+  type ProviderFactory,
   buildEmbedAdapter,
   createProviderFactory,
   createTestModeResolveProvider,
@@ -1229,12 +1234,15 @@ app
       appVersion: app.getVersion(),
     });
     let resolveProvider: ResolveProvider;
+    // Hoisted so Enhanced AI can honour an explicit provider / model choice
+    // (Settings → Enhanced AI); null in test mode, where every call is canned.
+    let providerFactory: ProviderFactory | null = null;
 
     if (testMode) {
       resolveProvider = createTestModeResolveProvider();
       console.log('[main] test-mode provider active — canned responses, no LLM calls');
     } else {
-      const providerFactory = createProviderFactory({
+      providerFactory = createProviderFactory({
         providersService,
         secretsStore,
         companiesRepo,
@@ -1628,13 +1636,17 @@ app
     //
     // Integrates semantic chunking, query expansion, long-term memory,
     // knowledge graph, multi-turn planning, streaming, and tracing with
-    // the desktop app. Requires an LLM provider to function fully.
-    // (Phase 5 — M32)
-    const llmProvider = settingsRepo.get<string>('llm_provider', 'auto');
-    const llmEnabled = llmProvider !== 'auto' && llmProvider !== null;
+    // the desktop app. It grounds `copilot.ask` (the `search_company_knowledge`
+    // tool) and remembers completed Copilot exchanges. (Phase 5 — M32)
+    //
+    // It needs retrieval (an embedding provider) and nothing else. It used to
+    // be created only when `llm_provider` was not 'auto' — but 'auto' is the
+    // default, and the Settings panel describes it as a routing preference,
+    // not an on/off switch. So with default settings the whole subsystem was
+    // off and every Enhanced AI toggle gated nothing.
     let enhancedAiService: EnhancedAiService | null = null;
 
-    if (llmEnabled && ragService !== null) {
+    if (ragService !== null) {
       // Create an LLM complete function based on the provider
       // This will be wired up once the LLM settings are fully configured
       const embedText = async (texts: string[]) => {
@@ -1697,7 +1709,21 @@ app
             `[enhanced-ai] llmComplete: system-agent row "${systemAgentRow.id}" vanished mid-resolution`,
           );
         }
-        const resolved = await resolveProvider(actorRow);
+        // Settings → Enhanced AI → Provider / Model, read per call so a change
+        // applies immediately. 'auto' defers to the system agent's own
+        // resolution. These rows used to be written and never read.
+        const llmProviderPref = settingsRepo.get<string>('llm_provider', 'auto');
+        const llmModelPref = settingsRepo.get<string>('llm_model', 'auto');
+        const resolved =
+          providerFactory === null || (llmProviderPref === 'auto' && llmModelPref === 'auto')
+            ? await resolveProvider(actorRow)
+            : await providerFactory.create({
+                providerId:
+                  llmProviderPref !== 'auto'
+                    ? llmProviderPref
+                    : (await resolveProvider(actorRow)).providerName,
+                ...(llmModelPref !== 'auto' ? { model: llmModelPref } : {}),
+              });
         let text = '';
         for await (const chunk of streamAgent({
           providerFactory: resolved.stream,
@@ -1725,6 +1751,10 @@ app
                 .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
           },
           llmComplete,
+          // Long-term memory and the knowledge graph persist (migration 0037);
+          // the package defaults would forget both at exit.
+          memoryRepo: createEnhancedAiMemoryRepo(db),
+          knowledgeRepo: createEnhancedAiKnowledgeRepo(db),
           // Audit F5 — the seven Settings → Enhanced AI switches used to be
           // write-only: `settings.getEnhancedAiConfig` / `setEnhancedAiConfig`
           // were the only readers of these rows, so every toggle persisted a
@@ -1751,7 +1781,7 @@ app
         enhancedAiService = null;
       }
     } else {
-      console.log('[enhanced-ai] disabled — configure LLM provider to enable');
+      console.log('[enhanced-ai] disabled — enable RAG and choose an embedding provider to enable');
     }
 
     // ---- Copilot event window: bounded per-company rolling buffer ---------
@@ -2264,6 +2294,9 @@ app
               copilotInsightsRepo: {
                 listActive: (filter) => copilotInsightsRepo.listActive(filter),
               },
+              // Enhanced AI grounding for copilot.ask; the tool is simply not
+              // offered when retrieval is not configured.
+              ...(enhancedAiService ? { knowledge: enhancedAiService } : {}),
             },
           );
           return [...readSide, ...copilotTools];
@@ -3278,11 +3311,25 @@ app
     if (copilotAnalyzerServiceInstance === null) {
       throw new Error('copilotAnalyzerServiceInstance must be initialized before copilot handlers');
     }
+    // Narrowed once: the `let` above is fixed by this point, and a const lets
+    // the closure below use it without a cast.
+    const copilotEnhancedAi = enhancedAiService;
     const copilotServiceInstance = createCopilotService({
       agenticLoopService: agenticLoopSvc,
       employeesRepo: {
         findSystemByRoleId: (cid, rid) => employeesRepo.findSystemByRoleId(cid, rid),
       },
+      // Completed Copilot exchanges feed long-term memory (gated inside the
+      // service by Settings → Enhanced AI → Long-Term Memory).
+      ...(copilotEnhancedAi
+        ? {
+            bus,
+            memory: {
+              remember: (companyId: string, sourceId: string, conversation: string) =>
+                copilotEnhancedAi.extractAndStoreFacts(conversation, { sourceId, companyId }),
+            },
+          }
+        : {}),
     });
     const copilotHandlers = buildCopilotHandlers({
       copilotInsightsRepo,
