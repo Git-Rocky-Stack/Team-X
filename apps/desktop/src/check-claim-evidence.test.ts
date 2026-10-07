@@ -14,11 +14,126 @@ import { describe, expect, it } from 'vitest';
 // @ts-expect-error — .mjs script with implicit module resolution; vitest resolves at runtime.
 import {
   applyAllowlist,
+  assertClaimsParsed,
+  filterByStagedDiff,
   formatStepSummary,
   parseBusEvents,
+  parseEndpointChannels,
   parseIpcChannels,
   summarize,
 } from '../../../scripts/check-claim-evidence.mjs';
+
+describe('parseEndpointChannels', () => {
+  it('returns [] for empty input or a doc without a Request Channels section', () => {
+    expect(parseEndpointChannels('')).toEqual([]);
+    // @ts-expect-error — guard non-string input.
+    expect(parseEndpointChannels(undefined)).toEqual([]);
+    expect(parseEndpointChannels('# API\n\n## Overview\n\nProse.')).toEqual([]);
+  });
+
+  it('parses channel-first rows and derives the namespace from the literal', () => {
+    const md = [
+      '## Request Channels',
+      '',
+      '### Companies',
+      '',
+      '| Channel | Request | Response |',
+      '|---------|---------|----------|',
+      '| `companies.list` | — | `Company[]` |',
+      '| `companies.create` | `CompaniesCreateRequest` | `{ companyId: string }` |',
+      '',
+      '## Event Channel',
+    ].join('\n');
+    expect(parseEndpointChannels(md)).toEqual([
+      { namespace: 'companies', channel: 'companies.list' },
+      { namespace: 'companies', channel: 'companies.create' },
+    ]);
+  });
+
+  it('accepts multi-segment channels such as localGguf.pool.load', () => {
+    const md = [
+      '## Request Channels',
+      '| Channel | Request | Response |',
+      '|---|---|---|',
+      '| `localGguf.pool.load` | `{ modelId: string }` | — |',
+    ].join('\n');
+    expect(parseEndpointChannels(md)).toEqual([
+      { namespace: 'localGguf', channel: 'localGguf.pool.load' },
+    ]);
+  });
+
+  it('expands a family row into one claim per backticked verb', () => {
+    const md = [
+      '## Request Channels',
+      '| Family | Channels | Purpose |',
+      '|--------|----------|---------|',
+      '| `localGguf.endpoint.*` | `list`, `add`, `remove` | LAN endpoints |',
+    ].join('\n');
+    expect(parseEndpointChannels(md).map((c) => c.channel)).toEqual([
+      'localGguf.endpoint.list',
+      'localGguf.endpoint.add',
+      'localGguf.endpoint.remove',
+    ]);
+  });
+
+  it('ignores rows outside the Request Channels section and non-channel cells', () => {
+    const md = [
+      '## Request Channels',
+      '| Channel | Request | Response |',
+      '|---|---|---|',
+      '| `tickets.list` | — | `Ticket[]` |',
+      '| not-a-channel | — | — |',
+      '| `apps/desktop/src/main/index.ts` | — | — |',
+      '## Event Channel',
+      '| `events.dashboard` | — | — |',
+    ].join('\n');
+    expect(parseEndpointChannels(md)).toEqual([{ namespace: 'tickets', channel: 'tickets.list' }]);
+  });
+});
+
+describe('filterByStagedDiff', () => {
+  const claims = [
+    { claim: 'companies.list' },
+    { claim: 'localGguf.pool.load' },
+    { claim: 'localGguf.hf.search' },
+    { claim: 'localGguf.hf.modelCard' },
+  ];
+
+  it('returns [] for an empty diff', () => {
+    expect(filterByStagedDiff(claims, '')).toEqual([]);
+  });
+
+  it('keeps only claims on added lines, including camelCase namespaces', () => {
+    const diff = [
+      '+++ b/API_ENDPOINTS.md',
+      '+| `localGguf.pool.load` | `{ modelId: string }` | — |',
+      '-| `companies.list` | — | `Company[]` |',
+    ].join('\n');
+    expect(filterByStagedDiff(claims, diff)).toEqual([{ claim: 'localGguf.pool.load' }]);
+  });
+
+  it('stages every verb under a touched family row', () => {
+    const diff = '+| `localGguf.hf.*` | `search`, `modelCard` | Hugging Face |';
+    expect(filterByStagedDiff(claims, diff).map((c) => c.claim)).toEqual([
+      'localGguf.hf.search',
+      'localGguf.hf.modelCard',
+    ]);
+  });
+});
+
+describe('assertClaimsParsed', () => {
+  // The gate went silent once already: CLAUDE.md lost its IPC table and the
+  // engine kept reporting "0 verified … out of 0" with exit 0, so a CI check
+  // listed as a merge gate verified nothing. Zero parsed claims is an engine
+  // error, never a pass.
+  it('throws when the claim set is empty', () => {
+    expect(() => assertClaimsParsed(0)).toThrow(/zero claims/);
+  });
+
+  it('accepts a non-empty claim set', () => {
+    expect(() => assertClaimsParsed(1)).not.toThrow();
+  });
+});
 
 describe('parseIpcChannels', () => {
   it('returns [] for empty input', () => {

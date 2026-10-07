@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Phase 5.6 M-E S2 + S3 — claim-evidence engine.
 //
-// Parses CLAUDE.md structured claims (IPC channel table + bus events table)
-// and verifies each claim has on-disk evidence via `git grep`. Known gaps
+// Parses structured claims — the request-channel tables in API_ENDPOINTS.md,
+// plus CLAUDE.md's IPC channel and bus events tables when present — and
+// verifies each claim has on-disk evidence via `git grep`. Parsing zero claims
+// is an engine error (exit 2): a gate that checks nothing must not pass. Known gaps
 // are cross-referenced to the M-A conformance audit via the allowlist file.
 // Exits non-zero on any UNALLOWED missing evidence.
 //
@@ -29,6 +31,7 @@ const SELF_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SELF_DIR, '..');
 
 const CLAUDE_MD_PATH = join(REPO_ROOT, 'CLAUDE.md');
+const API_ENDPOINTS_PATH = join(REPO_ROOT, 'API_ENDPOINTS.md');
 const ALLOWLIST_PATH = join(REPO_ROOT, 'scripts', 'check-claim-evidence.allowlist.json');
 
 // ---------------------------------------------------------------------------
@@ -89,6 +92,63 @@ export function parseIpcChannels(text) {
     }
   }
   return out;
+}
+
+// API_ENDPOINTS.md channels may carry more than one dot (`localGguf.pool.load`).
+const ENDPOINT_CHANNEL_RE = /^[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
+// A family row names a channel prefix and lists its verbs in the next cell.
+const ENDPOINT_FAMILY_RE = /^([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)*)\.\*$/;
+const VERB_RE = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+/**
+ * Parse the request-channel tables from API_ENDPOINTS.md text.
+ * Returns array of { namespace, channel }. Two row shapes are recognised inside
+ * the `## Request Channels` section (which ends at the next h2):
+ *   | `companies.list` | request | response |          → one claim
+ *   | `localGguf.hf.*` | `search`, `modelCard` | … |    → one claim per verb
+ */
+export function parseEndpointChannels(text) {
+  if (typeof text !== 'string' || text.length === 0) return [];
+  const headerMatch = text.match(/(?:^|\n)##\s+Request Channels[^\n]*\n/);
+  if (!headerMatch) return [];
+  const tail = text.slice(headerMatch.index + headerMatch[0].length);
+  const endMatch = tail.match(/\n##\s/);
+  const section = endMatch ? tail.slice(0, endMatch.index) : tail;
+
+  const out = [];
+  const push = (channel) => out.push({ namespace: channel.split('.')[0], channel });
+  for (const line of section.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) continue;
+    const cells = trimmed.split('|').map((c) => c.trim());
+    if (cells.length < 4) continue;
+    const first = cells[1].match(/^`([^`]+)`$/);
+    if (!first) continue;
+    const literal = first[1];
+    const family = literal.match(ENDPOINT_FAMILY_RE);
+    if (family) {
+      for (const m of cells[2].matchAll(/`([^`]+)`/g)) {
+        if (VERB_RE.test(m[1])) push(`${family[1]}.${m[1]}`);
+      }
+      continue;
+    }
+    if (ENDPOINT_CHANNEL_RE.test(literal)) push(literal);
+  }
+  return out;
+}
+
+/**
+ * Fail closed on an empty claim set. A gate that parses nothing reports
+ * "0 verified … out of 0" and exits 0 — indistinguishable from a pass — which
+ * is how this check went silent after CLAUDE.md dropped its IPC table.
+ */
+export function assertClaimsParsed(count) {
+  if (!(count > 0)) {
+    throw new Error(
+      'parsed zero claims from CLAUDE.md and API_ENDPOINTS.md — a source doc changed shape, ' +
+        'and a gate that verifies nothing must not pass',
+    );
+  }
 }
 
 /**
@@ -215,6 +275,13 @@ function loadClaudeMd() {
   return readFileSync(CLAUDE_MD_PATH, 'utf8');
 }
 
+function loadApiEndpoints() {
+  if (!existsSync(API_ENDPOINTS_PATH)) {
+    throw new Error(`API_ENDPOINTS.md not found at ${API_ENDPOINTS_PATH}`);
+  }
+  return readFileSync(API_ENDPOINTS_PATH, 'utf8');
+}
+
 function loadAllowlist() {
   if (!existsSync(ALLOWLIST_PATH)) return [];
   try {
@@ -293,30 +360,41 @@ function verifyBusEvent(event) {
   };
 }
 
-function getStagedClaudeMdDiff() {
+function getStagedClaimDocsDiff() {
   try {
-    const out = execFileSync('git', ['diff', '--cached', '--unified=0', '--', 'CLAUDE.md'], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-    });
+    const out = execFileSync(
+      'git',
+      ['diff', '--cached', '--unified=0', '--', 'CLAUDE.md', 'API_ENDPOINTS.md'],
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      },
+    );
     return out;
   } catch {
     return '';
   }
 }
 
-function filterByStagedDiff(claims, diffText) {
+export function filterByStagedDiff(claims, diffText) {
   if (!diffText) return [];
   const literals = new Set();
+  const families = [];
   for (const line of diffText.split('\n')) {
     if (!line.startsWith('+') || line.startsWith('+++')) continue;
     // Match backticked dotted literals OR table cells with dotted names.
-    const matches = line.match(/`?[a-z][a-z0-9_]*\.[a-zA-Z0-9._*]+`?/g) || [];
+    // Namespaces are camelCase (`localGguf`), so the head allows capitals.
+    const matches = line.match(/`?[a-z][a-zA-Z0-9_]*\.[a-zA-Z0-9._*]+`?/g) || [];
     for (const m of matches) {
-      literals.add(m.replace(/`/g, ''));
+      const literal = m.replace(/`/g, '');
+      // A touched family row (`localGguf.hf.*`) stages every verb under it.
+      if (literal.endsWith('.*')) families.push(literal.slice(0, -1));
+      else literals.add(literal);
     }
   }
-  return claims.filter((c) => literals.has(c.claim));
+  return claims.filter(
+    (c) => literals.has(c.claim) || families.some((prefix) => c.claim.startsWith(prefix)),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -331,20 +409,26 @@ async function main() {
   const VERBOSE = args.includes('--verbose');
 
   const text = loadClaudeMd();
+  const endpoints = loadApiEndpoints();
   const allowlist = STRICT ? [] : loadAllowlist();
 
-  const ipc = parseIpcChannels(text);
+  // A channel listed in both docs is one claim, verified once.
+  const ipcByChannel = new Map();
+  for (const c of [...parseIpcChannels(text), ...parseEndpointChannels(endpoints)]) {
+    if (!ipcByChannel.has(c.channel)) ipcByChannel.set(c.channel, c);
+  }
   const bus = parseBusEvents(text);
+  assertClaimsParsed(ipcByChannel.size + bus.length);
 
-  const ipcResults = ipc.map(verifyIpcChannel);
+  const ipcResults = [...ipcByChannel.values()].map(verifyIpcChannel);
   const busResults = bus.map(verifyBusEvent);
   let results = [...ipcResults, ...busResults];
 
   if (STAGED) {
-    const diff = getStagedClaudeMdDiff();
+    const diff = getStagedClaimDocsDiff();
     const staged = filterByStagedDiff(results, diff);
     if (staged.length === 0) {
-      // Nothing in the staged CLAUDE.md diff matched a structured claim — quiet pass.
+      // Nothing in the staged claim-doc diff matched a structured claim — quiet pass.
       if (JSON_OUT)
         console.log(
           JSON.stringify(
@@ -354,7 +438,7 @@ async function main() {
           ),
         );
       else
-        console.log('check-claim-evidence: no structured claims in staged CLAUDE.md diff — pass.');
+        console.log('check-claim-evidence: no structured claims in staged claim-doc diff — pass.');
       process.exit(0);
     }
     results = staged;

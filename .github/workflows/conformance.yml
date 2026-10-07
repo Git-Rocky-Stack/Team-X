@@ -1,8 +1,10 @@
 name: claim-evidence-audit
 
 # Phase 5.6 M-E S2 — CI conformance check.
-# Parses CLAUDE.md structured claims (IPC channels + bus events) and
-# verifies each has on-disk evidence under the expected location. Known
+# Parses structured claims — the request-channel tables in API_ENDPOINTS.md,
+# plus CLAUDE.md's IPC channel + bus event tables when present — and
+# verifies each has on-disk evidence under the expected location. Parsing
+# zero claims fails the job (engine exit 2) rather than passing. Known
 # gaps are cross-referenced to the M-A conformance audit via
 # scripts/check-claim-evidence.allowlist.json — that file shrinks as M-C
 # and M-D restoration commits land. M-G ships with the allowlist deleted

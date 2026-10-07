@@ -2,8 +2,8 @@
 # Phase 5.6 M-E S3 — pre-commit claim-evidence hook.
 #
 # Fast-path of the S2 CI conformance check, scoped to ONLY the structured
-# claims that changed in the staged CLAUDE.md diff. Keeps local commits
-# snappy (<2s on a warm cache) while still catching the "edited a CLAUDE.md
+# claims that changed in the staged CLAUDE.md / API_ENDPOINTS.md diff. Keeps local commits
+# snappy (<2s on a warm cache) while still catching the "edited a documented
 # claim without on-disk evidence" failure mode at the earliest possible
 # moment — before a commit even lands.
 #
@@ -28,12 +28,12 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
-# Skip if CLAUDE.md is not in the staged diff — nothing for the hook to do.
-if ! git diff --cached --name-only --diff-filter=AMR | grep -q "^CLAUDE\.md$"; then
+# Skip if neither claim doc is in the staged diff — nothing for the hook to do.
+if ! git diff --cached --name-only --diff-filter=AMR | grep -qE "^(CLAUDE|API_ENDPOINTS)\.md$"; then
   exit 0
 fi
 
-# Run the engine in --staged mode. The engine itself diffs CLAUDE.md
-# against HEAD and limits the audit to ONLY the claims that appear in the
-# diff. Exits 0 if no structured claims changed.
+# Run the engine in --staged mode. The engine itself diffs CLAUDE.md and
+# API_ENDPOINTS.md against HEAD and limits the audit to ONLY the claims that
+# appear in the diff. Exits 0 if no structured claims changed.
 node scripts/check-claim-evidence.mjs --staged
