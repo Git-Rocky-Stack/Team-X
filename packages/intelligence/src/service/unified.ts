@@ -63,7 +63,12 @@ import { type ExecutionPlan, type PlanExecutor, createPlanExecutor } from '../lo
 import { type StreamChunk, accumulateStream } from '../streaming/index.js';
 
 // Observability
-import { type Span, type Tracer, createAgentTracer } from '../observability/index.js';
+import {
+  type Span,
+  type SpanKind,
+  type Tracer,
+  createAgentTracer,
+} from '../observability/index.js';
 
 /**
  * AI service configuration.
@@ -442,12 +447,32 @@ export function createAiService(config: AiServiceConfig): AiService {
 
   // Statistics
   const stats = {
-    rag: { totalRetrievals: 0, cacheHits: 0, cacheLookups: 0 },
+    rag: { totalRetrievals: 0, completedQueries: 0, totalLatencyMs: 0 },
     memory: { factsExtracted: 0, summariesCreated: 0 },
     knowledge: { queriesRun: 0 },
-    planning: { plansCreated: 0, plansExecuted: 0 },
-    observability: { spansCreated: 0 },
+    planning: { plansCreated: 0, plansExecuted: 0, totalSteps: 0 },
+    observability: { spansCreated: 0, activeRootSpans: 0 },
   };
+
+  // Held here as well as inside the memory service so `getStats` can count
+  // what is actually stored rather than what this process happened to extract.
+  const memoryRepo = config.memory?.repo ?? createInMemoryMemoryRepo();
+
+  /**
+   * Span helpers that also feed `getStats().observability`. Root (`server`)
+   * spans are the requests in flight, which is what "active traces" counts.
+   */
+  function startSpan(name: string, kind: SpanKind): Span | undefined {
+    if (!tracer) return undefined;
+    stats.observability.spansCreated += 1;
+    if (kind === 'server') stats.observability.activeRootSpans += 1;
+    return tracer.startSpan(name, { kind });
+  }
+  function endSpan(span: Span | undefined, kind: SpanKind): void {
+    if (!span) return;
+    if (kind === 'server') stats.observability.activeRootSpans -= 1;
+    tracer?.endSpan(span);
+  }
 
   // Initialize
   async function initialize(): Promise<void> {
@@ -491,7 +516,7 @@ export function createAiService(config: AiServiceConfig): AiService {
     if (config.llm) {
       const llm = config.llm;
       memory = createLongTermMemoryService({
-        repo: config.memory?.repo ?? createInMemoryMemoryRepo(),
+        repo: memoryRepo,
         summarizeFn: async (conv, _ctx) => {
           const response = await llm.complete(`
 Summarize this conversation in 2-3 sentences.
@@ -691,19 +716,18 @@ Respond with JSON array:
         }
 
         // Start trace span
-        let span: Span | undefined;
-        if (tracer) {
-          span = tracer.startSpan('ai.query', { kind: 'server' });
-        }
+        const span = startSpan('ai.query', 'server');
 
         try {
           // Planning step
           if (usePlan && planner) {
-            const planSpan = tracer?.startSpan('query.plan', { kind: 'internal' });
+            const planSpan = startSpan('query.plan', 'internal');
             plan = await planner.createPlan(query, {
               availableTools: ['search', 'retrieve'],
             });
-            if (planSpan) tracer?.endSpan(planSpan);
+            endSpan(planSpan, 'internal');
+            stats.planning.plansCreated += 1;
+            stats.planning.totalSteps += plan.steps.length;
 
             yield {
               id: `chunk_${Date.now()}`,
@@ -717,11 +741,11 @@ Respond with JSON array:
           }
 
           // Retrieval step
-          const retrievalSpan = tracer?.startSpan('query.retrieval', { kind: 'client' });
+          const retrievalSpan = startSpan('query.retrieval', 'client');
 
           const hits = await retrieveHits(ragService, companyId, query, topK, threshold);
 
-          if (retrievalSpan) tracer?.endSpan(retrievalSpan);
+          endSpan(retrievalSpan, 'client');
 
           // Emit context chunks
           for (const hit of hits) {
@@ -747,12 +771,12 @@ Respond with JSON array:
           // `config.llm.complete` sat wired and unused. A configured
           // provider must actually generate the answer; with no provider the
           // service says so plainly instead of dressing a digest up as one.
-          const generateSpan = tracer?.startSpan('query.generate', { kind: 'client' });
+          const generateSpan = startSpan('query.generate', 'client');
           let answer: string;
           try {
             answer = await generateAnswer(query, hits);
           } finally {
-            if (generateSpan) tracer?.endSpan(generateSpan);
+            endSpan(generateSpan, 'client');
           }
 
           const chunkSize = 10;
@@ -774,6 +798,8 @@ Respond with JSON array:
           // `accumulateStream`) legitimately `break` as soon as they see
           // `isFinal`, which suspends this generator at that yield forever —
           // anything after it would never run and `result` would hang.
+          stats.rag.completedQueries += 1;
+          stats.rag.totalLatencyMs += Date.now() - startTime;
           settleResult({
             answer,
             context: hits,
@@ -801,7 +827,7 @@ Respond with JSON array:
           failResult(err);
           throw err;
         } finally {
-          if (span) tracer?.endSpan(span);
+          endSpan(span, 'server');
         }
       }
 
@@ -828,7 +854,7 @@ Respond with JSON array:
         throw new Error('RAG not configured. Provide rag.repo to enable retrieval.');
       }
 
-      const span = tracer?.startSpan('ai.retrieve', { kind: 'server' });
+      const span = startSpan('ai.retrieve', 'server');
       try {
         const context = await retrieveHits(
           ragService,
@@ -850,7 +876,7 @@ Respond with JSON array:
             : [];
         return { context, facts, related };
       } finally {
-        if (span) tracer?.endSpan(span);
+        endSpan(span, 'server');
       }
     },
 
@@ -1016,23 +1042,33 @@ Respond with JSON array:
     },
 
     getStats(companyId) {
-      // Graph counts are read from the graph itself rather than reported as
-      // zeros. `getStats` requires a company scope, so a process-wide call
-      // (no companyId) legitimately has nothing to report.
+      // Every figure is measured. Company-scoped stores (memory, the graph)
+      // need a company: a process-wide call legitimately has nothing to count
+      // there, and reports zero rather than a placeholder.
       const graphStats =
         knowledge && companyId !== undefined ? knowledge.getStats(companyId) : null;
+      const liveFacts =
+        memory && companyId !== undefined ? memory.retrieveRankedFacts(companyId) : [];
 
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
-          cacheHitRate:
-            stats.rag.cacheLookups > 0 ? stats.rag.cacheHits / stats.rag.cacheLookups : 0,
-          avgLatencyMs: 0, // Would be tracked in real implementation
+          cacheHitRate: cache ? cache.getStats().hitRate : 0,
+          avgLatencyMs:
+            stats.rag.completedQueries > 0
+              ? stats.rag.totalLatencyMs / stats.rag.completedQueries
+              : 0,
         },
         memory: {
-          totalFacts: stats.memory.factsExtracted,
-          totalSummaries: stats.memory.summariesCreated,
-          avgFreshness: 0.8, // Placeholder
+          totalFacts: liveFacts.length,
+          totalSummaries:
+            memory && companyId !== undefined
+              ? memoryRepo.listSummariesByCompany(companyId).length
+              : 0,
+          avgFreshness:
+            liveFacts.length > 0
+              ? liveFacts.reduce((sum, f) => sum + f.score.finalScore, 0) / liveFacts.length
+              : 0,
         },
         knowledge: {
           totalNodes: graphStats?.totalNodes ?? 0,
@@ -1041,11 +1077,16 @@ Respond with JSON array:
         },
         planning: {
           plansCreated: stats.planning.plansCreated,
+          // Plans are created here to shape retrieval, never executed by this
+          // service, so the honest count is the one it keeps: zero.
           plansExecuted: stats.planning.plansExecuted,
-          avgStepsPerPlan: 0,
+          avgStepsPerPlan:
+            stats.planning.plansCreated > 0
+              ? stats.planning.totalSteps / stats.planning.plansCreated
+              : 0,
         },
         observability: {
-          activeTraces: 0,
+          activeTraces: stats.observability.activeRootSpans,
           totalSpans: stats.observability.spansCreated,
         },
       };

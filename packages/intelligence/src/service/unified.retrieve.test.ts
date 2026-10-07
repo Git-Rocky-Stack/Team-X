@@ -216,3 +216,43 @@ describe('createAiService — retrieve', () => {
     await expect(service.retrieve('co-1', 'anything')).rejects.toThrow(/not initialized/i);
   });
 });
+
+describe('createAiService — getStats', () => {
+  // Previously `avgFreshness` was a literal 0.8 placeholder, `totalFacts`
+  // counted only this process's extractions, and the plan / span / cache
+  // counters were declared but never incremented.
+  it('counts the facts actually stored, as a fresh service over the same repo sees them', async () => {
+    const memoryRepo = createInMemoryMemoryRepo();
+    const { service } = await buildService({ memory: { repo: memoryRepo } });
+    await service.extractFacts('co-1', 'thread-1', 'conversation text');
+
+    const { service: nextLaunch } = await buildService({ memory: { repo: memoryRepo } });
+    const stats = nextLaunch.getStats('co-1');
+
+    expect(stats.memory.totalFacts).toBe(2);
+    expect(stats.memory.avgFreshness).toBeGreaterThan(0);
+    expect(stats.memory.avgFreshness).not.toBe(0.8);
+  });
+
+  it('reports no company-scoped counts without a company', async () => {
+    const { service } = await buildService();
+    await service.extractFacts('co-1', 'thread-1', 'conversation text');
+
+    expect(service.getStats().memory).toEqual({
+      totalFacts: 0,
+      totalSummaries: 0,
+      avgFreshness: 0,
+    });
+  });
+
+  it('measures query latency only once a query has completed', async () => {
+    const { service } = await buildService();
+    expect(service.getStats('co-1').rag.avgLatencyMs).toBe(0);
+
+    await seedPassage(service);
+    await service.query('co-1', 'why is the release blocked?');
+
+    expect(service.getStats('co-1').rag.totalRetrievals).toBe(1);
+    expect(service.getStats('co-1').rag.avgLatencyMs).toBeGreaterThanOrEqual(0);
+  });
+});
