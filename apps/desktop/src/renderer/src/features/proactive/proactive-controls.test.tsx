@@ -146,6 +146,20 @@ describe('ProactiveControls — autonomy mode selector', () => {
     expect(screen.getByText(/goal decomposition is blocked/i)).toBeInTheDocument();
   });
 
+  // DESIGN.md chooser recipe: `.cap` + `.cap-select` for the selected face,
+  // outline focus (a ring loses the box-shadow cascade on caps in Night Ops).
+  it('renders the modes as console chooser caps, the selected one armed', async () => {
+    settings = { enabled: true, autonomyMode: 'conservative' };
+    renderControls();
+    const selected = (await screen.findByRole('radio', { name: /conservative/i })).closest('label');
+    const other = screen.getByRole('radio', { name: /balanced/i }).closest('label');
+
+    expect(selected).toHaveClass('cap', 'cap-select');
+    expect(other).toHaveClass('cap');
+    expect(other).not.toHaveClass('cap-select');
+    expect(selected?.className).not.toMatch(/armed-soft|ring-/);
+  });
+
   it('persists a new mode through settings.setProactive', async () => {
     renderControls();
     fireEvent.click(await screen.findByRole('radio', { name: /conservative/i }));

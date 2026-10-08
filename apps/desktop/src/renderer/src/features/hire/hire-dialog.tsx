@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog.js';
 import { Input } from '@/components/ui/input.js';
+import { chooserCapBase, chooserCapFocus } from '@/features/workspace/chooser-cap.js';
 import { useEmployeeEventSync, useEmployees } from '@/hooks/use-employees.js';
 import { useHireEmployee } from '@/hooks/use-hire.js';
 import { type RoleOption, useRoles } from '@/hooks/use-roles.js';
@@ -155,11 +156,13 @@ export function HireDialog({ open, onOpenChange, companyId }: HireDialogProps) {
                       return (
                         <label
                           key={role.id}
+                          // Role titles carry their own casing ("VP of Sales"),
+                          // so the chooser's capitalize/centre are overridden.
                           className={cn(
-                            'cursor-pointer rounded-control border px-3 py-2 text-body-strong transition-colors focus-within:ring-2 focus-within:ring-brand/60',
-                            isSelected
-                              ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
-                              : 'border-[var(--hairline)] text-muted-foreground hover:border-[var(--hairline-strong)] hover:text-foreground',
+                            chooserCapBase,
+                            chooserCapFocus,
+                            'text-left normal-case',
+                            isSelected && 'cap-select',
                           )}
                         >
                           <input

@@ -99,6 +99,18 @@ describe('HireDialog role catalog', () => {
     expect(screen.getByText(/no roles match/i)).toBeInTheDocument();
   });
 
+  it('renders roles as console chooser caps, the chosen one armed', () => {
+    renderDialog();
+    fireEvent.click(screen.getByRole('radio', { name: /Data Engineering Manager/ }));
+    const chosen = screen.getByRole('radio', { name: /Data Engineering Manager/ }).closest('label');
+    const other = screen.getByRole('radio', { name: /Chief Executive Officer/ }).closest('label');
+
+    expect(chosen).toHaveClass('cap', 'cap-select');
+    expect(other).toHaveClass('cap');
+    expect(other).not.toHaveClass('cap-select');
+    expect(chosen?.className).not.toMatch(/armed-soft|ring-/);
+  });
+
   it('hires with the chosen role id through employees.create', async () => {
     renderDialog();
     fireEvent.click(screen.getByRole('radio', { name: /Data Engineering Manager/ }));

@@ -25,6 +25,7 @@ import { useEffect, useId, useState } from 'react';
 import { Faceplate, MetricTile, SubviewState, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Switch } from '@/components/ui/switch.js';
+import { chooserCapBase, chooserCapFocus } from '@/features/workspace/chooser-cap.js';
 import { ipc } from '@/lib/ipc.js';
 import { cn } from '@/lib/utils.js';
 import { useAppStore } from '@/store/app-store.js';
@@ -259,10 +260,10 @@ export function ProactiveControls({ companyId }: ProactiveControlsProps) {
               <label
                 key={mode}
                 className={cn(
-                  'cursor-pointer rounded-control border px-2 py-1.5 text-center text-body-strong capitalize transition-colors focus-within:ring-2 focus-within:ring-brand/60 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50',
-                  selected
-                    ? 'border-[var(--armed-edge)] bg-[var(--armed-soft)] text-foreground'
-                    : 'border-[var(--hairline)] text-muted-foreground hover:border-[var(--hairline-strong)] hover:text-foreground',
+                  chooserCapBase,
+                  chooserCapFocus,
+                  'px-2 py-1.5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50',
+                  selected && 'cap-select',
                 )}
               >
                 <input
