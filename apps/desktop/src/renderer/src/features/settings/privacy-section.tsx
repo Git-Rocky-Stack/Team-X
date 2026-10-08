@@ -10,7 +10,7 @@
  * Phase 3 — M19.
  */
 
-import type { PrivacyTier } from '@team-x/shared-types';
+import { PRIVACY_TIER_PROVIDER_LABEL, type PrivacyTier } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 
 import {
@@ -56,13 +56,6 @@ const TIER_LED: Record<PrivacyTier, string> = {
   local: 'bg-[var(--led-go)]',
   'open-source-cloud': 'bg-[var(--led-scope)]',
   'proprietary-cloud': 'bg-[var(--led-hold)]',
-};
-
-/** Provider-side tier names — same wording as the main-process refusal. */
-const PROVIDER_TIER_NAME: Record<PrivacyTier, string> = {
-  local: 'Local',
-  'open-source-cloud': 'Open-Source Cloud',
-  'proprietary-cloud': 'Proprietary Cloud',
 };
 
 export function PrivacySection() {
@@ -159,7 +152,7 @@ export function PrivacySection() {
                       <span className="truncate text-body-strong text-[var(--display-fg)]">
                         {p.name}
                       </span>
-                      <Tag>{PROVIDER_TIER_NAME[p.privacyTier] ?? p.privacyTier}</Tag>
+                      <Tag>{PRIVACY_TIER_PROVIDER_LABEL[p.privacyTier] ?? p.privacyTier}</Tag>
                       {p.id === retrievalEmbeddingProviderId ? <Tag>Retrieval</Tag> : null}
                     </div>
                     <LampTile small interactive={false} label="NO-GO" tone="nogo" />

@@ -79,15 +79,18 @@ import {
   makeTogetherStream,
 } from '@team-x/provider-router';
 import {
+  PRIVACY_TIER_PROVIDER_LABEL,
   PRIVACY_TIER_RANK,
   type PrivacyTier,
   type ProviderConfig,
   type ProviderKind,
+  exceedsPrivacyTier as exceedsTier,
 } from '@team-x/shared-types';
 
 import { getDb } from '../db/client.js';
 import { createCompaniesRepo } from '../db/repos/companies.js';
 import type { EmployeeRow } from '../db/repos/employees.js';
+import { createSettingsRepo } from '../db/repos/settings.js';
 
 import {
   DEFAULT_ANTHROPIC_ID,
@@ -126,13 +129,6 @@ const DEFAULT_MODEL_BY_KIND: Partial<Record<ProviderKind, string>> = {
 // -----------------------------------------------------------------------------
 // Privacy-tier enforcement
 // -----------------------------------------------------------------------------
-
-/** Provider-side tier names, as the refusal message phrases them. */
-const PROVIDER_TIER_NAME: Record<PrivacyTier, string> = {
-  local: 'Local',
-  'open-source-cloud': 'Open-Source Cloud',
-  'proprietary-cloud': 'Proprietary Cloud',
-};
 
 /** Max-tier names — mirror the Settings → Privacy option labels verbatim. */
 const MAX_TIER_LABEL: Record<PrivacyTier, string> = {
@@ -178,7 +174,7 @@ export class PrivacyTierViolationError extends Error {
   }) {
     const { provider, model, maxTier } = args;
     const providerTierName = isPrivacyTier(provider.privacyTier)
-      ? PROVIDER_TIER_NAME[provider.privacyTier]
+      ? PRIVACY_TIER_PROVIDER_LABEL[provider.privacyTier]
       : 'Unclassified';
     const maxLabel = isPrivacyTier(maxTier) ? MAX_TIER_LABEL[maxTier] : MAX_TIER_LABEL.local;
     const alternative = isPrivacyTier(maxTier)
@@ -208,21 +204,12 @@ export class PrivacyTierViolationError extends Error {
   }
 }
 
-/**
- * `true` when `provider` sits above `maxTier` on the shared
- * `PRIVACY_TIER_RANK` scale. Fails closed in both directions: a provider row
- * with an unrecognised tier ranks as the least private, and an unrecognised
- * max tier (a corrupted settings row) ranks as Local Only.
- */
+/** `true` when `provider` sits above `maxTier` — the shared, fail-closed rule. */
 export function exceedsPrivacyTier(
   provider: Pick<ProviderConfig, 'privacyTier'>,
   maxTier: string,
 ): boolean {
-  const providerRank = isPrivacyTier(provider.privacyTier)
-    ? PRIVACY_TIER_RANK[provider.privacyTier]
-    : Number.POSITIVE_INFINITY;
-  const maxRank = isPrivacyTier(maxTier) ? PRIVACY_TIER_RANK[maxTier] : PRIVACY_TIER_RANK.local;
-  return providerRank > maxRank;
+  return exceedsTier(provider.privacyTier, maxTier);
 }
 
 /**
@@ -474,20 +461,33 @@ export function createProviderFactory(deps: ProviderFactoryDeps): ProviderFactor
         }
       }
     }
+    // Explicit choices (employee, company default) are returned even when the
+    // privacy tier forbids them, so the caller refuses them by name rather
+    // than silently swapping them. The built-in defaults are nobody's choice:
+    // one the tier forbids is skipped so an allowed one can serve.
+    const explicitCount = candidates.length;
     candidates.push(DEFAULT_ANTHROPIC_ID, DEFAULT_OLLAMA_LOCAL_ID);
+    const maxTier = getMaxPrivacyTier?.();
+    let skippedForTier: ProviderConfig | null = null;
 
     const seen = new Set<string>();
-    for (const candidateId of candidates) {
+    for (const [i, candidateId] of candidates.entries()) {
       if (seen.has(candidateId)) continue;
       seen.add(candidateId);
 
       const candidate = providersService.get(candidateId);
       if (!candidate) continue;
       if (!candidate.enabled) continue;
-      if (await providersService.isConfigured(candidateId)) {
-        return candidate;
+      if (!(await providersService.isConfigured(candidateId))) continue;
+      if (i >= explicitCount && maxTier !== undefined && exceedsPrivacyTier(candidate, maxTier)) {
+        skippedForTier ??= candidate;
+        continue;
       }
+      return candidate;
     }
+    // Nothing allowed is configured: name the default the tier refused,
+    // which says more than "no configured provider".
+    if (skippedForTier) return skippedForTier;
 
     throw new Error(
       `[provider-factory] no configured provider found (checked: ${[...seen].join(', ')})`,
@@ -558,10 +558,15 @@ let _factory: ProviderFactory | null = null;
  */
 export function getProviderFactory(): ProviderFactory {
   if (_factory === null) {
+    const settingsRepo = createSettingsRepo(getDb());
     _factory = createProviderFactory({
       providersService: getProvidersService(),
       secretsStore: new SecretsStore(),
       companiesRepo: createCompaniesRepo(getDb()),
+      // The default construction must enforce Settings → Privacy: a caller
+      // reaching for the singleton would otherwise bypass the tier entirely.
+      getMaxPrivacyTier: () =>
+        settingsRepo.get<PrivacyTier>('max_privacy_tier', 'proprietary-cloud'),
     });
   }
   return _factory;

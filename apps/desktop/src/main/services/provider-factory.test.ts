@@ -562,6 +562,37 @@ describe('privacy-tier enforcement', () => {
       expect(resolved.providerName).toBe('anthropic');
     });
 
+    // The built-in fallback (no employee or company choice) tried Anthropic
+    // before Ollama and only then checked the tier, so under Local Only every
+    // employee without an explicit provider was refused even with Ollama
+    // configured. The fallback now skips what the tier forbids; an explicit
+    // choice is still refused, never swapped.
+    it('falls back past a forbidden built-in default to an allowed one', async () => {
+      const resolved = await makeFactory().resolveForEmployee(makeEmployee({ providerPref: null }));
+
+      expect(resolved.providerName).toBe('ollama-local');
+      expect(calls.makeAnthropic).toEqual([]);
+    });
+
+    it('still refuses a company default above the tier rather than swapping it', async () => {
+      companies.setSettings('co_test_1', { defaultProviderId: 'anthropic' });
+
+      await expect(
+        makeFactory().resolveForEmployee(makeEmployee({ providerPref: null })),
+      ).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      expect(calls.makeOllama).toEqual([]);
+    });
+
+    it('refuses clearly when the only configured built-in default is above the tier', async () => {
+      providers.set({ ...OLLAMA_ROW, enabled: false });
+
+      await expect(
+        makeFactory().resolveForEmployee(makeEmployee({ providerPref: null })),
+      ).rejects.toThrow(
+        /Provider "Anthropic \(.+\)" is Proprietary Cloud-tier, but Settings → Privacy allows Local Only/,
+      );
+    });
+
     it('reads the max tier at call time, so a Settings change applies to the next run', async () => {
       const factory = makeFactory();
       const employee = makeEmployee({ providerPref: 'anthropic' });

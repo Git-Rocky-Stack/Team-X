@@ -54,6 +54,7 @@ import {
   SHARED_OPERATOR_AUTH_MODES,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
+  exceedsPrivacyTier,
   getLevelRank,
 } from '@team-x/shared-types';
 import type {
@@ -6393,15 +6394,9 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         'proprietary-cloud',
       );
       const providers = providersService.list();
-      // Same fail-closed ranking the provider factory enforces at run time:
-      // an unrecognised provider tier is never allowed, and an unrecognised
-      // max tier (corrupted row) ranks as Local Only.
-      const maxRank = Object.hasOwn(PRIVACY_TIER_RANK, maxTier)
-        ? PRIVACY_TIER_RANK[maxTier]
-        : PRIVACY_TIER_RANK.local;
-      const isAllowed = (p: ProviderConfig) =>
-        Object.hasOwn(PRIVACY_TIER_RANK, p.privacyTier) &&
-        PRIVACY_TIER_RANK[p.privacyTier] <= maxRank;
+      // The rule the provider factory enforces at run time (fail-closed both
+      // ways), from the one shared copy so the panel cannot disagree with it.
+      const isAllowed = (p: ProviderConfig) => !exceedsPrivacyTier(p.privacyTier, maxTier);
       const availableProviders = providers.map((p) => ({
         id: p.id,
         name: p.name,
