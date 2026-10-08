@@ -113,3 +113,30 @@ describe('services/provider-factory.ts — the default singleton enforces the ti
     );
   });
 });
+
+describe('main/index.ts — the renderer trust boundary covers everything (audit P0-3)', () => {
+  it('guards ipcMain before any handler is registered', () => {
+    const guard = src.indexOf('installIpcSenderGuard(ipcMain');
+    expect(guard).toBeGreaterThan(-1);
+    const firstMount = Math.min(
+      ...['ipcMain.handle(', 'registerIpcHandlers(', 'registerSystemDialogHandlers(']
+        .map((needle) => src.indexOf(needle, src.indexOf('app\n  .whenReady()')))
+        .filter((i) => i > -1),
+    );
+    expect(guard).toBeLessThan(src.indexOf('app\n  .whenReady()'));
+    expect(guard).toBeLessThan(firstMount);
+  });
+
+  it('hardens every webContents and installs the permission policy', () => {
+    expect(src).toContain("app.on('web-contents-created'");
+    expect(src).toContain('hardenWebContents(contents, trustedRenderer');
+    expect(src).toContain('installPermissionPolicy(session.defaultSession, trustedRenderer)');
+  });
+
+  it('loads exactly the page the boundary trusts', () => {
+    expect(src).toContain('await win.loadFile(RENDERER_INDEX_HTML)');
+    expect(src).toContain('await win.loadURL(DEV_SERVER_URL)');
+    expect(src).toContain('indexHtmlPath: RENDERER_INDEX_HTML');
+    expect(src).toContain('devServerUrl: DEV_SERVER_URL');
+  });
+});

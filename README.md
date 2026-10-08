@@ -180,7 +180,7 @@ Team-X/
                             user-guide, vault, workspace
       hooks/                React Query hooks
       store/                Zustand app store
-    e2e/                    19 Playwright specs / 26 cases
+    e2e/                    20 Playwright specs / 29 cases
   packages/
     shared-types/           IPC contract types, event types, entities
     role-schema/            Role-spec parser + renderer + pack signing
@@ -231,7 +231,7 @@ Team-X/
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
 | Unit tests | Vitest (4,463 tests / 354 files) |
-| E2E tests | Playwright (19 specs / 26 cases) |
+| E2E tests | Playwright (20 specs / 29 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
 ---
@@ -325,7 +325,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **4,463 unit tests** across 354 files and **19 Playwright E2E specs** (26 cases):
+Team-X ships with **4,463 unit tests** across 354 files and **20 Playwright E2E specs** (29 cases):
 
 | Spec | Coverage |
 |------|----------|

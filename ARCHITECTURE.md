@@ -285,9 +285,16 @@ Team-X can launch external agent runtimes (Bash, HTTP, Codex, Cursor):
 - Permissions: allow, deny, prompt (ask user)
 
 ### 3. Sandbox Isolation
-- Renderer: Context isolation ON, node integration OFF
+- Renderer: context isolation ON, Node integration OFF, Chromium sandbox ON, webSecurity ON
 - Preload: No direct Node access; uses contextBridge
 - MCP servers: Run in child processes, not main thread
+
+### 3a. Renderer Trust Boundary (`main/security/renderer-boundary.ts`)
+- **IPC sender guard.** Installed on `ipcMain` before any handler registers. Every `handle`/`on` listener refuses a sender that is not the app's own top-level frame, so a foreign page refuses IPC even with the real preload.
+- **Navigation.** The window cannot navigate off the app, open new windows, or attach a `<webview>`. `https:` and `mailto:` links open in the user's browser; every other scheme is dropped.
+- **Permissions.** All permission requests are denied, except the sanitized clipboard write that the Commands copy button uses.
+- **CSP.** Every build ships the strict policy in `apps/desktop/renderer-csp.ts`: no eval, no inline or remote script, no network origins. Only `electron-vite dev` keeps the relaxed HMR policy. `scripts/check-packaged-csp.mjs` verifies the built page in CI and in the release workflow.
+- **Proof.** `e2e/security-boundary.spec.ts` exercises all of the above against the built app.
 
 ### 4. Content Security
 - FTS5 full-text search for vault (extracted text only)

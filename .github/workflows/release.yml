@@ -117,6 +117,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
 
+      # The renderer packed into this platform's installer must carry the
+      # strict production CSP (audit 2026-10-07 P0-3).
+      - name: Verify packaged renderer CSP
+        run: node scripts/check-packaged-csp.mjs
+
       # Smoke-test the Linux AppImage before it can ship. The image embeds the
       # static type2-runtime (electron-builder.yml `toolsets.appimage`), so it
       # must start on a stock Ubuntu desktop with NO FUSE 2 library installed

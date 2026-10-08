@@ -147,6 +147,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build desktop (main + preload + renderer)
         run: pnpm -F @team-x/desktop build
+      # The built page is what electron-builder packs: it must carry the
+      # strict production CSP (no eval, no inline script, no network origin).
+      - name: Packaged renderer CSP
+        run: node scripts/check-packaged-csp.mjs
       # `xvfb-run` wraps the Playwright invocation so Electron has a
       # virtual display. `--auto-servernum` picks a free :N so parallel
       # jobs on the same runner never collide on :99.

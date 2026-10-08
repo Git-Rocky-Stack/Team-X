@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import type { Plugin } from 'rollup';
 
+import { applyProductionCsp } from './renderer-csp';
+
 /**
  * Plugin to handle .js extension imports in workspace packages.
  * Workspace packages use .js extensions for ESM compliance (compiled output),
@@ -135,7 +137,16 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Builds ship the strict policy; only `electron-vite dev` keeps the
+      // relaxed one HMR needs (see renderer-csp.ts).
+      {
+        name: 'production-csp',
+        apply: 'build',
+        transformIndexHtml: { order: 'post', handler: applyProductionCsp },
+      },
+    ],
     build: {
       outDir: 'out/renderer',
       rollupOptions: {

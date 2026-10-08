@@ -3,12 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      CSP: dev needs 'unsafe-eval' + 'unsafe-inline' + ws:/http: localhost
-      for Vite HMR.  Packaged builds (T49) will replace this meta tag
-      with a strict prod-only CSP via electron-builder's afterPack hook.
-      Until then, the renderer still only talks to main via IPC — no
-      external network — so the dev-relaxed CSP does not weaken the
-      privacy-first posture.
+      Development policy only: the Vite dev server needs eval, inline module
+      preambles and a local HMR socket. Every `electron-vite build` swaps
+      this tag for the strict production policy in ../../renderer-csp.ts,
+      and scripts/check-packaged-csp.mjs verifies the built page.
     -->
     <meta
       http-equiv="Content-Security-Policy"

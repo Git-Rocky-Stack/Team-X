@@ -94,7 +94,7 @@ import {
 } from '@team-x/shared-types';
 import { calcCostUsd } from '@team-x/telemetry-core';
 import { eq } from 'drizzle-orm';
-import { BrowserWindow, app, dialog, ipcMain } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain, session, shell } from 'electron';
 
 import { configureStableUserDataPath } from './app-user-data.js';
 import { closeDb, getDb, initDb } from './db/client.js';
@@ -183,6 +183,12 @@ import {
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
+import {
+  createTrustedRenderer,
+  hardenWebContents,
+  installIpcSenderGuard,
+  installPermissionPolicy,
+} from './security/renderer-boundary.js';
 import { createAgentImprovementService } from './services/agent-improvement-service.js';
 import {
   type AgenticLoopService,
@@ -452,18 +458,25 @@ function recoverUnansweredDirectMessages(args: {
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+/** The only page this app runs: the dev server under `pnpm dev`, else the built file. */
+const DEV_SERVER_URL = isDev ? process.env.ELECTRON_RENDERER_URL : undefined;
+const RENDERER_INDEX_HTML = join(__dirname, '../renderer/index.html');
+const trustedRenderer = createTrustedRenderer({
+  indexHtmlPath: RENDERER_INDEX_HTML,
+  devServerUrl: DEV_SERVER_URL,
+});
+
 // ---------------------------------------------------------------------------
 // Test-mode (E2E) noise suppression — scoped strictly to `NODE_ENV=test`.
 //
 // The Playwright harness launches this entry with `NODE_ENV=test`. The
 // "Electron Security Warning (Insecure Content-Security-Policy)" advisory
 // carries zero signal for an automated smoke test yet drowns the useful
-// `[main]` app logs in the captured stderr. It is already silent in a
-// packaged production build, and `pnpm dev` (NODE_ENV unset) is untouched,
-// so it still surfaces during real local development: our dev/unpackaged CSP
-// intentionally keeps `'unsafe-eval'` for Vite HMR (see renderer/index.html),
-// and the advisory itself ends with "This warning will not show up once the
-// app is packaged". `ELECTRON_DISABLE_SECURITY_WARNINGS` is the documented
+// `[main]` app logs in the captured stderr. Built renderers (packaged and
+// E2E alike) carry the strict production CSP (renderer-csp.ts), so the
+// advisory can only come from the dev-server policy, and `pnpm dev`
+// (NODE_ENV unset) is untouched, so it still surfaces during real local
+// development. `ELECTRON_DISABLE_SECURITY_WARNINGS` is the documented
 // off-switch and is read by the (sandboxed) renderer, which inherits this env
 // var at spawn time.
 //
@@ -621,10 +634,10 @@ async function createWindow(): Promise<void> {
     }
   });
 
-  if (isDev && process.env.ELECTRON_RENDERER_URL) {
-    await win.loadURL(process.env.ELECTRON_RENDERER_URL);
+  if (DEV_SERVER_URL) {
+    await win.loadURL(DEV_SERVER_URL);
   } else {
-    await win.loadFile(join(__dirname, '../renderer/index.html'));
+    await win.loadFile(RENDERER_INDEX_HTML);
   }
 }
 
@@ -705,9 +718,21 @@ let hfServiceInstance: HfService | null = null;
 
 configureStableUserDataPath(app, { logger: console });
 
+// ---- Renderer trust boundary (audit 2026-10-07 P0-3) ------------------------
+// Installed before anything registers an IPC handler or opens a window, so
+// every handler and every webContents is covered without opting in. See
+// security/renderer-boundary.ts for the policy.
+installIpcSenderGuard(ipcMain, trustedRenderer, (message) => console.warn(`[security] ${message}`));
+app.on('web-contents-created', (_event, contents) => {
+  hardenWebContents(contents, trustedRenderer, (url) => shell.openExternal(url));
+});
+
 app
   .whenReady()
   .then(async () => {
+    // Deny every permission request except the clipboard write the app uses.
+    installPermissionPolicy(session.defaultSession, trustedRenderer);
+
     // ---- 1. Database --------------------------------------------------------
     const dbHandle = initDb(dbPath());
     runMigrations(dbHandle.db, resolveMigrationsFolder());
