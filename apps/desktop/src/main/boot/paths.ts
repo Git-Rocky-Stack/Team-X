@@ -28,11 +28,10 @@ export function resolveMigrationsFolder(): string {
 }
 
 /**
- * Resolve the absolute path to the role-packs roles directory.
- * Mirrors the path logic in `db/seed.ts` — both files need to point
- * at the same place, so we duplicate the helper rather than creating
- * a new shared module for one constant. T49's electron-builder
- * wiring will replace the dev branch with `process.resourcesPath`.
+ * Resolve the absolute path to the role-packs roles directory: under the
+ * resources directory in a packaged build (electron-builder.yml
+ * `extraResources`), four parents up from the bundle in dev. The only place
+ * that works this out; the role loader and the first-run seed both use it.
  */
 export function resolveRolePacksRoot(): string {
   return app.isPackaged

@@ -13,17 +13,16 @@
  *    under Vitest with sql.js + the real role packs directory resolved
  *    via `import.meta.url`.
  *
- * 2. `seed()` — THIN RUNTIME WIRING. Calls `getDb()`, computes the
- *    default rolePacksRoot from `__dirname`, delegates to `seedIfEmpty`
- *    with the Phase 1 company metadata + role assignments hardcoded.
- *    Not directly unit-tested — integration-verified via `pnpm dev`.
+ * 2. `seed(rolePacksRoot)` — THIN RUNTIME WIRING. Calls `getDb()` and
+ *    delegates to `seedIfEmpty` with the Phase 1 company metadata + role
+ *    assignments hardcoded. Not directly unit-tested — integration-verified
+ *    via `pnpm dev`.
  *
- * The runtime path assumes the compiled main process runs from
- * `apps/desktop/out/main/index.js` — four parents to the repo root,
- * then `role-packs/strategia-official/roles`. Production packaging
- * (Task 49+) will ship role packs via electron-builder extraResources;
- * the `isPackaged` branch in `seed()` is a placeholder so dev and prod
- * code paths stay symmetric.
+ * The caller supplies the role packs directory (`resolveRolePacksRoot` in
+ * `boot/paths.ts`). This file must not work the path out for itself: its own
+ * copy walked up from the bundle, which is right in dev and one directory
+ * too high in a packaged build, where the packs sit under the resources
+ * directory. A fresh install then failed with ENOENT before opening a window.
  *
  * -------------------------------------------------------------------
  * M35 T1 — Performance defaults pass + clamp audit (2026-04-19)
@@ -241,9 +240,8 @@ export function seedIfEmpty<TRunResult>(
  * Runtime wrapper — calls seedIfEmpty with the Phase 1 defaults.
  * Wired into main/index.ts just after runMigrations.
  */
-export function seed(rolePacksRoot?: string): SeedResult | null {
+export function seed(rolePacksRoot: string): SeedResult | null {
   const db = getDb();
-  const root = rolePacksRoot ?? defaultRolePacksRoot();
 
   // Base settings shared by dev + production + e2e.
   const settings: Record<string, unknown> = {
@@ -269,7 +267,7 @@ export function seed(rolePacksRoot?: string): SeedResult | null {
   }
 
   const result = seedIfEmpty(db, {
-    rolePacksRoot: root,
+    rolePacksRoot,
     company: {
       name: 'Strategia-X',
       slug: 'strategia-x',
@@ -296,14 +294,4 @@ export function seed(rolePacksRoot?: string): SeedResult | null {
     );
   }
   return result;
-}
-
-/**
- * Resolve the role packs directory relative to the compiled main bundle.
- * In dev, the compiled main lives at `apps/desktop/out/main/index.js`;
- * four parents up is the repo root, then `role-packs/strategia-official/roles`.
- * Production wiring via electron-builder extraResources lands in Task 49.
- */
-function defaultRolePacksRoot(): string {
-  return join(__dirname, '../../../../role-packs/strategia-official/roles');
 }

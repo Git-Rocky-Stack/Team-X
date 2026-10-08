@@ -71,7 +71,7 @@ import {
   startLocalGgufBackgroundWork,
 } from './boot/local-gguf.js';
 import { bootOrchestrator, bootRoleLoader } from './boot/orchestrator.js';
-import { resolveMigrationsFolder } from './boot/paths.js';
+import { resolveMigrationsFolder, resolveRolePacksRoot } from './boot/paths.js';
 import { bootPlatformServices } from './boot/platform-services.js';
 import { bootProactiveTrigger } from './boot/proactive.js';
 import { ensureWindowsProcessEnvironment } from './boot/process-env.js';
@@ -210,7 +210,7 @@ app
     console.log(`[db] FTS5 vault index: ${fts5Ready ? 'ready' : 'unavailable (fallback mode)'}`);
 
     // ---- 2-4. Seed company/employees, default providers, dev key import ----
-    seed();
+    seed(resolveRolePacksRoot());
     seedDefaultProviders();
     // Dev-only: import ANTHROPIC_API_KEY from apps/desktop/.env into the OS
     // keychain if the keychain has no anthropic key yet. No-op in packaged

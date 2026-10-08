@@ -82,6 +82,7 @@ The local GGUF engine was finished and given a home:
 - **Local model servers stay local.** A server you mark as local is checked at the moment Team-X connects, so a network name that changes its address after the check cannot redirect your data to the internet.
 - **Safer Hugging Face downloads.** File names that Windows treats as devices, redirects away from Hugging Face, files larger than announced, and too little disk space are all refused before anything is written. If the disk fills mid-download, the partial file is kept so you can resume.
 - **Faster start-up.** The app's start-up script is about a sixth of its old size, each screen loads the first time you open it, and the monospace font is 59 KB instead of 984 KB.
+- **A fresh install opens the first time.** An installed build looked for its starter roles in the wrong folder, so the very first launch stopped with "Team-X failed to start". It now opens with its Chief Executive Officer and Senior Fullstack Engineer in place.
 - **Checked installers.** Before a release publishes, each Windows and macOS installer is installed, launched and uninstalled automatically. Each download comes with a provenance attestation and a software bill of materials (SBOM). v3.5.0 is not code-signed, so your operating system warns before running it; check your download against `SHA256SUMS.txt` or its attestation.
 
 ### Preview features are labelled
@@ -100,6 +101,7 @@ Linking a workspace to a hosted service, operator invites and cloud identity are
 
 - **If you set Privacy to Local Only or Open-Source Cloud** while employees used cloud providers, those employees will now stop with a clear refusal instead of quietly using the cloud. Move them to an allowed provider or raise the tier. The Privacy panel lists who is affected.
 - **Semantic Chunking now applies to the search index.** New content is chunked by structure. Run Settings → Retrieval → Rebuild once to re-chunk what is already indexed.
+- **A first company without its starter employees.** If your first launch of an earlier version failed and the second worked, that company was created without its Chief Executive Officer and Senior Fullstack Engineer. Add them from the Hire dialog.
 - **Database migration.** Migration `0037` adds storage for long-term memory and the knowledge graph. It runs automatically on first launch.
 
 ---

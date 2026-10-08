@@ -128,6 +128,22 @@ describe('services/provider-factory.ts — the default singleton enforces the ti
   });
 });
 
+describe('main/index.ts — the first-run seed finds role packs in a packaged build', () => {
+  const seedSrc = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), 'db', 'seed.ts'),
+    'utf8',
+  );
+
+  it('seeds from the resolver that knows the packaged layout', () => {
+    expect(src).toContain('seed(resolveRolePacksRoot())');
+  });
+
+  it('leaves seed() no path of its own to fall back on', () => {
+    expect(seedSrc).toContain('export function seed(rolePacksRoot: string)');
+    expect(seedSrc).not.toContain('__dirname');
+  });
+});
+
 describe('main/index.ts — the renderer trust boundary covers everything (audit P0-3)', () => {
   it('guards ipcMain before any handler is registered', () => {
     const guard = src.indexOf('installIpcSenderGuard(ipcMain');
