@@ -222,8 +222,8 @@ function assertPortableSegment(filename: string, segment: string): void {
       `The filename "${filename}" uses "${segment}", a device name reserved by Windows.`,
     );
   }
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this refuses.
-  if (/[<>:"|?*\u0000-\u001f]/.test(segment)) {
+  const hasControl = [...segment].some((c) => c.charCodeAt(0) < 0x20);
+  if (hasControl || /[<>:"|?*]/.test(segment)) {
     throw new HfServiceError(
       `The filename "${filename}" contains a character that is not allowed in file names.`,
     );

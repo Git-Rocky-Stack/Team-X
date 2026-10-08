@@ -199,7 +199,7 @@ export function ModelDetail({ modelId, onClose }: ModelDetailProps) {
           <>
             <DialogTitle className="sr-only">Loading model…</DialogTitle>
             <DialogDescription className="sr-only">
-              Loading this model's details, prompt overrides and benchmark history.
+              {"Loading this model's details, prompt overrides and benchmark history."}
             </DialogDescription>
             <SubviewState
               lampLabel="SYNC"

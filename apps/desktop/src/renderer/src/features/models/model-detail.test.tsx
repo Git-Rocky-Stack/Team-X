@@ -18,9 +18,9 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { axeViolations } from '@/test-utils/axe';
-
 import { ModelDetail } from './model-detail.js';
+
+import { axeViolations } from '@/test-utils/axe';
 
 const MODEL = {
   id: 'm1',
@@ -153,7 +153,10 @@ describe('ModelDetail — accessible in every state (audit P2-1)', () => {
       ...makeBridge(),
       localGguf: {
         ...makeBridge().localGguf,
-        library: { ...makeBridge().localGguf.library, get: vi.fn(() => new Promise(() => {})) },
+        library: {
+          ...makeBridge().localGguf.library,
+          get: vi.fn(() => new Promise(() => undefined)),
+        },
       },
     } as ReturnType<typeof makeBridge>);
     mount();

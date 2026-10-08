@@ -33,9 +33,15 @@ export interface LocalNetworkFetchOptions {
   lookup?: (hostname: string, options: { all: true }) => Promise<LookupAddress[]>;
 }
 
+/**
+ * `RequestInit` is a type-only DOM-lib name, which eslint's `no-undef` flags in
+ * main-process code; derive the same type from `fetch` instead.
+ */
+type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
+
 export type LocalNetworkFetch = (
   input: string | URL | Request,
-  init?: RequestInit,
+  init?: FetchInit,
 ) => Promise<Response>;
 
 const RULE =
@@ -73,7 +79,7 @@ export function createLocalNetworkFetch(options: LocalNetworkFetchOptions = {}):
 
   return async (input, requestInit = {}) => {
     // A Request contributes its URL, method and headers; init overrides them.
-    const init: RequestInit =
+    const init: FetchInit =
       input instanceof Request
         ? { method: input.method, headers: input.headers, ...requestInit }
         : requestInit;
@@ -137,7 +143,7 @@ export function createLocalNetworkFetch(options: LocalNetworkFetchOptions = {}):
   };
 }
 
-function toBody(body: RequestInit['body']): Uint8Array | undefined {
+function toBody(body: FetchInit['body']): Uint8Array | undefined {
   if (body === undefined || body === null) return undefined;
   if (typeof body === 'string') return new TextEncoder().encode(body);
   if (body instanceof Uint8Array) return body;
