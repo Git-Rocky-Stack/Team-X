@@ -90,6 +90,8 @@ export interface HfFs {
   openTruncate(path: string): Promise<HfFileSink>;
   rename(from: string, to: string): Promise<void>;
   remove(path: string): Promise<void>;
+  /** Bytes free to this process on the volume holding `dir`, or null when unknown. */
+  freeBytes?(dir: string): Promise<number | null>;
 }
 
 export interface HfServiceDeps {
@@ -177,6 +179,7 @@ function resolveWithinFolder(
   if (segments.length === 0 || segments.some((s) => s === '.' || s === '..')) {
     throw new HfServiceError(`The filename "${filename}" must not contain path traversal.`);
   }
+  for (const segment of segments) assertPortableSegment(filename, segment);
 
   // The Discover panel only offers `.gguf` siblings, so anything else reaching
   // here came from somewhere other than that UI. Refusing it keeps a
@@ -199,13 +202,68 @@ function resolveWithinFolder(
   return { root, full, urlPath };
 }
 
+/** Device names Windows reserves in every folder, with or without an extension. */
+const WINDOWS_RESERVED =
+  /^(con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])(\..*)?$/i;
+
+/**
+ * A path segment must mean the same file on every OS the library may live on
+ * (a NAS share is read from Windows and macOS alike). Refused everywhere:
+ *
+ *   - Windows device names (`CON.gguf` writes to the console, not a file);
+ *   - characters Windows forbids, including `:`, which opens an NTFS
+ *     alternate data stream (`a:b.gguf` writes a hidden stream on `a`);
+ *   - a trailing dot or space, which Windows drops, so `Q8_0.` and `Q8_0`
+ *     would be one folder there and two everywhere else.
+ */
+function assertPortableSegment(filename: string, segment: string): void {
+  if (WINDOWS_RESERVED.test(segment)) {
+    throw new HfServiceError(
+      `The filename "${filename}" uses "${segment}", a device name reserved by Windows.`,
+    );
+  }
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this refuses.
+  if (/[<>:"|?*\u0000-\u001f]/.test(segment)) {
+    throw new HfServiceError(
+      `The filename "${filename}" contains a character that is not allowed in file names.`,
+    );
+  }
+  if (/[. ]$/.test(segment)) {
+    throw new HfServiceError(
+      `The filename "${filename}" has a segment ending in a dot or a space, which Windows drops.`,
+    );
+  }
+}
+
 /**
  * Comparison key for a destination path. Windows and macOS filesystems are
  * case-insensitive by default, so `Model.gguf` and `model.gguf` are one file
- * there and must count as one destination.
+ * there and must count as one destination; APFS also treats composed and
+ * decomposed Unicode (`café` typed two ways) as one name.
  */
-function destinationKey(path: string): string {
-  return process.platform === 'win32' || process.platform === 'darwin' ? path.toLowerCase() : path;
+export function destinationKey(path: string, platform: NodeJS.Platform = process.platform): string {
+  if (platform === 'darwin') return path.normalize('NFC').toLowerCase();
+  if (platform === 'win32') return path.toLowerCase();
+  return path;
+}
+
+/** Hosts the Hub serves files from, directly or through its CDN redirects. */
+function isHubHost(host: string): boolean {
+  return (
+    host === 'huggingface.co' ||
+    host.endsWith('.huggingface.co') ||
+    host === 'hf.co' ||
+    host.endsWith('.hf.co')
+  );
+}
+
+/** Margin left free on the volume after a download, so the OS is never starved. */
+const DISK_HEADROOM_BYTES = 256 * 1024 * 1024;
+
+function formatBytes(n: number): string {
+  if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`;
+  if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(0)} MB`;
+  return `${n} bytes`;
 }
 
 /**
@@ -303,6 +361,17 @@ function createNodeHfFs(): HfFs {
     async remove(path) {
       const { rm } = await import('node:fs/promises');
       await rm(path, { force: true });
+    },
+    async freeBytes(dir) {
+      const { statfs } = await import('node:fs/promises');
+      try {
+        const info = await statfs(dir);
+        return Number(info.bavail) * Number(info.bsize);
+      } catch {
+        // Some network filesystems do not answer statfs; the write itself
+        // still reports a full disk.
+        return null;
+      }
     },
   };
 }
@@ -507,6 +576,7 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
 
     let token: string | null = null;
     let sink: HfFileSink | null = null;
+    let discardPart = false;
 
     try {
       const resumeFrom = (await fs.size(record.partPath)) ?? 0;
@@ -515,10 +585,12 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
       const headers = { ...auth.headers };
       if (resumeFrom > 0) headers.range = `bytes=${resumeFrom}-`;
 
-      const response = await fetchFn(
-        `${apiBaseUrl}/${record.repoId}/resolve/main/${record.urlPath}`,
-        { method: 'GET', headers, signal: controller.signal },
-      );
+      const requestUrl = `${apiBaseUrl}/${record.repoId}/resolve/main/${record.urlPath}`;
+      const response = await fetchFn(requestUrl, {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      });
 
       // 416 to a ranged request means "you already have everything" when the
       // `.part` is exactly the full length — a pause or quit that landed after
@@ -541,6 +613,16 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
         throw apiError(response, `downloading ${record.filename}`);
       }
 
+      // The Hub redirects file requests to its CDN. Follow that, but only to
+      // an https Hub host (or the configured origin): a redirect anywhere
+      // else could hand back a file the Hub never served.
+      if (response.url && response.url !== requestUrl && !isTrustedSource(response.url)) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new HfServiceError(
+          `The download was redirected to ${new URL(response.url).origin}, which is not a Hugging Face host; the file was not saved.`,
+        );
+      }
+
       // A 200 in reply to a ranged request means the server ignored the range
       // and is sending the whole body. Appending it would corrupt the file.
       const isPartial = response.status === 206;
@@ -548,9 +630,24 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
       const startOffset = restarting ? 0 : resumeFrom;
 
       record.bytesReceived = startOffset;
-      record.bytesTotal = totalBytesOf(response, startOffset);
+      const total = totalBytesOf(response);
+      if (total === null) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new HfServiceError(
+          `The server did not report the file size for ${record.filename}, so the download cannot be checked for completeness or disk space.`,
+        );
+      }
+      record.bytesTotal = total;
 
       await fs.ensureDir(dirname(record.partPath));
+      const remaining = total - startOffset;
+      const free = fs.freeBytes ? await fs.freeBytes(dirname(record.partPath)) : null;
+      if (free !== null && free < remaining + DISK_HEADROOM_BYTES) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new HfServiceError(
+          `Not enough disk space for ${record.filename}: it needs ${formatBytes(remaining)} more (plus ${formatBytes(DISK_HEADROOM_BYTES)} headroom), and ${formatBytes(free)} is free.`,
+        );
+      }
       sink =
         startOffset > 0
           ? await fs.openAppend(record.partPath)
@@ -563,9 +660,17 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
           const { done, value } = await reader.read();
           if (done) break;
           if (value) {
+            if (record.bytesReceived + value.length > total) {
+              // More bytes than announced: the file is not what the Hub
+              // described, and an unbounded body would fill the disk.
+              await reader.cancel().catch(() => undefined);
+              discardPart = true;
+              throw new HfServiceError(
+                `The server sent more than the ${total} bytes it announced for ${record.filename}; the partial file was discarded.`,
+              );
+            }
             await sink.write(value);
             record.bytesReceived += value.length;
-            if (record.bytesReceived > record.bytesTotal) record.bytesTotal = record.bytesReceived;
           }
           if (controller.signal.aborted) {
             await reader.cancel().catch(() => undefined);
@@ -589,7 +694,13 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
         await finishAborted(record);
         return;
       }
-      const message = err instanceof Error ? err.message : String(err);
+      if (discardPart) await fs.remove(record.partPath).catch(() => undefined);
+      const diskFull = (err as { code?: string } | null)?.code === 'ENOSPC';
+      const message = diskFull
+        ? `The disk is full. The ${record.bytesReceived} bytes already downloaded are kept; free up space, then retry to resume.`
+        : err instanceof Error
+          ? err.message
+          : String(err);
       record.state = 'failed';
       record.errorMessage = redact(message, token);
     } finally {
@@ -615,13 +726,30 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
     await fs.remove(record.partPath).catch(() => undefined);
   }
 
-  /** Total size from `Content-Range` (ranged) or `Content-Length` (whole body). */
-  function totalBytesOf(response: Response, startOffset: number): number {
+  /**
+   * Full file size from `Content-Range` (ranged) or `Content-Length` (whole
+   * body), or null when the server reports neither.
+   */
+  function totalBytesOf(response: Response): number | null {
     const contentRange = response.headers.get('content-range');
     const match = contentRange?.match(/\/(\d+)\s*$/);
     if (match?.[1]) return Number(match[1]);
-    const length = Number(response.headers.get('content-length') ?? 0);
-    return Number.isFinite(length) && length > 0 ? startOffset + length : startOffset;
+    const length = Number(response.headers.get('content-length'));
+    if (!Number.isFinite(length) || length <= 0) return null;
+    // A 206 without a total is the remainder only; a 200 is the whole file.
+    return response.status === 206 ? null : length;
+  }
+
+  /** https on a Hub host, or the configured origin itself. */
+  function isTrustedSource(url: string): boolean {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return false;
+    }
+    if (parsed.origin === new URL(apiBaseUrl).origin) return true;
+    return parsed.protocol === 'https:' && isHubHost(parsed.hostname);
   }
 
   function launch(record: DownloadRecord): void {

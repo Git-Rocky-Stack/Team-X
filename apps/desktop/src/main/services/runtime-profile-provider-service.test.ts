@@ -224,8 +224,30 @@ describe('runtime profile provider service — privacy tier', () => {
       getMaxPrivacyTier: () => maxTier,
       ...(lookup ? { lookup } : {}),
     });
-    return { service, providerFactory, stream };
+    return { service, providerFactory, stream, externalRuntimeAdapters };
   }
+
+  // Audit 2026-10-07 P1-3: when Privacy forbids cloud, the runtime that is
+  // allowed to run must also be held to the LAN at connect time, not just
+  // when its host was classified.
+  it('builds the adapter local-only whenever the tier forbids cloud', async () => {
+    const lookup = vi.fn(async () => [{ address: '192.168.1.40', family: 4 }]);
+    for (const [tier, localOnly] of [
+      ['local', true],
+      ['open-source-cloud', true],
+      ['proprietary-cloud', false],
+    ] as const) {
+      const { service, externalRuntimeAdapters } = harness(
+        makeProfile('http', { baseUrl: 'http://bench-rig:8080' }),
+        tier,
+        lookup,
+      );
+      await service.resolveForEmployee(makeEmployee());
+      expect(externalRuntimeAdapters.createResolvedProvider).toHaveBeenCalledWith(
+        expect.objectContaining({ localOnly }),
+      );
+    }
+  });
 
   it.each(['codex', 'claude-code', 'cursor'] as const)(
     'refuses a %s profile under Local Only, naming the profile and the setting',

@@ -172,9 +172,15 @@ export function createRuntimeProfileProviderService(
         return providerFactory.resolveForEmployee(employee);
       }
 
+      // When cloud is not allowed, whatever runs must stay on the LAN at the
+      // socket, not just at classification time (see local-network-fetch.ts).
+      const localOnly =
+        getMaxPrivacyTier !== undefined &&
+        exceedsPrivacyTier({ privacyTier: 'proprietary-cloud' }, getMaxPrivacyTier());
       const adapted = externalRuntimeAdapters.createResolvedProvider({
         employee,
         profile,
+        localOnly,
       });
       if (adapted) {
         await assertRuntimeAllowed(profile);

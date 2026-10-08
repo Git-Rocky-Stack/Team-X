@@ -1058,3 +1058,187 @@ describe('HfService — activeDownloads snapshot', () => {
     expect((await service.activeDownloads())[0]?.bytesReceived).toBe(300);
   });
 });
+
+// ===========================================================================
+// Download trust (audit 2026-10-07 P1-3)
+// ===========================================================================
+
+describe('HfService — destination names that are unsafe on some filesystem', () => {
+  it.each(['CON.gguf', 'nul.gguf', 'Q8_0/COM1.gguf', 'lpt9.GGUF', 'aux.q4.gguf'])(
+    'refuses the Windows device name %s on every platform',
+    async (name) => {
+      const { service } = buildService();
+      await expect(service.startDownload(REPO, name, FOLDER)).rejects.toThrow(/reserved/);
+    },
+  );
+
+  it.each([
+    'Q8_0/a:b.gguf',
+    'Q8_0/m<1>.gguf',
+    'what?.gguf',
+    'star*.gguf',
+    'pipe|.gguf',
+    'quote".gguf',
+    'ctl\u0001.gguf',
+  ])(
+    'refuses %s, which holds a character Windows forbids (an ADS colon among them)',
+    async (name) => {
+      const { service } = buildService();
+      await expect(service.startDownload(REPO, name, FOLDER)).rejects.toThrow(/not allowed/);
+    },
+  );
+
+  it('refuses a segment ending in a dot or space, which Windows silently drops', async () => {
+    const { service } = buildService();
+    await expect(service.startDownload(REPO, 'Q8_0./m.gguf', FOLDER)).rejects.toThrow(
+      /dot or a space/,
+    );
+    await expect(service.startDownload(REPO, 'Q8_0 /m.gguf', FOLDER)).rejects.toThrow(
+      /dot or a space/,
+    );
+  });
+});
+
+describe('destinationKey', () => {
+  it('folds case on Windows and macOS, and Unicode normalization on macOS', async () => {
+    const { destinationKey } = await import('./hf-service.js');
+    const nfc = '/m/café.gguf';
+    const nfd = '/m/café.gguf';
+    expect(destinationKey('/m/A.gguf', 'win32')).toBe(destinationKey('/m/a.gguf', 'win32'));
+    expect(destinationKey(nfc, 'darwin')).toBe(destinationKey(nfd, 'darwin'));
+    expect(destinationKey(nfc, 'darwin')).toBe(destinationKey('/m/CAFÉ.gguf', 'darwin'));
+    // Linux filesystems treat these as distinct files; so does the key.
+    expect(destinationKey('/m/A.gguf', 'linux')).not.toBe(destinationKey('/m/a.gguf', 'linux'));
+  });
+});
+
+describe('HfService — where the bytes come from', () => {
+  function redirectedTo(url: string, body: ReadableStream<Uint8Array>): Response {
+    const response = new Response(body, { status: 200, headers: { 'content-length': '300' } });
+    Object.defineProperty(response, 'url', { value: url });
+    Object.defineProperty(response, 'redirected', { value: true });
+    return response;
+  }
+
+  it('accepts a redirect to the Hub CDN', async () => {
+    const { service, files } = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: () =>
+            redirectedTo(
+              'https://cas-bridge.xethub.hf.co/xet-bridge-us/abc',
+              streamOf([bytes(300)]),
+            ),
+        },
+      ],
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    expect(files.get(at(FOLDER, FILE))?.length).toBe(300);
+  });
+
+  it.each([
+    ['a plain-http CDN', 'http://cdn-lfs.hf.co/x'],
+    ['a host outside Hugging Face', 'https://evil.example/model.gguf'],
+    ['a look-alike host', 'https://huggingface.co.evil.example/x'],
+  ])('refuses a redirect to %s before writing a byte', async (_label, target) => {
+    const { service, files } = buildService({
+      routes: [
+        {
+          match: (u) => u.includes('/resolve/'),
+          respond: () => redirectedTo(target, streamOf([bytes(300)])),
+        },
+      ],
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    const [progress] = await service.activeDownloads();
+    expect(progress?.state).toBe('failed');
+    expect(progress?.errorMessage).toMatch(/redirected/);
+    expect(files.has(at(FOLDER, `${FILE}.part`))).toBe(false);
+  });
+});
+
+describe('HfService — size limits and disk space', () => {
+  it('fails, and discards the partial file, when the server sends more than it announced', async () => {
+    const { service, files } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(200), bytes(200)]), {
+        status: 200,
+        headers: { 'content-length': '300' },
+      }),
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    const [progress] = await service.activeDownloads();
+    expect(progress?.state).toBe('failed');
+    expect(progress?.errorMessage).toMatch(/more than the 300 bytes/);
+    expect(files.has(at(FOLDER, FILE))).toBe(false);
+    expect(files.has(at(FOLDER, `${FILE}.part`))).toBe(false);
+  });
+
+  it('refuses a transfer whose size the server does not report', async () => {
+    const { service, files } = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(100)]), { status: 200 }),
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    const [progress] = await service.activeDownloads();
+    expect(progress?.state).toBe('failed');
+    expect(progress?.errorMessage).toMatch(/did not report the file size/);
+    expect(files.has(at(FOLDER, FILE))).toBe(false);
+  });
+
+  it('checks free space before writing and names what is missing', async () => {
+    const built = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(300)])),
+    });
+    // Rebuild with a filesystem that reports almost no free space.
+    const service = createHfService({
+      fetchFn: built.fetchFn,
+      apiBaseUrl: API,
+      fs: { ...built.fs, freeBytes: async () => 10 },
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    const [progress] = await service.activeDownloads();
+    expect(progress?.state).toBe('failed');
+    expect(progress?.errorMessage).toMatch(/Not enough disk space/);
+    expect(built.files.has(at(FOLDER, `${FILE}.part`))).toBe(false);
+  });
+
+  it('keeps the partial file and explains how to resume when the disk fills mid-transfer', async () => {
+    const built = buildService({
+      routes: downloadRoutes(() => streamOf([bytes(100), bytes(100), bytes(100)])),
+    });
+    let writes = 0;
+    const service = createHfService({
+      fetchFn: built.fetchFn,
+      apiBaseUrl: API,
+      fs: {
+        ...built.fs,
+        async openTruncate(path) {
+          const sink = await built.fs.openTruncate(path);
+          return {
+            async write(chunk) {
+              writes += 1;
+              if (writes === 2) {
+                throw Object.assign(new Error('ENOSPC: no space left on device, write'), {
+                  code: 'ENOSPC',
+                });
+              }
+              await sink.write(chunk);
+            },
+            close: () => sink.close(),
+          };
+        },
+      },
+    });
+    const { handleId } = await service.startDownload(REPO, FILE, FOLDER);
+    await service.settled(handleId);
+    const [progress] = await service.activeDownloads();
+    expect(progress?.state).toBe('failed');
+    expect(progress?.errorMessage).toMatch(/disk is full.*resume/i);
+    expect(built.files.get(at(FOLDER, `${FILE}.part`))?.length).toBe(100);
+  });
+});

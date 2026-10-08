@@ -6,6 +6,7 @@ import type { RuntimeProfile } from '@team-x/shared-types';
 import type { EmployeeRow } from '../db/repos/employees.js';
 import type { TicketCheckoutsRepo } from '../db/repos/ticket-checkouts.js';
 
+import { createLocalNetworkFetch } from './local-gguf/local-network-fetch.js';
 import type {
   RuntimeAuditContext,
   RuntimeAuditNormalizer,
@@ -48,11 +49,20 @@ export interface ExternalRuntimeAdapters {
   createResolvedProvider(input: {
     employee: EmployeeRow;
     profile: RuntimeProfile;
+    /**
+     * Settings → Privacy forbids cloud, so an HTTP runtime may only reach the
+     * local network. Its requests then go through the local-network fetch,
+     * which checks the address each socket connects to (no DNS rebinding,
+     * no proxy, no redirects).
+     */
+    localOnly?: boolean;
   }): ExternalRuntimeResolvedProvider | null;
 }
 
 export interface ExternalRuntimeAdaptersDeps {
   fetchFn?: FetchLike;
+  /** Fetch for local-only HTTP runtimes; defaults to createLocalNetworkFetch(). */
+  localNetworkFetchFn?: FetchLike;
   spawnFn?: SpawnLike;
   secretsStore?: RuntimeSecretReader;
   userDataDir?: string;
@@ -845,6 +855,7 @@ export function createExternalRuntimeAdapters(
   deps: ExternalRuntimeAdaptersDeps = {},
 ): ExternalRuntimeAdapters {
   const fetchFn = deps.fetchFn ?? fetch;
+  const localNetworkFetchFn: FetchLike = deps.localNetworkFetchFn ?? createLocalNetworkFetch();
   const spawnFn = deps.spawnFn ?? spawn;
   const ensureWorkspaceFn = deps.ensureWorkspaceFn ?? ensureRuntimeWorkspacePaths;
   const lifecycle: RuntimeLifecycleDeps = {
@@ -884,7 +895,7 @@ export function createExternalRuntimeAdapters(
             baseUrl,
             employee: input.employee,
             profile: input.profile,
-            fetchFn,
+            fetchFn: input.localOnly ? localNetworkFetchFn : fetchFn,
             userDataDir: deps.userDataDir,
             ensureWorkspaceFn,
             lifecycle,
@@ -910,7 +921,7 @@ export function createExternalRuntimeAdapters(
               baseUrl: endpointUrl,
               employee: input.employee,
               profile: input.profile,
-              fetchFn,
+              fetchFn: input.localOnly ? localNetworkFetchFn : fetchFn,
               userDataDir: deps.userDataDir,
               ensureWorkspaceFn,
               lifecycle,

@@ -179,6 +179,39 @@ describe('external runtime adapters', () => {
     ]);
   });
 
+  it('sends a local-only http runtime through the local-network fetch (audit P1-3)', async () => {
+    const reply = () =>
+      new Response(
+        JSON.stringify({ text: 'ok', usage: { promptTokens: 1, completionTokens: 1 } }),
+        {
+          status: 200,
+        },
+      );
+    const fetchFn = vi.fn(async () => reply());
+    const localNetworkFetchFn = vi.fn(async () => reply());
+    const adapters = createExternalRuntimeAdapters({ fetchFn, localNetworkFetchFn });
+    const profile = makeProfile('http', { baseUrl: 'http://bench-rig:8787/runtime' });
+    const drain = async (localOnly: boolean) => {
+      const resolved = adapters.createResolvedProvider({
+        employee: makeEmployee(),
+        profile,
+        localOnly,
+      });
+      if (!resolved) throw new Error('expected http runtime adapter');
+      for await (const _ of resolved.stream({ system: 's', messages: [] })) {
+        // drain
+      }
+    };
+
+    await drain(true);
+    expect(localNetworkFetchFn).toHaveBeenCalledTimes(1);
+    expect(fetchFn).not.toHaveBeenCalled();
+
+    await drain(false);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(localNetworkFetchFn).toHaveBeenCalledTimes(1);
+  });
+
   it('treats codex-style launcher profiles as execution-backed command adapters when configured', async () => {
     const child = new MockChildProcess();
     const spawnFn = vi.fn(() => {
