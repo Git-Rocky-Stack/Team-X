@@ -100,6 +100,13 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
 
 ### Fixed
 
+- **A fresh install opens on its first launch.** An installed build looked
+  for the starter role packs one directory above the resources folder that
+  holds them, so the first launch on an empty database stopped with "Team-X
+  failed to start". The second launch then opened a company with no Chief
+  Executive Officer or Senior Fullstack Engineer, because the company row
+  had been written before the failure. The first-run seed now takes its path
+  from the one resolver that knows the packaged layout.
 - **Local models start on Linux and macOS.** The llama.cpp fetcher dropped
   the library symlinks when it flattened the archive, so the bundled
   `llama-server` could not load its libraries. The release now refuses an
