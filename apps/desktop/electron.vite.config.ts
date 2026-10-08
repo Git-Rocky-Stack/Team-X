@@ -67,8 +67,9 @@ const workspaceDeps = [
 // Both package.json files set "type": "module", so Electron loads
 // out/main/index.js as ESM where __dirname / __filename are undefined.
 // Inject a banner that polyfills them from import.meta.url before any
-// bundled module code executes.  import.meta.dirname would be cleaner
-// but requires Node 21.2+ (Electron 31 ships Node 20.x).
+// bundled module code executes. Electron 44 ships Node 24, so
+// import.meta.dirname is available, but bundled dependencies still read the
+// CommonJS globals, so the shim stays.
 const esmDirnameShim = [
   'import { fileURLToPath as __estfp } from "node:url";',
   'import { dirname as __estdn } from "node:path";',

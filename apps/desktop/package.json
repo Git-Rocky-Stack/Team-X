@@ -52,7 +52,7 @@
     "@team-x/shared-types": "workspace:*",
     "@team-x/telemetry-core": "workspace:*",
     "@vlcn.io/crsqlite-wasm": "^0.12.0",
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
@@ -67,7 +67,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
+    "@electron/rebuild": "^4.2.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/dom": "^10.4.0",
@@ -81,7 +81,7 @@
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.27",
     "drizzle-kit": "^0.31.11",
-    "electron": "^31.0.0",
+    "electron": "^44.7.0",
     "electron-builder": "^26.8.1",
     "electron-vite": "^2.3.0",
     "jsdom": "^25.0.1",

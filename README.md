@@ -215,7 +215,7 @@ Team-X/
 
 | Layer | Technology |
 |-------|-----------|
-| Desktop shell | Electron 31 |
+| Desktop shell | Electron 44 |
 | Build | electron-vite + electron-builder |
 | Main process | Node.js 22 + TypeScript (strict) |
 | Renderer | React 19 + TypeScript + Tailwind CSS + shadcn/ui + Radix |

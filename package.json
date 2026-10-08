@@ -78,7 +78,8 @@
       "ai>@ai-sdk/vue": "-",
       "ai>@ai-sdk/solid": "-",
       "ai>sswr": "-",
-      "ai>svelte": "-"
+      "ai>svelte": "-",
+      "node-abi@>=4.0.0": "^4.37.0"
     }
   }
 }

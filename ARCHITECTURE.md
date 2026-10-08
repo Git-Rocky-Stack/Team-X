@@ -45,7 +45,7 @@ Team-X/
 
 | Layer | Technology |
 |-------|------------|
-| **Desktop Shell** | Electron 31 |
+| **Desktop Shell** | Electron 44 |
 | **UI Framework** | React 19 + Vite 5 |
 | **Styling** | Tailwind CSS 3 |
 | **Database** | SQLite + Drizzle ORM |
