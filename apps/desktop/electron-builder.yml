@@ -136,6 +136,16 @@ dmg:
       path: /Applications
 
 # ─── Linux ────────────────────────────────────────────────────────────
+# AppImage runtime: the static type2-runtime (issue #16). The legacy
+# toolset (0.0.0) embedded a runtime that dlopen()s FUSE 2 (`libfuse.so.2`),
+# which Ubuntu 22.04+ no longer installs (24.04 renamed it `libfuse2t64`),
+# so a stock desktop could not start the AppImage (issue #4). Toolset 1.0.2
+# embeds AppImage's static-pie type2-runtime (libfuse statically linked):
+# it mounts through the stock `fusermount3` and needs no FUSE 2 library.
+# release.yml proves it by booting the AppImage with FUSE 2 absent.
+toolsets:
+  appimage: "1.0.2"
+
 linux:
   target:
     - target: AppImage
@@ -157,15 +167,8 @@ linux:
 # Desktop and Fedora Workstation ship libsecret by default; declaring
 # it here guarantees apt resolves it everywhere else.
 #
-# AppImage users still need libsecret-1-0 for the OS keychain. Note that
-# AppImage bundles the app's own libraries but does NOT bundle FUSE: the
-# AppImage *runtime* requires FUSE 2 (`libfuse.so.2`) on the host to
-# self-mount. Modern Ubuntu (22.04+) no longer ships it by default, and
-# 24.04 renamed the package to `libfuse2t64` — without it the AppImage
-# fails to start before any app code runs (issue #4). Users either install
-# `libfuse2` / `libfuse2t64` (Fedora: `fuse-libs`) or run the image with
-# `--appimage-extract-and-run`. Documented in README / quick-start / FAQ,
-# and release.yml smoke-tests the AppImage boot before publishing.
+# AppImage users still need libsecret-1-0 for the OS keychain. FUSE is no
+# longer a host dependency: see `toolsets.appimage` above.
 deb:
   depends:
     - libsecret-1-0
