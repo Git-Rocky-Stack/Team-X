@@ -22,7 +22,18 @@ const WORKSPACE_SWITCHER_PATH = join(currentDirname, 'workspace-switcher.tsx');
 const USE_COMPANIES_PATH = join(currentDirname, '..', '..', 'hooks', 'use-companies.ts');
 const HIRE_DIALOG_PATH = join(currentDirname, '..', 'hire', 'hire-dialog.tsx');
 const SHARED_ENTITIES_PATH = join(repoRoot, 'packages', 'shared-types', 'src', 'entities.ts');
-const MAIN_HANDLERS_PATH = join(repoRoot, 'apps', 'desktop', 'src', 'main', 'ipc', 'handlers.ts');
+// rowToCompany lives with the other row mappers since handlers.ts was split
+// by bounded context (audit 2026-10-07 P1-7).
+const MAIN_HANDLERS_PATH = join(
+  repoRoot,
+  'apps',
+  'desktop',
+  'src',
+  'main',
+  'ipc',
+  'handlers',
+  'mappers.ts',
+);
 
 const companySettingsSrc = readFileSync(COMPANY_SETTINGS_PATH, 'utf8');
 const switcherSrc = readFileSync(WORKSPACE_SWITCHER_PATH, 'utf8');

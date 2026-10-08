@@ -149,7 +149,7 @@ export interface SuggestItem {
 
 // ---------------------------------------------------------------------------
 // Handler map — the seam to the existing IPC handler functions registered
-// in `apps/desktop/src/main/ipc/handlers.ts`. We type each method exactly
+// in `apps/desktop/src/main/ipc/handlers/`. We type each method exactly
 // as the handler's argument + return contract so the dispatcher below is
 // fully type-checked.
 // ---------------------------------------------------------------------------

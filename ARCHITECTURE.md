@@ -167,7 +167,8 @@ Request/response and event streaming between main and renderer:
 
 **Key Files:**
 - `apps/desktop/src/main/ipc/register.ts` — Channel registration
-- `apps/desktop/src/main/ipc/handlers.ts` — Pure handler functions
+- `apps/desktop/src/main/ipc/handlers.ts` — Composes the pure handler modules
+- `apps/desktop/src/main/ipc/handlers/` — One handler module per bounded context (companies, employees, chat, tickets, schedule, planning, autonomy, extensions, settings, providers and data, operators and cloud, proactive and updater), plus the contract, dependency shapes, shared context and row mappers
 - `apps/desktop/src/preload/index.ts` — ContextBridge glue
 
 ### 6. Intelligence Package

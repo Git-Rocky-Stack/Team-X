@@ -175,7 +175,7 @@ These are non-negotiable. Violating them requires a design-doc amendment:
 ### File Organization
 
 - **Main process services**: one file per service in `src/main/services/`, factory pattern with dependency injection
-- **IPC handlers**: interface in `src/main/ipc/handlers.ts`, implementation per-domain, registration in `register-channels.ts`
+- **IPC handlers**: contract in `src/main/ipc/handlers/contract.ts`, one implementation module per bounded context in `src/main/ipc/handlers/`, composed by `src/main/ipc/handlers.ts`, registered in `src/main/ipc/register.ts`
 - **Renderer features**: one directory per feature in `src/renderer/src/features/`, co-located components
 - **Hooks**: one file per IPC domain in `src/renderer/src/hooks/`
 
