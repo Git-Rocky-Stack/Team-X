@@ -59,7 +59,53 @@ export function chunkText(text: string, options?: ChunkOptions): string[] {
     chunks.push(currentSentences.join(' '));
   }
 
-  return chunks;
+  // A "sentence" is only bounded by . ! ? — code, minified data or prose
+  // without terminal punctuation is one sentence of any length. Window those
+  // so no chunk exceeds the budget the embedding provider was sized for.
+  return chunks.flatMap((chunk) => splitToMaxChars(chunk, maxChars, overlapChars));
+}
+
+/**
+ * Split `text` into windows of at most `maxChars`, each overlapping the
+ * previous by about `overlapChars`. A window ends at the last whitespace in
+ * its second half when there is one, so words are kept whole; an unbroken
+ * run longer than that is cut at `maxChars`. Text within the limit is
+ * returned as is.
+ */
+export function splitToMaxChars(text: string, maxChars: number, overlapChars = 0): string[] {
+  if (maxChars <= 0) throw new RangeError(`maxChars must be positive, got ${maxChars}`);
+  if (text.length <= maxChars) return [text];
+  const overlap = Math.min(Math.max(0, overlapChars), Math.floor(maxChars / 2));
+  const windows: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + maxChars, text.length);
+    if (end < text.length) {
+      const breakAt = lastWhitespace(text, start + Math.floor(maxChars / 2), end);
+      if (breakAt > start) end = breakAt;
+    }
+    const window = text.slice(start, end).trim();
+    if (window.length > 0) windows.push(window);
+    if (end >= text.length) break;
+    // Step back by the overlap, but always make progress, and start the next
+    // window on a word boundary when one is near.
+    let next = Math.max(end - overlap, start + 1);
+    if (overlap > 0) {
+      const wordStart = text.indexOf(' ', next);
+      if (wordStart !== -1 && wordStart < end) next = wordStart + 1;
+    }
+    start = next;
+  }
+  return windows;
+}
+
+/** Index of the last whitespace character in [from, to), or -1. */
+function lastWhitespace(text: string, from: number, to: number): number {
+  for (let i = to - 1; i >= from; i--) {
+    const c = text.charCodeAt(i);
+    if (c === 32 || c === 10 || c === 9 || c === 13) return i;
+  }
+  return -1;
 }
 
 function splitSentences(text: string): string[] {

@@ -12,6 +12,8 @@
  * Phase 5 — M29 (Priority 2 enhancement).
  */
 
+import { splitToMaxChars } from './chunker.js';
+
 /**
  * Content type detection for adaptive chunking.
  */
@@ -384,6 +386,64 @@ export function calculateContentDensity(text: string): {
 export async function semanticChunk(
   text: string,
   options: SemanticChunkOptions = {},
+): Promise<Chunk[]> {
+  const chunks = await semanticChunkByStructure(text, options);
+  return capChunkSize(chunks, {
+    maxTokens: options.maxTokens ?? 512,
+    overlapTokens: options.overlapTokens ?? 64,
+    maxChunkTokens: options.maxChunkTokens ?? 2048,
+  });
+}
+
+/**
+ * Enforce `maxChunkTokens` as a hard ceiling. Structure-preserving chunking
+ * keeps a segment whole — a code fence, a paragraph, a file with no blank
+ * lines, minified JSON — however long it is, so a document without
+ * boundaries used to come back as one chunk of any size, which the embedding
+ * provider rejects or truncates. An oversized chunk is re-split with the
+ * fixed window at `maxTokens`; everything within the ceiling is untouched.
+ */
+function capChunkSize(
+  chunks: Chunk[],
+  limits: { maxTokens: number; overlapTokens: number; maxChunkTokens: number },
+): Chunk[] {
+  const maxChunkChars = limits.maxChunkTokens * CAP_CHARS_PER_TOKEN;
+  if (chunks.every((c) => c.content.length <= maxChunkChars)) return chunks;
+  const windowChars = Math.min(limits.maxTokens, limits.maxChunkTokens) * CAP_CHARS_PER_TOKEN;
+  const out: Chunk[] = [];
+  for (const chunk of chunks) {
+    if (chunk.content.length <= maxChunkChars) {
+      out.push({ ...chunk, index: out.length });
+      continue;
+    }
+    let cursor = 0;
+    for (const piece of splitToMaxChars(
+      chunk.content,
+      windowChars,
+      limits.overlapTokens * CAP_CHARS_PER_TOKEN,
+    )) {
+      const at = chunk.content.indexOf(piece, cursor);
+      const offset = at === -1 ? cursor : at;
+      cursor = offset + 1;
+      out.push({
+        ...chunk,
+        content: piece,
+        tokens: Math.max(1, Math.ceil(piece.length / CAP_CHARS_PER_TOKEN)),
+        index: out.length,
+        startPos: chunk.startPos + offset,
+        endPos: chunk.startPos + offset + piece.length,
+      });
+    }
+  }
+  return out;
+}
+
+/** The char-per-token estimate the size ceiling is measured in. */
+const CAP_CHARS_PER_TOKEN = 4;
+
+async function semanticChunkByStructure(
+  text: string,
+  options: SemanticChunkOptions,
 ): Promise<Chunk[]> {
   const opts: Required<SemanticChunkOptions> = {
     maxTokens: 512,
