@@ -66,7 +66,9 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
   and then the release notes say so. Windows NSIS and macOS DMG builds are
   installed, launched and uninstalled in CI, every installer gets a
   build-provenance attestation, and an SPDX SBOM is attached. A manual dry
-  run publishes nothing; only a `v*` tag does. (P0-4)
+  run publishes nothing; only a `v*` tag does. v3.5.0 itself ships unsigned:
+  no signing credentials are configured yet, so the override is set and its
+  release notes say so. (P0-4)
 - **Every model call honours runtime profiles.** The agentic loop, its
   write-side tools and the Copilot analyzer built their own provider factory,
   so a runtime profile bound to those agents was ignored. They now resolve

@@ -82,7 +82,7 @@ The local GGUF engine was finished and given a home:
 - **Local model servers stay local.** A server you mark as local is checked at the moment Team-X connects, so a network name that changes its address after the check cannot redirect your data to the internet.
 - **Safer Hugging Face downloads.** File names that Windows treats as devices, redirects away from Hugging Face, files larger than announced, and too little disk space are all refused before anything is written. If the disk fills mid-download, the partial file is kept so you can resume.
 - **Faster start-up.** The app's start-up script is about a sixth of its old size, each screen loads the first time you open it, and the monospace font is 59 KB instead of 984 KB.
-- **Checked installers.** Before a release publishes, each Windows and macOS installer is installed, launched and uninstalled automatically, and its signature is verified. Each download comes with a provenance attestation and a software bill of materials (SBOM).
+- **Checked installers.** Before a release publishes, each Windows and macOS installer is installed, launched and uninstalled automatically. Each download comes with a provenance attestation and a software bill of materials (SBOM). v3.5.0 is not code-signed, so your operating system warns before running it; check your download against `SHA256SUMS.txt` or its attestation.
 
 ### Preview features are labelled
 

@@ -1,5 +1,5 @@
 /**
- * IPC handlers — Ticket attachments: attach, list, open and remove files.
+ * IPC handlers — Ticket attachments: attach, list and remove files.
  * Split from tickets.ts (audit 2026-10-07 P1-7).
  */
 
