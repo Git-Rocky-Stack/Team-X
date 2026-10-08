@@ -37,7 +37,8 @@
     "audit:deps": "node scripts/check-dependency-audit.mjs",
     "autonomy:doctor": "node scripts/autonomy-doctor.mjs",
     "autonomy:benchmark": "pnpm -F @team-x/desktop autonomy:benchmark",
-    "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules"
+    "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules",
+    "clean:diagnose": "node scripts/clean-diagnose.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "~1.9.4",

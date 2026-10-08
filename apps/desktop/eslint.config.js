@@ -6,6 +6,11 @@
  *
  * Note: Type checking is done separately via `pnpm typecheck`.
  * ESLint focuses on code style, best practices, and common errors.
+ *
+ * A full uncached run takes under a minute. To see where the time goes, run
+ * with ESLint's rule timing on: `TIMING=15 pnpm lint:eslint` (PowerShell:
+ * `$env:TIMING=15; pnpm lint:eslint`). import/no-cycle dominated at 94% of
+ * two minutes before the import settings below (audit 2026-10-07 P3-1).
  */
 
 import js from '@eslint/js';
@@ -122,11 +127,37 @@ export default [
     plugins: {
       import: importPlugin,
     },
+    // Without a TypeScript parser and resolver, import/* rules could not read
+    // a dependency (`./x.js` → x.ts, TS syntax), so import/no-cycle found no
+    // cycle while spending ~94% of the lint run walking node_modules
+    // (audit 2026-10-07 P3-1). With both, it sees the real graph in seconds.
+    settings: {
+      'import/parsers': { '@typescript-eslint/parser': ['.ts', '.tsx'] },
+      'import/extensions': ['.ts', '.tsx', '.js', '.mjs'],
+      'import/resolver': {
+        typescript: {
+          project: [
+            './tsconfig.main.json',
+            './tsconfig.preload.json',
+            './tsconfig.renderer-test.json',
+            './tsconfig.e2e.json',
+          ],
+        },
+      },
+    },
     rules: {
       'import/order': [
         'warn',
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+          // Keep the order this codebase settled on before imports resolved:
+          // workspace packages sort with npm packages, and the renderer's `@/`
+          // alias sorts last.
+          pathGroups: [
+            { pattern: '@team-x/**', group: 'external' },
+            { pattern: '@/**', group: 'unknown' },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
           distinctGroup: false,
@@ -134,7 +165,7 @@ export default [
       ],
       'import/no-duplicates': 'warn',
       'import/no-unresolved': 'off', // TypeScript handles this better
-      'import/no-cycle': 'warn',
+      'import/no-cycle': ['warn', { ignoreExternal: true }],
       'import/no-self-import': 'error',
       'import/no-useless-path-segments': 'warn',
     },
