@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 // @ts-expect-error — .mjs script with implicit module resolution; vitest resolves at runtime.
 import {
+  MIN_CLAIMS,
   applyAllowlist,
   assertClaimsParsed,
   filterByStagedDiff,
@@ -130,8 +131,18 @@ describe('assertClaimsParsed', () => {
     expect(() => assertClaimsParsed(0)).toThrow(/zero claims/);
   });
 
-  it('accepts a non-empty claim set', () => {
-    expect(() => assertClaimsParsed(1)).not.toThrow();
+  it('accepts a claim set at or above the floor', () => {
+    expect(() => assertClaimsParsed(MIN_CLAIMS)).not.toThrow();
+    expect(() => assertClaimsParsed(MIN_CLAIMS + 50)).not.toThrow();
+  });
+
+  // Audit 2026-10-07 P1-4: a format drift that drops most rows (not all) must
+  // fail too. The floor sits just under today's 226 parsed claims, so losing
+  // a table section trips it while ordinary churn does not.
+  it('throws when a format drift silently drops most of the claims', () => {
+    expect(MIN_CLAIMS).toBeGreaterThanOrEqual(200);
+    expect(() => assertClaimsParsed(MIN_CLAIMS - 1)).toThrow(/below the floor/);
+    expect(() => assertClaimsParsed(40)).toThrow(/below the floor/);
   });
 });
 

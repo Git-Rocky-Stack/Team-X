@@ -142,11 +142,25 @@ export function parseEndpointChannels(text) {
  * "0 verified … out of 0" and exits 0 — indistinguishable from a pass — which
  * is how this check went silent after CLAUDE.md dropped its IPC table.
  */
-export function assertClaimsParsed(count) {
+/**
+ * Minimum number of claims a healthy parse yields (226 on 2026-10-08). A doc
+ * that changes shape usually drops a whole table, not every row, so a bare
+ * "more than zero" check would still pass a gate that verifies a fraction of
+ * the surface. Raise this when the claim set grows; lower it only alongside
+ * a deliberate removal of documented channels.
+ */
+export const MIN_CLAIMS = 200;
+
+export function assertClaimsParsed(count, min = MIN_CLAIMS) {
   if (!(count > 0)) {
     throw new Error(
       'parsed zero claims from CLAUDE.md and API_ENDPOINTS.md — a source doc changed shape, ' +
         'and a gate that verifies nothing must not pass',
+    );
+  }
+  if (count < min) {
+    throw new Error(
+      `parsed ${count} claims, below the floor of ${min} — a source doc likely changed shape and dropped a table; fix the parser or the doc (or lower MIN_CLAIMS with the removal)`,
     );
   }
 }

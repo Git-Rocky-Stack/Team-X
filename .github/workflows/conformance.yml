@@ -58,8 +58,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run claim-evidence audit (allowlist applied)
-        run: pnpm audit:claims
+      # Strict: the allowlist is empty and must stay that way, so a new
+      # undocumented gap fails here instead of being quietly allowlisted.
+      - name: Run claim-evidence audit (strict)
+        run: pnpm audit:claims:strict
 
       - name: Re-run in JSON mode for CI summary
         if: always()
