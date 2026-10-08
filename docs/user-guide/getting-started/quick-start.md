@@ -28,37 +28,39 @@ Team-X is your AI-powered workforce desktop application. Hire AI employees with 
    - **Windows 10/11:** Download `Team-X-<version>-Setup-x64.exe`
    - **macOS 11+ (Intel):** Download `Team-X-<version>-x64.dmg`
    - **macOS 11+ (Apple Silicon):** Download `Team-X-<version>-arm64.dmg`
-   - **Linux:** Download `Team-X-<version>-x64.AppImage` (or `Team-X-<version>-x64.deb`, see the FUSE note below)
+   - **Linux:** Download `Team-X-<version>-x86_64.AppImage` (or `Team-X-<version>-amd64.deb`)
 
 ### Install
 
 **Windows:**
 ```
-Double-click Team-X-Setup-windows-x64.exe
+Double-click Team-X-<version>-Setup-x64.exe
 → Click "Install" → Wait for installation → Click "Finish"
 ```
 
 **macOS:**
 ```
-Double-click Team-X-Setup-macos-*.dmg
+Double-click Team-X-<version>-x64.dmg (Intel) or Team-X-<version>-arm64.dmg (Apple Silicon)
 → Drag Team-X to Applications folder
 → Open Launchpad → Click Team-X
 ```
 
 **Linux (AppImage):**
 ```
-chmod +x Team-X-<version>-x64.AppImage
-./Team-X-<version>-x64.AppImage
+chmod +x Team-X-<version>-x86_64.AppImage
+./Team-X-<version>-x86_64.AppImage
 ```
 
-> **AppImage won't start?** The AppImage runtime needs **FUSE 2**, which modern Ubuntu no longer installs by default (24.04 renamed the package to `libfuse2t64`). Pick either path:
+> **No extra packages needed.** From the release after v3.4.0, the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop as is.
 >
-> - **No install (quickest):** `./Team-X-<version>-x64.AppImage --appimage-extract-and-run`
+> **On v3.4.0 or earlier**, the AppImage needs **FUSE 2**, which modern Ubuntu no longer installs by default (24.04 renamed the package to `libfuse2t64`). Pick either path:
+>
+> - **No install (quickest):** `./Team-X-<version>-x86_64.AppImage --appimage-extract-and-run`
 > - **Install FUSE 2 once:** Ubuntu 24.04 → `sudo apt install libfuse2t64` · Ubuntu 22.04 / Debian → `sudo apt install libfuse2` · Fedora → `sudo dnf install fuse-libs`
 
 **Linux (.deb, no FUSE required):**
 ```
-sudo apt install ./Team-X-<version>-x64.deb
+sudo apt install ./Team-X-<version>-amd64.deb
 ```
 
 ### First Launch

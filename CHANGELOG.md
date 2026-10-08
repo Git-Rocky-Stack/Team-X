@@ -209,6 +209,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Linux AppImage no longer needs FUSE 2** (#16, following #4). The
+  legacy electron-builder toolset embedded an AppImage runtime that
+  `dlopen()`s `libfuse.so.2`. Ubuntu 22.04+ no longer installs it, so a stock
+  desktop could not start the AppImage. `toolsets.appimage: "1.0.2"` in
+  `apps/desktop/electron-builder.yml` embeds AppImage's static-pie
+  type2-runtime instead, which has no shared-library dependencies and mounts
+  through the stock `fusermount3`.
+  - Verified on a host with zero `libfuse.so.2`: the image self-mounts and
+    boots headlessly.
+  - `release.yml` now proves the same before publishing. It removes FUSE 2,
+    installs only `fuse3`, asserts the runtime is statically linked, then
+    mounts and boots the image.
+  - The README, BUILD_GUIDE, quick start and FAQ drop the FUSE 2 install step
+    for new releases, keep it for v3.4.0 and earlier, and now give the real
+    installer file names (`x86_64.AppImage`, `amd64.deb`, `-Setup-x64.exe`).
+
 - **Review of this branch (`/review`, Stage 2).** Ten findings. Each one was
   reproduced or confirmed against the code and fixed with a test that fails
   on the previous code:

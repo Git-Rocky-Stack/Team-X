@@ -6,18 +6,32 @@
 
 [![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-4%2C252%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-4%2C463%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
 
-[Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
+[Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [What's New](docs/user-guide/whats-new.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
 ![Team-X Mission Control — Night Ops](docs/media/hero-night-ops.png)
 
 *Mission Control in **Night Ops**. The whole app is built on the Command Console design system — brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
 
 </div>
+
+---
+
+## What's new
+
+The next release (in review in [#39](https://github.com/Git-Rocky-Stack/Team-X/pull/39)) is about trust: every setting now does what its label says.
+
+- **Enforced privacy tiers.** Every model call, embedding and external runtime is checked against Settings → Privacy. A provider above the tier is refused with a reason and is never silently swapped.
+- **Copilot grounded in your company's knowledge**, with long-term memory and a knowledge graph that survive restarts.
+- **The Models tab.** Run GGUF models locally, browse Hugging Face, and connect LAN model servers.
+- **A palette that understands commands**, plus meeting minutes that file action items, a Hire dialog with all 55 roles, and a per-company Proactive Mode that works.
+- **A Linux AppImage with no FUSE 2 requirement.**
+
+Full release notes: **[What's New](docs/user-guide/whats-new.md)**.
 
 ---
 
@@ -108,11 +122,11 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 | Platform | File | Architecture |
 |----------|------|--------------|
-| Windows | `Team-X-Setup-x.x.x.exe` | x64, arm64 |
-| macOS | `Team-X-x.x.x.dmg` | x64 (Intel), arm64 (Apple Silicon) |
-| Linux | `Team-X-x.x.x.AppImage` / `.deb` | x64 |
+| Windows | `Team-X-x.x.x-Setup-x64.exe` / `Team-X-x.x.x-Setup-arm64.exe` | x64, arm64 |
+| macOS | `Team-X-x.x.x-x64.dmg` / `Team-X-x.x.x-arm64.dmg` | x64 (Intel), arm64 (Apple Silicon) |
+| Linux | `Team-X-x.x.x-x86_64.AppImage` / `Team-X-x.x.x-amd64.deb` | x64 |
 
-> **Linux AppImage note:** the AppImage runtime requires **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If the AppImage won't start, either install that package or run `./Team-X-x.x.x-x64.AppImage --appimage-extract-and-run`. The `.deb` needs no FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-x64.deb`).
+> **Linux AppImage note:** releases after v3.4.0 embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
 
 ### From Source
 
@@ -216,7 +230,7 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
-| Unit tests | Vitest (4,252 tests / 334 files) |
+| Unit tests | Vitest (4,463 tests / 354 files) |
 | E2E tests | Playwright (19 specs / 26 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
@@ -310,7 +324,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **4,252 unit tests** across 334 files and **19 Playwright E2E specs** (26 cases):
+Team-X ships with **4,463 unit tests** across 354 files and **19 Playwright E2E specs** (26 cases):
 
 | Spec | Coverage |
 |------|----------|

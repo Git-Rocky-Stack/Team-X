@@ -39,13 +39,16 @@ pnpm dist:mac      # macOS DMG (x64 Intel + arm64 Apple Silicon)
 pnpm dist:linux    # Linux AppImage + .deb (x64)
 ```
 
-Output lands in `dist/` as `Team-X Setup <version>.exe`, `Team-X-<version>.dmg` /
-`Team-X-<version>-arm64.dmg`, and `Team-X-<version>-x64.AppImage` / `.deb`.
+Output lands in `release/<version>/` as `Team-X-<version>-Setup-x64.exe` /
+`-Setup-arm64.exe`, `Team-X-<version>-x64.dmg` / `-arm64.dmg`, and
+`Team-X-<version>-x86_64.AppImage` / `Team-X-<version>-amd64.deb`.
 
-> **Linux AppImage note:** the AppImage runtime requires **FUSE 2** on the host
-> (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If it won't
-> start, install that package or run it with `--appimage-extract-and-run`. The
-> `.deb` needs no FUSE and resolves its own dependencies. No `.rpm` is produced.
+> **Linux AppImage note:** the AppImage embeds AppImage's static type2-runtime
+> (`toolsets.appimage: "1.0.2"` in `apps/desktop/electron-builder.yml`), so it
+> needs no FUSE 2 library on the host; it mounts through the `fusermount3` that
+> stock Ubuntu / Fedora desktops ship (#16). `--appimage-extract-and-run` still
+> works as a fallback where FUSE is unavailable (some containers). The `.deb`
+> needs no FUSE and resolves its own dependencies. No `.rpm` is produced.
 
 ## Verification before distributing
 

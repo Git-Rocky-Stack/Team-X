@@ -22,6 +22,7 @@
 
 **Core Documentation:**
 - Comprehensive User Guide: docs/user-guide/comprehensive-user-guide.md
+- What's New (release notes): docs/user-guide/whats-new.md
 - FAQ: docs/user-guide/faq.md
 - Troubleshooting: docs/user-guide/troubleshooting.md
 
@@ -61,6 +62,7 @@ docs/
 │   │   └── README.md
 │   ├── video-scripts/                       # Video tutorial scripts
 │   │   └── README.md
+│   ├── whats-new.md                         # Release notes
 │   ├── faq.md                               # Frequently asked questions
 │   ├── troubleshooting.md                    # Common issues and solutions
 │   ├── glossary.md                          # 200+ term glossary

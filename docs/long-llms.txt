@@ -26,7 +26,7 @@ Team-X is a desktop application (Electron + React) that provides an AI-powered w
 - **Curated Employee Roles:** Pre-configured AI agents with specialized skills, personalities, and work styles
 - **Autonomous Collaboration:** Agents work together, participate in ticket threads, and coordinate without human intervention
 - **Budget Governance:** Multi-layer budget controls (monthly caps, per-ticket limits, approval workflows)
-- **Provider Flexibility:** 9 provider kinds (Ollama, Anthropic, OpenAI, Google, OpenRouter, Groq, Together, Fireworks, OpenAI-compatible) filtered by privacy tier, plus a Models tab for native GGUF models
+- **Provider Flexibility:** 9 provider kinds (Ollama, Anthropic, OpenAI, Google, OpenRouter, Groq, Together, Fireworks, OpenAI-compatible) with the privacy tier enforced on every call, plus a Models tab for native GGUF models
 - **Multi-Workspace:** Manage multiple companies/clients with data isolation and shared policies
 - **Complete Oversight:** Mission Control Dashboard shows all activity, Copilot provides proactive insights
 
@@ -733,6 +733,11 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 - Enhanced AI: active whenever RAG is enabled with an embedding provider; grounds Copilot answers (`search_company_knowledge`); long-term memory and knowledge graph persist in SQLite (migration 0037)
 - RAG ranks in-process by cosine similarity: exact per company, IVF approximate index at 4,096+ vectors (no sqlite-vec)
 - Settings → Paperclip Import (preview + save as package for Portability) and Settings → Private Operator Access (read-only decision record; opens no listener)
+- Privacy tiers enforced: every model call, embedding and external runtime (Codex / Claude Code / Cursor / command = Proprietary Cloud; HTTP = Local only on the local network) is checked at call time; a provider above the tier is refused with a reason, never swapped
+- Command palette classifies with the system agent's model (15 s timeout, budget-aware, recorded as runs); meeting minutes summarise and file action items as tickets; Hire dialog lists all 55 roles; per-company Proactive Mode; Installed Extensions panel (disable / remove MCP servers and skills)
+- Linux AppImage embeds the static type2-runtime: no FUSE 2 needed on the host
+- Removed: the `team-x-ai` CLI (fabricated output) and the Streaming / Planning / Max Tokens / Temperature Enhanced AI settings
+- Release notes: docs/user-guide/whats-new.md
 
 **v3.4.0** (2026-07-11) — current release
 - Command Console / Carbon Pro design system across every renderer surface — dual-shift Night Ops + Day Shift
