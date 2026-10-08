@@ -345,9 +345,9 @@ Channel naming: `namespace.verb` (e.g., `vault.upload`, `meetings.call`).
 
 ## Process Safeguards
 
-> Phase 5.6 M-E shipped a six-point safeguard suite (S1–S6) that catches CLAUDE.md/reality drift before it merges. Drift was allowed to accumulate for 10+ milestones before the M-A conformance audit ([`docs/audits/2026-04-17-conformance-audit.md`](docs/audits/2026-04-17-conformance-audit.md)) caught it; the safeguards make the same drift impossible to recur.
+> Phase 5.6 M-E shipped a six-point safeguard suite (S1–S6) that catches CLAUDE.md/reality drift before it merges. Drift was allowed to accumulate for 10+ milestones before the M-A conformance audit ([`docs/audits/2026-04-17-conformance-audit.md`](https://github.com/Git-Rocky-Stack/Team-X/blob/6f6a50d8f93433728fc92e2e483bf3b1b35bcb24/docs/audits/2026-04-17-conformance-audit.md)) caught it; the safeguards make the same drift impossible to recur.
 >
-> Plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](docs/plans/2026-04-17-team-x-phase-5.6-remediation.md) §7.
+> Plan: [`docs/plans/2026-04-17-team-x-phase-5.6-remediation.md`](https://github.com/Git-Rocky-Stack/Team-X/blob/e7c99322461d249310a9e9ed1782e32e579a31cd/docs/plans/2026-04-17-team-x-phase-5.6-remediation.md) §7.
 
 | ID | Safeguard | Lives at | Enforcement |
 |---|---|---|---|

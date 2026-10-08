@@ -237,4 +237,3 @@ Before Phase 4 development starts:
 ## Gate Summary
 
 This branch is close, and it is materially stronger than the prior gate because the full Electron suite is green. It is not yet clean enough to enter the next phase without risk. The two P1 items are exactly the kind of issues that get harder to isolate once more dashboard/runtime work lands on top.
-

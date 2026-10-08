@@ -476,10 +476,10 @@ Automate recurring work:
 
 ### Documentation
 
-- **Comprehensive User Guide:** [Full documentation](./comprehensive-user-guide.md)
-- **Real-World Scenarios:** [Learn by example](./scenarios/)
-- **Troubleshooting:** [Common issues](./troubleshooting.md)
-- **FAQ:** [Frequently asked questions](./faq.md)
+- **Comprehensive User Guide:** [Full documentation](../comprehensive-user-guide.md)
+- **Real-World Scenarios:** [Learn by example](../scenarios/)
+- **Troubleshooting:** [Common issues](../troubleshooting.md)
+- **FAQ:** [Frequently asked questions](../faq.md)
 
 ### Support
 

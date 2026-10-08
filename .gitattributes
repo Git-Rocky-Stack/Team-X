@@ -16,3 +16,9 @@
 *.zip    binary
 *.gz     binary
 *.pdf    binary
+
+# Whitespace policy for `git diff --check` (CI Policy gates). Two trailing
+# spaces are a Markdown hard line break, and vendored license texts are kept
+# byte-for-byte as published.
+*.md whitespace=-blank-at-eol
+apps/desktop/src/renderer/src/assets/fonts/**/LICENSE.txt -whitespace

@@ -2360,7 +2360,7 @@ renderer hooks — out of scope).
 
 ### M33 — Copilot Service (periodic analyzer + proactive insights + ask-the-copilot) (2026-04-17)
 
-> **Status:** Complete (T0–T10, all 11 tasks shipped). Baseline: 1033 unit tests / 8 E2E specs → current: **1099 unit tests / 9 E2E specs** (10 Playwright cases) (+66 unit, +1 E2E). Plan: [`docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md`](docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
+> **Status:** Complete (T0–T10, all 11 tasks shipped). Baseline: 1033 unit tests / 8 E2E specs → current: **1099 unit tests / 9 E2E specs** (10 Playwright cases) (+66 unit, +1 E2E). Plan: [`docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md`](https://github.com/Git-Rocky-Stack/Team-X/blob/e7c99322461d249310a9e9ed1782e32e579a31cd/docs/plans/2026-04-16-team-x-phase-5-m33-copilot-service.md).
 
 #### Added
 - **`system-copilot` pseudo-employee** — second `is_system = 1` row per company alongside M31's `system-agent`. Hidden from `employees.list`, `orgchart.get`, hire dialog, delegation pickers, and meeting attendees by the same `level: 'system'` + `is_system = 1` filter sweep. Owns the Copilot Conversations thread for `copilot.ask`. NEW role card `role-packs/strategia-official/roles/system/system-copilot.md` (117 lines, level: system, `tools_allowed: [query_employees, query_tickets, query_projects, query_meetings, query_vault, query_events, query_copilot_insights]`, `tools_denied: [decompose_project, delegate_subtask, review_deliverable, shell, filesystem, network, send_message_to_colleague]`, `decision_authority: advisory`). NEW `packages/shared-types/src/roles.ts` exports `SYSTEM_AGENT_ROLE_ID` + `SYSTEM_COPILOT_ROLE_ID` + `SYSTEM_ROLE_IDS` tuple + `isSystemRoleId()` predicate. `ensureSystemCopilot(companyId)` bootstrap called inline after `ensureSystemAgent` from `seedIfEmpty`. `SeedResult` gains `systemCopilotId`
@@ -2399,7 +2399,7 @@ renderer hooks — out of scope).
 
 ### M32 — Task Planner (write-side) (2026-04-15)
 
-> **Status:** Complete (T0–T10, all 11 tasks shipped, completed 2026-04-16). Baseline: 958 unit tests / 7 E2E → current: 1033 unit tests / 8 E2E (+75 unit, +1 E2E). Plan: [`docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md`](docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md).
+> **Status:** Complete (T0–T10, all 11 tasks shipped, completed 2026-04-16). Baseline: 958 unit tests / 7 E2E → current: 1033 unit tests / 8 E2E (+75 unit, +1 E2E). Plan: [`docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md`](https://github.com/Git-Rocky-Stack/Team-X/blob/e7c99322461d249310a9e9ed1782e32e579a31cd/docs/plans/2026-04-15-team-x-phase-5-m32-task-planner.md).
 
 #### Added
 - **Three write-side agentic tools** in `apps/desktop/src/main/services/agentic-tools-write.ts`:
@@ -2441,7 +2441,7 @@ renderer hooks — out of scope).
 
 ### M31 — Agentic Loop (read-side) (2026-04-15)
 
-> **Status:** 9 of 11 tasks shipped (T0–T8). T9 (this docs commit) done. T10 (verification + milestone marker) pending. Baseline: 819 unit tests / 7 E2E → current: 958 unit tests / 8 E2E (+139 unit, +1 E2E). Plan: [`docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`](docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md).
+> **Status:** 9 of 11 tasks shipped (T0–T8). T9 (this docs commit) done. T10 (verification + milestone marker) pending. Baseline: 819 unit tests / 7 E2E → current: 958 unit tests / 8 E2E (+139 unit, +1 E2E). Plan: [`docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md`](https://github.com/Git-Rocky-Stack/Team-X/blob/e7c99322461d249310a9e9ed1782e32e579a31cd/docs/plans/2026-04-14-team-x-phase-5-m31-agentic-loop.md).
 
 #### Added
 - **System-agent pseudo-employee** — new `is_system` column on `employees` (migration 0010, partial index `idx_employees_system_by_company`), `role-packs/strategia-official/roles/system/system-agent.md` role card, `ensureSystemAgent(companyId)` bootstrap called from `seedIfEmpty`. Exactly one per company; filtered out of `employees.list`, `orgchart.get`, hire dialog, delegation pickers. Backing for every `complex_request` thread
