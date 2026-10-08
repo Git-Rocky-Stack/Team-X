@@ -61,8 +61,11 @@ describe('semanticChunk — markdown', () => {
 
     const chunks = await semanticChunk(text, { contentType: 'markdown' });
 
+    // The whole fence is one chunk, language tag included, so "the
+    // TypeScript example" can find it.
     const codeChunks = chunks.filter((c) => c.metadata.contentType === 'code');
-    expect(codeChunks.map((c) => c.content)).toEqual([code]);
+    expect(codeChunks.map((c) => c.content)).toEqual([`\`\`\`ts\n${code}\`\`\``]);
+    for (const c of chunks) expect(text.slice(c.startPos, c.endPos)).toBe(c.content);
 
     const joined = chunks.map((c) => c.content).join(' ');
     expect(joined).toContain('Install the dependencies first.');
@@ -78,7 +81,7 @@ describe('semanticChunk — markdown', () => {
     const chunks = await semanticChunk(text, { contentType: 'markdown' });
 
     expect(chunks.filter((c) => c.metadata.contentType !== 'code').length).toBeGreaterThan(1);
-    expect(chunks.some((c) => c.content === 'make release\n')).toBe(true);
+    expect(chunks.some((c) => c.content === '```sh\nmake release\n```')).toBe(true);
   });
 });
 

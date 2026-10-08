@@ -94,10 +94,14 @@ export interface Chunk {
   /** Chunk index */
   index: number;
 
-  /** Starting position in original text */
+  /**
+   * Start of the chunk in the original text. `content` is exactly
+   * `text.slice(startPos, endPos)`, so a chunk can be traced back to (and
+   * highlighted in) its source.
+   */
   startPos: number;
 
-  /** Ending position in original text */
+  /** End (exclusive) of the chunk in the original text. */
   endPos: number;
 
   /** Chunk metadata */
@@ -431,7 +435,7 @@ function capChunkSize(
         tokens: Math.max(1, Math.ceil(piece.length / CAP_CHARS_PER_TOKEN)),
         index: out.length,
         startPos: chunk.startPos + offset,
-        endPos: chunk.startPos + offset + piece.length,
+        endPos: Math.min(chunk.endPos, chunk.startPos + offset + piece.length),
       });
     }
   }
@@ -440,6 +444,19 @@ function capChunkSize(
 
 /** The char-per-token estimate the size ceiling is measured in. */
 const CAP_CHARS_PER_TOKEN = 4;
+
+/** `text.slice(start, end)` with surrounding whitespace removed, and its exact bounds. */
+function trimmedSpan(
+  text: string,
+  start: number,
+  end: number,
+): { content: string; start: number; end: number } {
+  let s = start;
+  let e = end;
+  while (s < e && /\s/.test(text[s] ?? '')) s++;
+  while (e > s && /\s/.test(text[e - 1] ?? '')) e--;
+  return { content: text.slice(s, e), start: s, end: e };
+}
 
 async function semanticChunkByStructure(
   text: string,
@@ -485,64 +502,66 @@ async function semanticChunkByStructure(
     return chunkMarkdownWithCodeBlocks(text, opts, counter, boundaries);
   }
 
-  // General semantic chunking for prose
+  // General semantic chunking for prose. Segments are contiguous slices of
+  // `text`, so a chunk is the exact source span from its first segment to
+  // its last; positions and content agree by construction.
   const chunks: Chunk[] = [];
-  const currentStart = 0;
   let chunkIndex = 0;
 
-  // Split by boundaries first
   const segments = splitByBoundaries(text, boundaries);
 
-  let currentSegments: string[] = [];
+  let current: Array<{ start: number; end: number }> = [];
   let currentLength = 0;
 
+  const spanOf = (parts: Array<{ start: number; end: number }>) =>
+    trimmedSpan(text, parts[0]?.start ?? 0, parts[parts.length - 1]?.end ?? 0);
+
   for (const segment of segments) {
-    const segmentLength = segment.content.length;
+    const segmentLength = segment.end - segment.start;
 
     // Check if adding this segment would exceed max chunk size
-    if (currentLength + segmentLength > maxChars && currentSegments.length > 0) {
-      // Create chunk from current segments
-      const content = currentSegments.join(' ');
-      const tokens = counter.count(content);
+    if (currentLength + segmentLength > maxChars && current.length > 0) {
+      const span = spanOf(current);
+      const tokens = counter.count(span.content);
 
       if (tokens >= opts.minChunkTokens) {
-        chunks.push({
-          content,
-          tokens,
-          boundaries: segment.boundaries,
-          index: chunkIndex++,
-          startPos: currentStart,
-          endPos: currentStart + content.length,
-          metadata: {
-            contentType: opts.contentType,
-            hasCode: false,
-            hasList: false,
-            hasTable: false,
-            hasHeading: false,
-          },
-        });
-
-        // Calculate overlap for next chunk
-        const overlapSegments: string[] = [];
-        let overlapLength = 0;
-
-        for (let i = currentSegments.length - 1; i >= 0; i--) {
-          const seg = currentSegments[i];
-          if (seg === undefined) continue;
-          const segLength = seg.length;
-          if (overlapLength + segLength > overlapChars) break;
-
-          overlapSegments.unshift(seg);
-          overlapLength += segLength + 1; // +1 for space
+        if (span.content.length > 0) {
+          chunks.push({
+            content: span.content,
+            tokens,
+            boundaries: segment.boundaries,
+            index: chunkIndex++,
+            startPos: span.start,
+            endPos: span.end,
+            metadata: {
+              contentType: opts.contentType,
+              hasCode: false,
+              hasList: false,
+              hasTable: false,
+              hasHeading: false,
+            },
+          });
         }
 
-        currentSegments = overlapSegments;
+        // Carry trailing segments forward as overlap for the next chunk.
+        const overlap: Array<{ start: number; end: number }> = [];
+        let overlapLength = 0;
+        for (let i = current.length - 1; i >= 0; i--) {
+          const part = current[i];
+          if (part === undefined) continue;
+          const partLength = part.end - part.start;
+          if (overlapLength + partLength > overlapChars) break;
+          overlap.unshift(part);
+          overlapLength += partLength;
+        }
+
+        current = overlap;
         currentLength = overlapLength;
       }
     }
 
-    currentSegments.push(segment.content);
-    currentLength += segmentLength + 1; // +1 for space
+    current.push({ start: segment.start, end: segment.end });
+    currentLength += segmentLength;
   }
 
   // Flush whatever remains.
@@ -554,22 +573,22 @@ async function semanticChunkByStructure(
   // caller saw an empty chunk list and indexed nothing, with no error. Short
   // tickets, chat messages and notes are exactly the content a workspace
   // indexes most, so the loss was both large and invisible.
-  if (currentSegments.length > 0) {
-    const content = currentSegments.join(' ').trim();
-    if (content.length > 0) {
-      const tokens = counter.count(content);
+  if (current.length > 0) {
+    const span = spanOf(current);
+    if (span.content.length > 0) {
+      const tokens = counter.count(span.content);
       const previous = chunks[chunks.length - 1];
 
       if (tokens >= opts.minChunkTokens || previous === undefined) {
         // Either it stands on its own, or it is the whole document — an
         // undersized document still has to be indexed.
         chunks.push({
-          content,
+          content: span.content,
           tokens,
           boundaries: [],
           index: chunkIndex++,
-          startPos: currentStart,
-          endPos: currentStart + content.length,
+          startPos: span.start,
+          endPos: span.end,
           metadata: {
             contentType: opts.contentType,
             hasCode: false,
@@ -579,11 +598,11 @@ async function semanticChunkByStructure(
           },
         });
       } else {
-        // Undersized tail with a predecessor: merge so the text survives.
-        const merged = `${previous.content} ${content}`.trim();
-        previous.content = merged;
-        previous.tokens = counter.count(merged);
-        previous.endPos = previous.startPos + merged.length;
+        // Undersized tail with a predecessor: extend it so the text survives.
+        const merged = trimmedSpan(text, previous.startPos, span.end);
+        previous.content = merged.content;
+        previous.tokens = counter.count(merged.content);
+        previous.endPos = merged.end;
       }
     }
   }
@@ -597,33 +616,24 @@ async function semanticChunkByStructure(
 function splitByBoundaries(
   text: string,
   boundaries: ChunkBoundary[],
-): Array<{ content: string; boundaries: ChunkBoundary[] }> {
+): Array<{ start: number; end: number; boundaries: ChunkBoundary[] }> {
   if (boundaries.length === 0) {
-    return [{ content: text, boundaries: [] }];
+    return [{ start: 0, end: text.length, boundaries: [] }];
   }
 
-  const segments: Array<{ content: string; boundaries: ChunkBoundary[] }> = [];
+  const segments: Array<{ start: number; end: number; boundaries: ChunkBoundary[] }> = [];
   let lastPos = 0;
 
   for (const boundary of boundaries) {
     if (boundary.position > lastPos) {
-      const segmentContent = text.slice(lastPos, boundary.position);
-      if (segmentContent.length > 0) {
-        segments.push({
-          content: segmentContent,
-          boundaries: [boundary],
-        });
-      }
+      segments.push({ start: lastPos, end: boundary.position, boundaries: [boundary] });
     }
-    lastPos = boundary.position;
+    lastPos = Math.max(lastPos, boundary.position);
   }
 
   // Add final segment
   if (lastPos < text.length) {
-    segments.push({
-      content: text.slice(lastPos),
-      boundaries: [],
-    });
+    segments.push({ start: lastPos, end: text.length, boundaries: [] });
   }
 
   return segments;
@@ -640,26 +650,28 @@ function chunkCodeOrData(
 ): Chunk[] {
   const chunks: Chunk[] = [];
   const lines = text.split('\n');
+  // Offset of each line in `text`, so a window is an exact source span.
+  const lineStarts: number[] = [];
+  for (let i = 0, at = 0; i < lines.length; i++) {
+    lineStarts.push(at);
+    at += (lines[i]?.length ?? 0) + 1;
+  }
+  const lineEnd = (i: number) => (lineStarts[i] ?? 0) + (lines[i]?.length ?? 0);
+
   const maxLines = Math.ceil(options.maxTokens / 10); // Rough line count
   // Overlap must leave at least one fresh line per window, or the buffer
   // never shrinks below `maxLines` and every later window keeps growing.
   const overlapLines = Math.max(0, Math.min(Math.ceil(options.overlapTokens / 10), maxLines - 1));
 
-  let currentLines: string[] = [];
-  // Leading lines of `currentLines` carried over as overlap from the previous
-  // chunk. They are already emitted, so a merge must not append them twice.
-  let carriedLines = 0;
+  // The window is lines [first, i]. Leading lines carried over as overlap
+  // from the previous chunk are already emitted, so a merge extends the
+  // previous chunk only past what it already covers.
+  let first = 0;
   let chunkIndex = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line !== undefined) {
-      currentLines.push(line);
-    }
-
-    if (currentLines.length >= maxLines || i === lines.length - 1) {
-      const content = currentLines.join('\n');
-      const tokens = counter.count(content);
+    if (i - first + 1 >= maxLines || i === lines.length - 1) {
+      const span = trimmedSpan(text, lineStarts[first] ?? 0, lineEnd(i));
       const previous = chunks[chunks.length - 1];
 
       // Same merge-or-keep rule as the prose flush in `semanticChunk`:
@@ -667,16 +679,17 @@ function chunkCodeOrData(
       // Discarding here dropped every short snippet or config file outright
       // and every short tail of a longer one, with no error to show for it.
       // A whitespace-only window has nothing to index and is never emitted.
-      if (content.trim().length > 0) {
+      if (span.content.length > 0) {
+        const tokens = counter.count(span.content);
         if (tokens >= options.minChunkTokens || previous === undefined) {
           // Either it stands on its own, or it is the whole document.
           chunks.push({
-            content,
+            content: span.content,
             tokens,
             boundaries: [],
             index: chunkIndex++,
-            startPos: 0, // Not tracking for code
-            endPos: content.length,
+            startPos: span.start,
+            endPos: span.end,
             metadata: {
               contentType: options.contentType,
               hasCode: true,
@@ -685,23 +698,19 @@ function chunkCodeOrData(
               hasHeading: false,
             },
           });
-        } else {
-          // Undersized with a predecessor: append only the lines it has not
-          // already seen, so the text survives without duplicating the overlap.
-          const fresh = currentLines.slice(carriedLines).join('\n');
-          if (fresh.trim().length > 0) {
-            const merged = `${previous.content}\n${fresh}`;
-            previous.content = merged;
-            previous.tokens = counter.count(merged);
-            previous.endPos = merged.length;
-          }
+        } else if (span.end > previous.endPos) {
+          // Undersized with a predecessor: extend it over the fresh lines,
+          // so the text survives without duplicating the overlap.
+          const merged = trimmedSpan(text, previous.startPos, span.end);
+          previous.content = merged.content;
+          previous.tokens = counter.count(merged.content);
+          previous.endPos = merged.end;
         }
       }
 
-      // Overlap. `slice(-0)` is `slice(0)` — the whole buffer — so zero
-      // overlap needs its own branch or every chunk re-carries all before it.
-      currentLines = overlapLines > 0 ? currentLines.slice(-overlapLines) : [];
-      carriedLines = currentLines.length;
+      // Overlap: the next window starts `overlapLines` back, but always past
+      // the start of this one.
+      first = overlapLines > 0 ? Math.max(first + 1, i + 1 - overlapLines) : i + 1;
     }
   }
 
@@ -720,39 +729,23 @@ async function chunkMarkdownWithCodeBlocks(
   const chunks: Chunk[] = [];
   let chunkIndex = 0;
 
-  // Find all code blocks
-  const codeBlockRegex = /```[a-z]*\n([\s\S]*?)```/g;
-  const codeBlocks: Array<{ start: number; end: number; content: string; language: string }> = [];
-
+  // Closed fences, with any info string (`ts`, `python3`, `c++`,
+  // `objective-c`). An unclosed fence stays prose, so its text is still kept.
+  const codeBlockRegex = /```[^\n`]*\n[\s\S]*?```/g;
+  const codeBlocks: Array<{ start: number; end: number }> = [];
   for (const match of text.matchAll(codeBlockRegex)) {
-    codeBlocks.push({
-      start: match.index,
-      end: match.index + match[0].length,
-      content: match[1] ?? '',
-      language: match[0].match(/```([a-z]*)/)?.[1] || 'text',
-    });
+    codeBlocks.push({ start: match.index, end: match.index + match[0].length });
   }
 
   // Split by code blocks
   let lastEnd = 0;
-  const segments: Array<{ content: string; isCode: boolean; boundaries: ChunkBoundary[] }> = [];
-
+  const segments: Array<{ start: number; end: number; isCode: boolean }> = [];
   for (const block of codeBlocks) {
-    // Add text before code block
-    if (block.start > lastEnd) {
-      const proseText = text.slice(lastEnd, block.start);
-      segments.push({ content: proseText, isCode: false, boundaries: [] });
-    }
-
-    // Add code block as single segment
-    segments.push({ content: block.content, isCode: true, boundaries: [] });
+    if (block.start > lastEnd) segments.push({ start: lastEnd, end: block.start, isCode: false });
+    segments.push({ start: block.start, end: block.end, isCode: true });
     lastEnd = block.end;
   }
-
-  // Add remaining text
-  if (lastEnd < text.length) {
-    segments.push({ content: text.slice(lastEnd), isCode: false, boundaries: [] });
-  }
+  if (lastEnd < text.length) segments.push({ start: lastEnd, end: text.length, isCode: false });
 
   // Prose between fences is chunked as plain prose. Passing the caller's
   // options through unchanged left `contentType` at 'markdown', which routed
@@ -760,21 +753,20 @@ async function chunkMarkdownWithCodeBlocks(
   // `RangeError: Maximum call stack size exceeded` on every markdown document.
   const proseOptions: SemanticChunkOptions = { ...options, contentType: 'prose' };
 
-  // Chunk each segment
   for (const segment of segments) {
     if (segment.isCode) {
+      // The whole fence, markers and language tag included: the tag is the
+      // best signal a retriever has for "the TypeScript example".
+      const body = text.slice(segment.start, segment.end);
       // An empty fence carries nothing worth embedding.
-      if (segment.content.trim().length === 0) continue;
-
-      // Code blocks stay intact
-      const tokens = counter.count(segment.content);
+      if (body.replace(/```[^\n`]*/g, '').trim().length === 0) continue;
       chunks.push({
-        content: segment.content,
-        tokens,
+        content: body,
+        tokens: counter.count(body),
         boundaries: [],
         index: chunkIndex++,
-        startPos: 0,
-        endPos: segment.content.length,
+        startPos: segment.start,
+        endPos: segment.end,
         metadata: {
           contentType: 'code',
           hasCode: true,
@@ -784,12 +776,15 @@ async function chunkMarkdownWithCodeBlocks(
         },
       });
     } else {
-      // Prose gets regular semantic chunking
-      const proseChunks = await semanticChunk(segment.content, proseOptions);
+      // Prose gets regular semantic chunking; shift its positions from the
+      // segment back into the document.
+      const proseChunks = await semanticChunk(text.slice(segment.start, segment.end), proseOptions);
       for (const chunk of proseChunks) {
         chunks.push({
           ...chunk,
           index: chunkIndex++,
+          startPos: segment.start + chunk.startPos,
+          endPos: segment.start + chunk.endPos,
           metadata: {
             ...chunk.metadata,
             contentType: options.contentType,

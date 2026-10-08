@@ -68,9 +68,11 @@ export function chunkText(text: string, options?: ChunkOptions): string[] {
 /**
  * Split `text` into windows of at most `maxChars`, each overlapping the
  * previous by about `overlapChars`. A window ends at the last whitespace in
- * its second half when there is one, so words are kept whole; an unbroken
- * run longer than that is cut at `maxChars`. Text within the limit is
- * returned as is.
+ * its second half when there is one, so words are kept whole. Text with no
+ * whitespace there (minified JSON, CJK, a long URL) ends after the last
+ * punctuation instead, so a key or value is not cut mid-token; only a run
+ * with neither is cut at `maxChars`, and never inside a surrogate pair.
+ * Text within the limit is returned as is.
  */
 export function splitToMaxChars(text: string, maxChars: number, overlapChars = 0): string[] {
   if (maxChars <= 0) throw new RangeError(`maxChars must be positive, got ${maxChars}`);
@@ -81,8 +83,14 @@ export function splitToMaxChars(text: string, maxChars: number, overlapChars = 0
   while (start < text.length) {
     let end = Math.min(start + maxChars, text.length);
     if (end < text.length) {
-      const breakAt = lastWhitespace(text, start + Math.floor(maxChars / 2), end);
+      const half = start + Math.floor(maxChars / 2);
+      const breakAt = lastWhitespace(text, half, end);
       if (breakAt > start) end = breakAt;
+      else {
+        const afterPunct = lastPunctuation(text, half, end);
+        if (afterPunct > start) end = afterPunct;
+        else if (isHighSurrogate(text.charCodeAt(end - 1)) && end - 1 > start) end -= 1;
+      }
     }
     const window = text.slice(start, end).trim();
     if (window.length > 0) windows.push(window);
@@ -90,6 +98,7 @@ export function splitToMaxChars(text: string, maxChars: number, overlapChars = 0
     // Step back by the overlap, but always make progress, and start the next
     // window on a word boundary when one is near.
     let next = Math.max(end - overlap, start + 1);
+    if (next < text.length && isLowSurrogate(text.charCodeAt(next))) next += 1;
     if (overlap > 0) {
       const wordStart = text.indexOf(' ', next);
       if (wordStart !== -1 && wordStart < end) next = wordStart + 1;
@@ -97,6 +106,24 @@ export function splitToMaxChars(text: string, maxChars: number, overlapChars = 0
     start = next;
   }
   return windows;
+}
+
+const PUNCTUATION = new Set([...',;:)]}>|/&?=、。，；：）」』']);
+
+/** Index just after the last punctuation character in [from, to), or -1. */
+function lastPunctuation(text: string, from: number, to: number): number {
+  for (let i = to - 1; i >= from; i--) {
+    if (PUNCTUATION.has(text[i] ?? '')) return i + 1;
+  }
+  return -1;
+}
+
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff;
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff;
 }
 
 /** Index of the last whitespace character in [from, to), or -1. */
