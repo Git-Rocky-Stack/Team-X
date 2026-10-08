@@ -238,7 +238,7 @@ Team-X/
 
 ## Documentation
 
-Team-X includes comprehensive documentation across 136 files:
+Team-X includes comprehensive documentation across 137 files:
 
 ### Getting Started
 - **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users
