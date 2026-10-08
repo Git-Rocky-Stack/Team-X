@@ -86,6 +86,8 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
   one module per bounded context under `main/ipc/handlers/`, and the
   3,700-line shared IPC contract into request shapes, channel map and bridge
   modules under `shared-types/src/ipc/`; every export stays where it was.
+  The 3,800-line main-process entry is now a 354-line boot sequence over
+  phase modules in `main/boot/`.
   Production source is capped at 800 lines (`pnpm audit:filesize`); longer
   files are listed with a reason and a cap that can only come down. A parity
   test now also holds the shared-types contract to the preload. (P1-7)

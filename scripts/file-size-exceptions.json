@@ -5,10 +5,6 @@
       "maxLines": 1964,
       "reason": "Declarative: one Drizzle table definition per entity. Splitting by table would scatter the relations drizzle-kit reads from one schema module."
     },
-    "apps/desktop/src/main/index.ts": {
-      "maxLines": 3773,
-      "reason": "Pending decomposition (in progress): the composition root moves its boot phases into main/boot/ so index.ts only sequences them."
-    },
     "apps/desktop/src/main/ipc/register.ts": {
       "maxLines": 1534,
       "reason": "Declarative: one ipcMain.handle binding per channel, held in parity with the preload, REQUEST_CHANNELS and the shared-types IpcContract by channel-parity.test.ts. Split candidate by the same bounded contexts as ipc/handlers/."

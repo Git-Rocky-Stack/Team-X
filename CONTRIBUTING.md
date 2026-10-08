@@ -176,6 +176,7 @@ These are non-negotiable. Violating them requires a design-doc amendment:
 ### File Organization
 
 - **Main process services**: one file per service in `src/main/services/`, factory pattern with dependency injection
+- **Main process boot**: `src/main/index.ts` only sequences the boot phases in `src/main/boot/`. Wire a new service in the phase that owns its bounded context, and keep handles the shutdown path needs on `runtime` (`boot/runtime-state.ts`)
 - **File size**: production source stays at or under 800 lines (`pnpm audit:filesize`, enforced in CI). Split a growing module by responsibility. A file that must be longer (a schema, a type union, static content) goes in [`scripts/file-size-exceptions.json`](scripts/file-size-exceptions.json) with a reason; its cap is a ratchet and may only come down.
 - **IPC handlers**: contract in `src/main/ipc/handlers/contract.ts`, one implementation module per bounded context in `src/main/ipc/handlers/`, composed by `src/main/ipc/handlers.ts`, registered in `src/main/ipc/register.ts`
 - **Renderer features**: one directory per feature in `src/renderer/src/features/`, co-located components
