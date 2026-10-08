@@ -30,6 +30,18 @@ export interface EmployeeLiveState {
   currentStream: string;
   lastThreadId: string | null;
   lastMessageId: string | null;
+  /**
+   * Why this employee's latest turn failed — a refusal (Settings → Privacy, a
+   * missing API key) or a provider error — until the next turn starts or the
+   * user dismisses it by sending again.
+   */
+  lastFailure?: EmployeeTurnFailure | null;
+}
+
+export interface EmployeeTurnFailure {
+  threadId: string;
+  error: string;
+  at: number;
 }
 
 export interface PendingDirectChatState {
@@ -147,6 +159,12 @@ export interface AppState {
   pendingDirectChats: Record<string, PendingDirectChatState>;
   /** Optional section to focus when Settings opens. */
   settingsFocusSection: SettingsSectionFocus | null;
+  /**
+   * A package path another panel has handed to the Portability import field
+   * (Paperclip Import's "Review & import in Portability"). Portability takes
+   * it into its own field and clears it.
+   */
+  portabilityImportRef: string | null;
   /** Incremented when another surface needs the Hire dialog to open. */
   hireDialogRequestNonce: number;
   /**
@@ -177,6 +195,9 @@ export interface AppState {
   setActiveTicketId: (ticketId: string | null) => void;
   setActiveMeetingId: (meetingId: string | null) => void;
   setSettingsFocusSection: (section: SettingsSectionFocus | null) => void;
+  /** Hand a package path to the Portability import and scroll Settings to it. */
+  stagePortabilityImport: (packageRef: string) => void;
+  clearPortabilityImportRef: () => void;
   openSettingsSection: (section: SettingsSectionFocus) => void;
   requestHireDialog: () => void;
   ackAnnunciator: (id: string, fingerprint: string) => void;
@@ -184,6 +205,8 @@ export interface AppState {
   dequeueQueuedDirectChatMessage: (employeeId: string) => string | null;
   setDirectChatStopping: (employeeId: string, isStopping: boolean) => void;
   setDirectChatAwaitingReply: (employeeId: string, awaitingReply: boolean) => void;
+  /** Dismiss the employee's last turn failure (the user is trying again). */
+  clearEmployeeFailure: (employeeId: string) => void;
   handleDashboardEvent: (event: DashboardEvent) => void;
 }
 
@@ -231,6 +254,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   copilotSidebarOpen: false,
   pendingDirectChats: {},
   settingsFocusSection: null,
+  portabilityImportRef: null,
   hireDialogRequestNonce: 0,
   ackedAnnunciators: {},
 
@@ -316,6 +340,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveTicketId: (ticketId) => set({ activeTicketId: ticketId }),
   setActiveMeetingId: (meetingId) => set({ activeMeetingId: meetingId }),
   setSettingsFocusSection: (section) => set({ settingsFocusSection: section }),
+  stagePortabilityImport: (packageRef) =>
+    set({ portabilityImportRef: packageRef, settingsFocusSection: 'portability' }),
+  clearPortabilityImportRef: () => set({ portabilityImportRef: null }),
   openSettingsSection: (section) =>
     set({
       activeView: 'settings',
@@ -370,6 +397,15 @@ export const useAppStore = create<AppState>((set, get) => ({
           ...prev,
           isStopping,
         }),
+      };
+    }),
+
+  clearEmployeeFailure: (employeeId) =>
+    set((state) => {
+      const prev = state.employeeLive[employeeId];
+      if (!prev?.lastFailure) return state;
+      return {
+        employeeLive: { ...state.employeeLive, [employeeId]: { ...prev, lastFailure: null } },
       };
     }),
 
@@ -436,16 +472,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       if (event.type === 'work.failed') {
-        // Same thread-matching logic as work.completed.
-        const payload = event.payload as { threadId?: string };
-        if (payload.threadId) {
-          for (const [empId, empState] of Object.entries(live)) {
-            if (empState.lastThreadId === payload.threadId) {
-              live[empId] = { ...empState, status: 'idle', currentStream: '' };
-              break;
-            }
-          }
-        }
+        const payload = event.payload as { threadId?: string; employeeId?: string; error?: string };
+        if (!payload.threadId) return state;
+        // Prefer the employee the payload names: a turn refused before it
+        // started (no work.started) never set `lastThreadId`. Fall back to
+        // the thread match for emitters that omit the employee.
+        const empId =
+          payload.employeeId ??
+          Object.entries(live).find(([, s]) => s.lastThreadId === payload.threadId)?.[0];
+        if (!empId) return state;
+        const prev = live[empId] ?? defaultLive();
+        live[empId] = {
+          ...prev,
+          status: 'idle',
+          currentStream: '',
+          lastFailure: {
+            threadId: payload.threadId,
+            error:
+              typeof payload.error === 'string' && payload.error.length > 0
+                ? payload.error
+                : 'The turn failed without a reason.',
+            at: Date.now(),
+          },
+        };
         return { employeeLive: live };
       }
 

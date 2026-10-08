@@ -443,7 +443,7 @@ export function createCommandService(deps: CommandServiceDeps): CommandService {
       };
 
       // Complex request: skip resolver + slot filler. CommandService.execute
-      // routes this to the M31 agentic-loop stub.
+      // starts an agentic-loop run (`agenticLoopStart`) with the raw text.
       if (normalizedIntentResult.intent === 'complex_request') {
         return {
           kind: 'ready',

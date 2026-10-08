@@ -32,6 +32,7 @@ import {
   useInstallCompanyTemplate,
 } from '@/hooks/use-company-portability.js';
 import { useOperatorInvites, useSharingReadiness } from '@/hooks/use-operators.js';
+import { useStagedPortabilityImport } from '@/hooks/use-staged-portability-import.js';
 import { ipc } from '@/lib/ipc.js';
 import { useAppStore } from '@/store/app-store.js';
 
@@ -191,6 +192,8 @@ export function PortabilitySection() {
   const [importNameDirty, setImportNameDirty] = useState(false);
   const [importSlugDirty, setImportSlugDirty] = useState(false);
   const [secretDrafts, setSecretDrafts] = useState<Record<string, string>>({});
+  // A package saved by Paperclip Import arrives here for review and import.
+  useStagedPortabilityImport(setPackageRef);
 
   const activeCompany = companies.find((company) => company.id === companyId) ?? null;
   const cloudLink = cloudLinkQuery.data ?? null;

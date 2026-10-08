@@ -187,12 +187,13 @@ Exit criteria:
 
 ### P2.3 Optional Private Operator Web/Mobile Access
 
-Status: **library only — not reachable from the app.** The policy module is
-written and unit-tested, but nothing in the main process constructs it: there
-is no IPC channel, no transport adapter, and no renderer surface. Verified
-2026-08-23 — `createPrivateOperatorAccessService` has zero importers outside
-its own test. This line previously read "shipped as the third P2 strategic
-differentiator slice", which is only true of the code, not of the product.
+Status: **shipped as an in-app read-only decision record.** The main process
+constructs `createPrivateOperatorAccessService` and serves it over
+`privateOperator.plan` / `privateOperator.snapshot`, and **Settings → Private
+Operator Access** renders the plan per workspace and exposure (Localhost /
+Tailscale / Hosted bridge), refusals included. Nothing opens a listener and no
+remote transport (local HTTP adapter or hosted bridge) exists yet, so the
+remote-supervision half of this slice remains future work.
 
 - Added `createPrivateOperatorAccessService` as the security policy and read-only Mission Control snapshot contract for optional private remote supervision.
 - The policy defaults to localhost-only access, refuses public bind hosts, keeps Tailscale/private tunnel guidance explicit, and returns machine-readable guardrails.
@@ -211,13 +212,12 @@ Exit criteria:
 
 ### P2.4 Paperclip Import Bridge
 
-Status: **library only — not reachable from the app.** The mapping functions
-are written and unit-tested, but nothing in the main process calls them: there
-is no `localGguf`-style IPC channel, no preload binding, and no button in
-Settings → Portability. Verified 2026-08-23 — `previewPaperclipImportBridge`
-and `loadPaperclipExportFolder` have zero importers outside their own test.
-This line previously read "shipped as the fourth P2 strategic differentiator
-slice", which is only true of the code, not of the product.
+Status: **shipped as an in-app preview that saves a package for Portability.**
+`paperclip.preview` and `paperclip.savePackage` back **Settings → Paperclip
+Import**: choose an export folder, review the preview, save it as a
+`.teamx-package.json`, then **Review & import in Portability** stages that file
+into the Portability import, which binds secrets and commits through
+`companies.importPackage`. The bridge itself never creates a workspace.
 
 - Added `loadPaperclipExportFolder` for conventional Paperclip export layouts split across company/workspace, agents, adapters, tasks, issues, and skills JSON files.
 - Added `previewPaperclipImportBridge` to map Paperclip exports into Team-X workspace package previews without mutating local state.

@@ -22,6 +22,7 @@ import {
   type AgenticLoopServiceDeps,
   type AgenticLoopThreadsRepo,
   SYSTEM_AGENT_ROLE_ID,
+  budgetsFromAgenticSettings,
   createAgenticLoopService,
 } from './agentic-loop-service.js';
 
@@ -1055,5 +1056,87 @@ describe('createAgenticLoopService', () => {
       const stateTrace = service.getRun(runId)?.traceId;
       expect(stateTrace).toBe(startedTrace);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Settings → Agentic Loop budgets reach the loop (audit P1)
+//
+// The three Settings rows (`agentic_max_steps` / `_max_tokens` /
+// `_timeout_ms`) used to be persisted and never read: the composition root
+// did not pass `getBudgets`, so every run used the package defaults. These
+// tests pin the settings → budgets mapping and that the service reads the
+// budgets afresh at each run start.
+// ---------------------------------------------------------------------------
+
+describe('Settings → Agentic Loop budgets', () => {
+  const TOOL_ONLY_SCRIPT = ['{"action":"test_tool","args":{}}'] as const;
+
+  /** Fixture whose provider never answers (always calls a tool) and counts calls. */
+  function buildCountingFixture(getBudgets: AgenticLoopServiceDeps['getBudgets']): {
+    fixture: Fixture;
+    calls: () => number;
+  } {
+    const fixture = buildFixture({ script: TOOL_ONLY_SCRIPT });
+    let count = 0;
+    const inner = fixture.deps.resolveComplete;
+    fixture.deps = {
+      ...fixture.deps,
+      getBudgets,
+      resolveComplete: async (args) => {
+        const resolved = await inner(args);
+        return {
+          ...resolved,
+          complete: (req) => {
+            count += 1;
+            return resolved.complete(req);
+          },
+        };
+      },
+    };
+    return { fixture, calls: () => count };
+  }
+
+  it('maps the UI "Max Steps" (tool turns) onto maxIterations and keeps the step-entry ceiling at its default', () => {
+    expect(budgetsFromAgenticSettings({ maxSteps: 5, maxTokens: 4096, timeoutMs: 30_000 })).toEqual(
+      {
+        maxIterations: 5,
+        maxSteps: 64,
+        maxTokens: 4096,
+        timeoutMs: 30_000,
+      },
+    );
+  });
+
+  it('caps a run at the configured number of tool turns (budget_iterations, not budget_steps)', async () => {
+    const { fixture, calls } = buildCountingFixture(() =>
+      budgetsFromAgenticSettings({ maxSteps: 3, maxTokens: 8000, timeoutMs: 5000 }),
+    );
+    const service = createAgenticLoopService(fixture.deps);
+    const { runId } = await service.start({ companyId: fixture.companyId, userText: 'loop' });
+    await service.waitForRun(runId);
+
+    const failed = fixture.bus.emitted.find((e) => e.type === 'agentic.failed');
+    expect((failed?.payload as { reason: string }).reason).toBe('budget_iterations');
+    expect(calls()).toBe(3);
+  });
+
+  it('reads the budgets at each run start so a settings change applies to the next run', async () => {
+    let configured = 2;
+    const getBudgets = vi.fn(() =>
+      budgetsFromAgenticSettings({ maxSteps: configured, maxTokens: 8000, timeoutMs: 5000 }),
+    );
+    const { fixture, calls } = buildCountingFixture(getBudgets);
+    const service = createAgenticLoopService(fixture.deps);
+
+    const first = await service.start({ companyId: fixture.companyId, userText: 'one' });
+    await service.waitForRun(first.runId);
+    expect(calls()).toBe(2);
+
+    configured = 4;
+    const second = await service.start({ companyId: fixture.companyId, userText: 'two' });
+    await service.waitForRun(second.runId);
+    expect(calls()).toBe(2 + 4);
+    expect(getBudgets).toHaveBeenCalledTimes(2);
   });
 });

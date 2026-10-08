@@ -50,6 +50,13 @@ export interface RagServiceOptions {
   dimension: number;
   repo: RagRepo;
   chunker?: ChunkOptions;
+  /**
+   * Replaces the built-in fixed-window chunker. The desktop app passes the
+   * semantic chunker here while Settings → Enhanced AI → Semantic Chunking is
+   * on; `chunker` options are ignored when this is set. Blank chunks are
+   * skipped.
+   */
+  chunk?: (content: string) => string[] | Promise<string[]>;
   now?: () => number;
   idGen?: () => string;
   /**
@@ -163,17 +170,28 @@ export function createRagService(opts: RagServiceOptions): RagService {
   /**
    * Per-company index, rebuilt whenever the company's vectors change.
    *
-   * `rowCount` is a cheap staleness guard, not the primary one — the write
-   * paths below drop the entry outright. It catches the case the write paths
-   * cannot see: rows changed by something other than this service instance.
+   * The write paths below drop the entry outright. `rowIds` catches what they
+   * cannot see: rows changed by something other than this service instance
+   * (another instance sharing the embeddings table). It must be the exact id
+   * set, not a count — a re-index swaps ids one-for-one, so the count holds
+   * steady while the cached layout stops covering the live rows.
    */
-  const annIndexes = new Map<string, { index: AnnIndex; rowCount: number }>();
+  const annIndexes = new Map<string, { index: AnnIndex; rowIds: ReadonlySet<string> }>();
+
+  /** True when `rowIds` is exactly the id set of `rows` (ids are unique). */
+  function coversExactly(rowIds: ReadonlySet<string>, rows: readonly RagEmbeddingRow[]): boolean {
+    if (rowIds.size !== rows.length) return false;
+    for (const row of rows) if (!rowIds.has(row.id)) return false;
+    return true;
+  }
 
   return {
     async indexSource(input: IndexSourceInput): Promise<number> {
       if (!input.content.trim()) return 0;
 
-      const chunks = chunkText(input.content, chunkerOpts);
+      const chunks = (
+        opts.chunk ? await opts.chunk(input.content) : chunkText(input.content, chunkerOpts)
+      ).filter((c) => c.trim().length > 0);
       if (chunks.length === 0) return 0;
 
       // Invalidate cache when indexing new content
@@ -242,14 +260,21 @@ export function createRagService(opts: RagServiceOptions): RagService {
       const queryVector = vectors[0];
       if (!queryVector) return [];
 
-      // Brute-force cosine similarity over the company's stored chunks.
+      // Rows of any other length (left behind by a different embedding model)
+      // are skipped on both paths: no cosine against the query means anything.
+      // The configured dimension wins over the query's when it is set, so a
+      // stray query from the wrong model returns nothing rather than garbage.
+      const dimension = opts.dimension > 0 ? opts.dimension : queryVector.length;
+      if (queryVector.length !== dimension) return [];
+
+      // Two ranking paths over the company's stored chunks: an exact
+      // brute-force cosine scan, and — once the corpus reaches
+      // `ann.minVectors` (and ANN is not disabled) — the in-process IVF index
+      // from `ann-index.ts`, which scans only the nearest partitions.
       //
-      // This is the only ranking path. An ANN branch that called
-      // `repo.similaritySearch` used to run ahead of it, but the sqlite-vec
-      // table it queried was never created (its migration was never
-      // journaled and the extension was never loaded), so it threw on every
-      // call and fell through to exactly this code. It was removed along
-      // with the `forceBruteForce` escape hatch that only existed to skip it.
+      // (The earlier sqlite-vec branch via `repo.similaritySearch` is gone:
+      // its table was never created, so it threw on every call and fell
+      // through to the scan. It was removed with its `forceBruteForce` hatch.)
       const rows = opts.repo.listByCompany(input.companyId);
       const exclude = new Set(input.excludeSourceIds ?? []);
 
@@ -259,14 +284,15 @@ export function createRagService(opts: RagServiceOptions): RagService {
         // Partitioned scan. Reuse the cached index when the corpus has not
         // moved; the rows themselves are re-read every call, so `contentText`
         // is always current even when the partition layout is not rebuilt.
+        // The id-set check is O(N), against O(N·D) for the scoring it guards.
         let cachedIndex = annIndexes.get(input.companyId);
-        if (!cachedIndex || cachedIndex.rowCount !== rows.length) {
+        if (!cachedIndex || !coversExactly(cachedIndex.rowIds, rows)) {
           cachedIndex = {
             index: buildAnnIndex(
               rows.map((row) => ({ id: row.id, vector: bufferToFloatArray(row.embedding) })),
-              { clusters: annOpts.clusters, seed: annOpts.seed ?? 0x5eed },
+              { clusters: annOpts.clusters, seed: annOpts.seed ?? 0x5eed, dimension },
             ),
-            rowCount: rows.length,
+            rowIds: new Set(rows.map((row) => row.id)),
           };
           annIndexes.set(input.companyId, cachedIndex);
         }
@@ -301,7 +327,9 @@ export function createRagService(opts: RagServiceOptions): RagService {
         const ranked: RetrievalHit[] = [];
         for (const row of rows) {
           if (exclude.has(row.sourceId)) continue;
-          const similarity = cosineSimilarity(queryVector, bufferToFloatArray(row.embedding));
+          const vector = bufferToFloatArray(row.embedding);
+          if (vector.length !== dimension) continue;
+          const similarity = cosineSimilarity(queryVector, vector);
           if (similarity < input.threshold) continue;
           ranked.push({
             sourceType: row.sourceType,

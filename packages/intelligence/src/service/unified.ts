@@ -38,6 +38,7 @@ import {
 
 import {
   type GraphQueryResult,
+  type KnowledgeGraphRepo,
   type KnowledgeGraphService,
   createInMemoryGraphRepo,
   createKnowledgeGraphService,
@@ -46,10 +47,14 @@ import {
 import {
   type ConversationSummary,
   type ExtractedFact,
+  type FactType,
+  type LongTermMemoryRepo,
   type LongTermMemoryService,
   createInMemoryMemoryRepo,
   createLongTermMemoryService,
 } from '../memory/index.js';
+
+import { parseModelJson } from './model-json.js';
 
 // Planning
 import { type ExecutionPlan, type PlanExecutor, createPlanExecutor } from '../loop/planning.js';
@@ -58,7 +63,12 @@ import { type ExecutionPlan, type PlanExecutor, createPlanExecutor } from '../lo
 import { type StreamChunk, accumulateStream } from '../streaming/index.js';
 
 // Observability
-import { type Span, type Tracer, createAgentTracer } from '../observability/index.js';
+import {
+  type Span,
+  type SpanKind,
+  type Tracer,
+  createAgentTracer,
+} from '../observability/index.js';
 
 /**
  * AI service configuration.
@@ -78,39 +88,58 @@ export interface AiServiceConfig {
      * will throw at call time.
      */
     repo?: RagRepo;
+    /**
+     * An existing RAG service to retrieve and index through, instead of
+     * building a second one over `repo`. A second instance carries its own
+     * query cache that writes through the first never invalidate, so content
+     * indexed elsewhere stays invisible for the cache TTL.
+     */
+    service?: RagService;
     topK?: number;
     threshold?: number;
     cacheTtl?: number;
-    enableRerank?: boolean;
     enableExpansion?: boolean;
   };
 
   /** Memory configuration */
   memory?: {
+    /**
+     * Storage for extracted facts and summaries. Defaults to an in-memory
+     * store, which forgets everything when the process exits — pass a
+     * persistent repo for memory that is actually long-term.
+     */
+    repo?: LongTermMemoryRepo;
     summarizationTrigger?: {
       minMessages?: number;
       maxMessages?: number;
       minTimeSpan?: number;
     };
     factExtraction?: {
+      /** Extracted facts below this confidence (0-1) are dropped. Default 0.7. */
       minConfidence?: number;
     };
   };
 
   /** Knowledge graph configuration */
   knowledge?: {
-    enableInference?: boolean;
+    /** Storage for graph nodes and edges. Defaults to an in-memory store. */
+    repo?: KnowledgeGraphRepo;
   };
 
   /** Planning configuration */
   planning?: {
     enablePlanning?: boolean;
+    /**
+     * Minimum query length (characters) before a query is planned when the
+     * caller does not pass `usePlan` itself. Default 0: plan every query.
+     */
     planningThreshold?: number;
   };
 
   /** Observability configuration */
   observability?: {
     enableTracing?: boolean;
+    /** Probability (0-1) that a query's trace is recorded. Default 1. */
     traceSampleRate?: number;
   };
 
@@ -202,6 +231,18 @@ export interface ServiceStats {
 }
 
 /**
+ * Grounding for a question, without an answer. See `AiService.retrieve`.
+ */
+export interface RetrieveResult {
+  /** Retrieved passages, best first. */
+  context: RetrievalHit[];
+  /** Remembered facts that bear on the question, most relevant first. */
+  facts: ExtractedFact[];
+  /** Knowledge-graph entities the question mentions, and their neighbours. */
+  related: Array<{ entity: string; relation: string }>;
+}
+
+/**
  * Main AI service interface.
  */
 export interface AiService {
@@ -237,6 +278,30 @@ export interface AiService {
       includeRelated?: boolean;
     },
   ): Promise<QueryResult>;
+
+  /**
+   * Assemble the grounding for a question — retrieved passages (after query
+   * expansion, when enabled), relevant remembered facts and knowledge-graph
+   * entities — without generating an answer.
+   *
+   * For callers that already own a model, such as an agent loop that should
+   * compose its own reply: `query` would spend a second model call on an
+   * answer the caller discards.
+   */
+  retrieve(
+    companyId: string,
+    query: string,
+    options?: {
+      topK?: number;
+      threshold?: number;
+      /** Include remembered facts. Default true; empty when memory is off. */
+      includeFacts?: boolean;
+      maxFacts?: number;
+      /** Include knowledge-graph entities. Default true; empty when the graph is off. */
+      includeRelated?: boolean;
+      maxRelated?: number;
+    },
+  ): Promise<RetrieveResult>;
 
   /**
    * Index content for retrieval.
@@ -295,7 +360,7 @@ export interface AiService {
   ): { path: string[]; edges: unknown[] } | null;
 
   /**
-   * Run evaluation on golden dataset.
+   * Run retrieval evaluation over a caller-supplied, labelled query set.
    */
   evaluate(dataset: EvalQuery[]): Promise<AggregatedMetrics>;
 
@@ -320,6 +385,68 @@ export interface AiService {
   getTracer(): Tracer | null;
 }
 
+const FACT_TYPES: ReadonlySet<FactType> = new Set<FactType>([
+  'preference',
+  'status',
+  'decision',
+  'relationship',
+  'event',
+  'metric',
+  'procedure',
+  'custom',
+]);
+
+/**
+ * Turn a model's fact-extraction reply into stored facts.
+ *
+ * The reply is untrusted shape: anything that is not an object with a
+ * non-empty `fact` string and a finite `confidence` is dropped rather than
+ * stored as a malformed row. An unknown `type` is kept as `custom`, and only
+ * string entities survive. Fields are copied explicitly so a reply cannot
+ * inject keys such as `id` or `companyId`.
+ */
+function toExtractedFacts(
+  parsed: unknown,
+  ctx: { companyId: string; sourceId: string },
+): ExtractedFact[] {
+  if (!Array.isArray(parsed)) return [];
+  const now = Date.now();
+  const facts: ExtractedFact[] = [];
+  for (const item of parsed) {
+    if (typeof item !== 'object' || item === null) continue;
+    const raw = item as Record<string, unknown>;
+    if (typeof raw.fact !== 'string' || raw.fact.trim().length === 0) continue;
+    if (typeof raw.confidence !== 'number' || !Number.isFinite(raw.confidence)) continue;
+    const type =
+      typeof raw.type === 'string' && FACT_TYPES.has(raw.type as FactType)
+        ? (raw.type as FactType)
+        : 'custom';
+    const entities = Array.isArray(raw.entities)
+      ? raw.entities.filter((e): e is string => typeof e === 'string' && e.trim().length > 0)
+      : [];
+    facts.push({
+      id: `fact_${now}_${Math.random().toString(36).slice(2)}`,
+      companyId: ctx.companyId,
+      sourceId: ctx.sourceId,
+      fact: raw.fact.trim(),
+      type,
+      confidence: Math.min(1, Math.max(0, raw.confidence)),
+      entities,
+      observedAt: now,
+      extractedAt: now,
+      accessCount: 0,
+      lastAccessedAt: now,
+    });
+  }
+  return facts;
+}
+
+/**
+ * Most query variants (the original plus expansions) retrieved per question.
+ * Each costs one embedding call and one ranking pass.
+ */
+const MAX_RETRIEVAL_VARIANTS = 4;
+
 /**
  * Create unified AI service.
  */
@@ -337,12 +464,37 @@ export function createAiService(config: AiServiceConfig): AiService {
 
   // Statistics
   const stats = {
-    rag: { totalRetrievals: 0, cacheHits: 0, cacheLookups: 0 },
+    rag: { totalRetrievals: 0, completedQueries: 0, totalLatencyMs: 0 },
     memory: { factsExtracted: 0, summariesCreated: 0 },
     knowledge: { queriesRun: 0 },
-    planning: { plansCreated: 0, plansExecuted: 0 },
-    observability: { spansCreated: 0 },
+    planning: { plansCreated: 0, plansExecuted: 0, totalSteps: 0 },
+    observability: { spansCreated: 0, activeRootSpans: 0 },
   };
+
+  // Held here as well as inside the memory service so `getStats` can count
+  // what is actually stored rather than what this process happened to extract.
+  const memoryRepo = config.memory?.repo ?? createInMemoryMemoryRepo();
+
+  /**
+   * Span helpers that also feed `getStats().observability`. Root (`server`)
+   * spans are the requests in flight, which is what "active traces" counts.
+   * Only spans the tracer's sampler kept are counted: a dropped trace was
+   * never recorded, so reporting it would overstate what was traced.
+   */
+  function startSpan(name: string, kind: SpanKind): Span | undefined {
+    if (!tracer) return undefined;
+    const span = tracer.startSpan(name, { kind });
+    if (span.context.sampled) {
+      stats.observability.spansCreated += 1;
+      if (kind === 'server') stats.observability.activeRootSpans += 1;
+    }
+    return span;
+  }
+  function endSpan(span: Span | undefined, kind: SpanKind): void {
+    if (!span) return;
+    if (kind === 'server' && span.context.sampled) stats.observability.activeRootSpans -= 1;
+    tracer?.endSpan(span);
+  }
 
   // Initialize
   async function initialize(): Promise<void> {
@@ -354,8 +506,10 @@ export function createAiService(config: AiServiceConfig): AiService {
       maxEntries: 1000,
     });
 
-    // Initialize RAG service if a repo is provided
-    if (config.rag?.repo) {
+    // Use the caller's RAG service when given; otherwise build one if a repo is provided
+    if (config.rag?.service) {
+      ragService = config.rag.service;
+    } else if (config.rag?.repo) {
       ragService = createRagService({
         embedText: config.embedding.embedText,
         dimension: config.embedding.dimension,
@@ -386,7 +540,7 @@ export function createAiService(config: AiServiceConfig): AiService {
     if (config.llm) {
       const llm = config.llm;
       memory = createLongTermMemoryService({
-        repo: createInMemoryMemoryRepo(),
+        repo: memoryRepo,
         summarizeFn: async (conv, _ctx) => {
           const response = await llm.complete(`
 Summarize this conversation in 2-3 sentences.
@@ -402,7 +556,11 @@ Respond with JSON:
   "entities": ["array of entities"]
 }
           `);
-          return JSON.parse(response);
+          return parseModelJson(response) as {
+            summary: string;
+            topics: string[];
+            entities: string[];
+          };
         },
         extractFactsFn: async (text, ctx) => {
           const response = await llm.complete(`
@@ -422,23 +580,13 @@ Respond with JSON array:
   }
 ]
           `);
-          const parsed = JSON.parse(response);
-          return parsed.map((f: ExtractedFact) => ({
-            ...f,
-            id: `fact_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-            companyId: ctx.companyId,
-            sourceId: ctx.sourceId,
-            observedAt: Date.now(),
-            extractedAt: Date.now(),
-            accessCount: 0,
-            lastAccessedAt: Date.now(),
-          }));
+          return toExtractedFacts(parseModelJson(response), ctx);
         },
         summarizationTrigger: config.memory?.summarizationTrigger,
       });
 
       knowledge = createKnowledgeGraphService({
-        repo: createInMemoryGraphRepo(),
+        repo: config.knowledge?.repo ?? createInMemoryGraphRepo(),
       });
     }
 
@@ -457,9 +605,13 @@ Respond with JSON array:
 
     // Initialize tracer
     if (config.observability?.enableTracing) {
+      // The tracer rejects a rate outside [0, 1]. A bad stored setting should
+      // cost tracing fidelity, not the whole service, so clamp it here.
+      const rate = config.observability.traceSampleRate;
       tracer = createAgentTracer({
         name: 'team-x-ai-service',
         version: '1.0.0',
+        sampleRate: rate === undefined || Number.isNaN(rate) ? 1 : Math.min(1, Math.max(0, rate)),
       });
     }
 
@@ -510,6 +662,79 @@ Respond with JSON array:
     );
   }
 
+  /**
+   * Retrieve passages for a question, expanding the query first when
+   * expansion is enabled. Shared by `queryStream` and `retrieve` so the two
+   * cannot drift on how grounding is gathered.
+   */
+  async function retrieveHits(
+    rag: RagService,
+    companyId: string,
+    query: string,
+    topK: number,
+    threshold: number,
+  ): Promise<RetrievalHit[]> {
+    if (!queryExpansion) {
+      const hits = await rag.retrieve({ companyId, query, topK, threshold });
+      stats.rag.totalRetrievals += 1;
+      return hits;
+    }
+
+    // Retrieve for the original query and its expansions, then merge. This
+    // used to take `expansions[0]` — which the expander always sets to the
+    // original query — so expansion was computed and thrown away and the
+    // Query Expansion switch changed nothing about what came back.
+    const expanded = await queryExpansion.expand(query, { companyId } satisfies EntityContext);
+    const variants: Array<{ text: string; weight: number }> = [];
+    const seen = new Set<string>();
+    expanded.expansions.forEach((text, i) => {
+      const key = text.trim().toLowerCase();
+      if (key.length === 0 || seen.has(key) || variants.length >= MAX_RETRIEVAL_VARIANTS) return;
+      seen.add(key);
+      variants.push({ text, weight: expanded.weights[i] ?? 1 });
+    });
+    if (variants.length === 0) variants.push({ text: query, weight: 1 });
+
+    const perVariant = await Promise.all(
+      variants.map((v) => rag.retrieve({ companyId, query: v.text, topK, threshold })),
+    );
+    stats.rag.totalRetrievals += 1;
+
+    // One entry per chunk, ranked by its best weighted score. `similarity`
+    // stays the raw cosine of that best match, so the threshold keeps its
+    // meaning; the weight only orders an expansion's hits below the
+    // original's when both match.
+    const best = new Map<string, { hit: RetrievalHit; score: number }>();
+    perVariant.forEach((hits, i) => {
+      const weight = variants[i]?.weight ?? 1;
+      for (const hit of hits) {
+        const key = `${hit.sourceId}#${hit.chunkIndex}`;
+        const score = hit.similarity * weight;
+        const prior = best.get(key);
+        if (!prior || score > prior.score) best.set(key, { hit, score });
+      }
+    });
+    return [...best.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK)
+      .map((entry) => entry.hit);
+  }
+
+  /** Knowledge-graph entities a question mentions, plus their neighbours. */
+  function relatedEntities(
+    companyId: string,
+    query: string,
+    maxResults: number,
+  ): Array<{ entity: string; relation: string }> {
+    if (!knowledge) return [];
+    const graphResult = knowledge.query({ companyId, query, maxResults, maxDepth: 2 });
+    stats.knowledge.queriesRun += 1;
+    return graphResult.nodes.slice(0, maxResults).map((n) => ({
+      entity: n.label,
+      relation: 'related',
+    }));
+  }
+
   // Create the service object
   const service: AiService = {
     async initialize() {
@@ -519,7 +744,12 @@ Respond with JSON array:
     queryStream(companyId, query, options = {}) {
       const topK = options.topK ?? config.rag?.topK ?? 10;
       const threshold = options.threshold ?? config.rag?.threshold ?? 0.7;
-      const usePlan = options.usePlan ?? config.planning?.enablePlanning ?? false;
+      // An explicit `usePlan` is the caller's decision; otherwise plan only
+      // when planning is on and the query reaches the configured length.
+      const usePlan =
+        options.usePlan ??
+        ((config.planning?.enablePlanning ?? false) &&
+          query.length >= (config.planning?.planningThreshold ?? 0));
       const includeRelated = options.includeRelated ?? true;
 
       const startTime = Date.now();
@@ -550,19 +780,18 @@ Respond with JSON array:
         }
 
         // Start trace span
-        let span: Span | undefined;
-        if (tracer) {
-          span = tracer.startSpan('ai.query', { kind: 'server' });
-        }
+        const span = startSpan('ai.query', 'server');
 
         try {
           // Planning step
           if (usePlan && planner) {
-            const planSpan = tracer?.startSpan('query.plan', { kind: 'internal' });
+            const planSpan = startSpan('query.plan', 'internal');
             plan = await planner.createPlan(query, {
               availableTools: ['search', 'retrieve'],
             });
-            if (planSpan) tracer?.endSpan(planSpan);
+            endSpan(planSpan, 'internal');
+            stats.planning.plansCreated += 1;
+            stats.planning.totalSteps += plan.steps.length;
 
             yield {
               id: `chunk_${Date.now()}`,
@@ -576,27 +805,11 @@ Respond with JSON array:
           }
 
           // Retrieval step
-          const retrievalSpan = tracer?.startSpan('query.retrieval', { kind: 'client' });
+          const retrievalSpan = startSpan('query.retrieval', 'client');
 
-          let expandedQuery = query;
-          if (queryExpansion) {
-            const entityContext: EntityContext = { companyId };
-            const expanded = await queryExpansion.expand(query, entityContext);
-            const firstExpansion = expanded.expansions[0];
-            if (firstExpansion) {
-              expandedQuery = firstExpansion;
-            }
-          }
+          const hits = await retrieveHits(ragService, companyId, query, topK, threshold);
 
-          const hits = await ragService.retrieve({
-            companyId,
-            query: expandedQuery,
-            topK,
-            threshold,
-          });
-          stats.rag.totalRetrievals += 1;
-
-          if (retrievalSpan) tracer?.endSpan(retrievalSpan);
+          endSpan(retrievalSpan, 'client');
 
           // Emit context chunks
           for (const hit of hits) {
@@ -622,12 +835,12 @@ Respond with JSON array:
           // `config.llm.complete` sat wired and unused. A configured
           // provider must actually generate the answer; with no provider the
           // service says so plainly instead of dressing a digest up as one.
-          const generateSpan = tracer?.startSpan('query.generate', { kind: 'client' });
+          const generateSpan = startSpan('query.generate', 'client');
           let answer: string;
           try {
             answer = await generateAnswer(query, hits);
           } finally {
-            if (generateSpan) tracer?.endSpan(generateSpan);
+            endSpan(generateSpan, 'client');
           }
 
           const chunkSize = 10;
@@ -643,25 +856,14 @@ Respond with JSON array:
           }
 
           // Related entities from knowledge graph
-          let related: Array<{ entity: string; relation: string }> = [];
-          if (includeRelated && knowledge) {
-            const graphResult = knowledge.query({
-              companyId,
-              query,
-              maxResults: 5,
-              maxDepth: 2,
-            });
-            stats.knowledge.queriesRun += 1;
-            related = graphResult.nodes.slice(0, 5).map((n) => ({
-              entity: n.label,
-              relation: 'related',
-            }));
-          }
+          const related = includeRelated ? relatedEntities(companyId, query, 5) : [];
 
           // Settle BEFORE the terminal yield. Consumers (including
           // `accumulateStream`) legitimately `break` as soon as they see
           // `isFinal`, which suspends this generator at that yield forever —
           // anything after it would never run and `result` would hang.
+          stats.rag.completedQueries += 1;
+          stats.rag.totalLatencyMs += Date.now() - startTime;
           settleResult({
             answer,
             context: hits,
@@ -689,7 +891,7 @@ Respond with JSON array:
           failResult(err);
           throw err;
         } finally {
-          if (span) tracer?.endSpan(span);
+          endSpan(span, 'server');
         }
       }
 
@@ -706,6 +908,40 @@ Respond with JSON array:
       await accumulateStream(stream);
 
       return result;
+    },
+
+    async retrieve(companyId, query, options = {}) {
+      if (!initialized) {
+        throw new Error('Service not initialized. Call initialize() first.');
+      }
+      if (!ragService) {
+        throw new Error('RAG not configured. Provide rag.repo to enable retrieval.');
+      }
+
+      const span = startSpan('ai.retrieve', 'server');
+      try {
+        const context = await retrieveHits(
+          ragService,
+          companyId,
+          query,
+          options.topK ?? config.rag?.topK ?? 10,
+          options.threshold ?? config.rag?.threshold ?? 0.7,
+        );
+        const facts =
+          options.includeFacts !== false && memory
+            ? memory
+                .retrieveRankedFacts(companyId, query)
+                .slice(0, options.maxFacts ?? 10)
+                .map((r) => r.fact)
+            : [];
+        const related =
+          options.includeRelated !== false
+            ? relatedEntities(companyId, query, options.maxRelated ?? 10)
+            : [];
+        return { context, facts, related };
+      } finally {
+        endSpan(span, 'server');
+      }
     },
 
     async index(input) {
@@ -727,6 +963,7 @@ Respond with JSON array:
       const facts = await memory.extractFacts(text, {
         companyId,
         sourceId,
+        options: { minConfidence: config.memory?.factExtraction?.minConfidence ?? 0.7 },
       });
 
       // Store in memory
@@ -870,23 +1107,35 @@ Respond with JSON array:
     },
 
     getStats(companyId) {
-      // Graph counts are read from the graph itself rather than reported as
-      // zeros. `getStats` requires a company scope, so a process-wide call
-      // (no companyId) legitimately has nothing to report.
+      // Every figure is measured. Company-scoped stores (memory, the graph)
+      // need a company: a process-wide call legitimately has nothing to count
+      // there, and reports zero rather than a placeholder.
       const graphStats =
         knowledge && companyId !== undefined ? knowledge.getStats(companyId) : null;
+      const liveFacts =
+        memory && companyId !== undefined ? memory.retrieveRankedFacts(companyId) : [];
 
       return {
         rag: {
           totalRetrievals: stats.rag.totalRetrievals,
-          cacheHitRate:
-            stats.rag.cacheLookups > 0 ? stats.rag.cacheHits / stats.rag.cacheLookups : 0,
-          avgLatencyMs: 0, // Would be tracked in real implementation
+          // From whichever service actually answers queries (an injected one
+          // may carry no cache at all, which is a hit rate of zero).
+          cacheHitRate: ragService?.getCacheStats?.()?.hitRate ?? 0,
+          avgLatencyMs:
+            stats.rag.completedQueries > 0
+              ? stats.rag.totalLatencyMs / stats.rag.completedQueries
+              : 0,
         },
         memory: {
-          totalFacts: stats.memory.factsExtracted,
-          totalSummaries: stats.memory.summariesCreated,
-          avgFreshness: 0.8, // Placeholder
+          totalFacts: liveFacts.length,
+          totalSummaries:
+            memory && companyId !== undefined
+              ? memoryRepo.listSummariesByCompany(companyId).length
+              : 0,
+          avgFreshness:
+            liveFacts.length > 0
+              ? liveFacts.reduce((sum, f) => sum + f.score.finalScore, 0) / liveFacts.length
+              : 0,
         },
         knowledge: {
           totalNodes: graphStats?.totalNodes ?? 0,
@@ -895,11 +1144,16 @@ Respond with JSON array:
         },
         planning: {
           plansCreated: stats.planning.plansCreated,
+          // Plans are created here to shape retrieval, never executed by this
+          // service, so the honest count is the one it keeps: zero.
           plansExecuted: stats.planning.plansExecuted,
-          avgStepsPerPlan: 0,
+          avgStepsPerPlan:
+            stats.planning.plansCreated > 0
+              ? stats.planning.totalSteps / stats.planning.plansCreated
+              : 0,
         },
         observability: {
-          activeTraces: 0,
+          activeTraces: stats.observability.activeRootSpans,
           totalSpans: stats.observability.spansCreated,
         },
       };

@@ -11,6 +11,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Settings → Privacy is enforced.** "Local Only" promised "No data leaves
+  your machine", but `max_privacy_tier` only drew an "allowed" flag in the
+  panel; nothing that chose a provider read it. Now every path that reaches a
+  model checks the tier at call time, so a change applies to the next call:
+  - the provider factory (`create`, `resolveForEmployee`) at every
+    construction site in `main/index.ts` — chat, tickets, delegation,
+    meetings, Copilot, Enhanced AI — pinned by
+    `apps/desktop/src/main/composition-root-wiring.test.ts`;
+  - every embedding call (checked per `embed()`, because RAG builds its
+    adapter once at startup);
+  - external runtime profiles, which never went through the factory. Codex,
+    Claude Code and Cursor count as Proprietary Cloud (command or endpoint),
+    a command runtime counts as Proprietary Cloud because its destination is
+    unknowable, and an HTTP runtime is Local only when its host is provably
+    on the local network — the same rule Local model endpoints follow
+    (`runtime-profile-provider-service.ts`).
+
+  A refused provider is never silently re-routed. The run fails before any
+  key is read or process spawned, with a `PrivacyTierViolationError` that
+  names the provider, both tiers and the way out, e.g. `Provider "Anthropic
+  (claude-haiku-4-5)" is Proprietary Cloud-tier, but Settings → Privacy
+  allows Local Only. Choose a local provider (Ollama) for this employee or
+  raise the privacy tier.` An unrecognised tier on either side is refused.
+  The Privacy panel lists the configured providers the current tier refuses
+  (GO / NO-GO lamps) before anything runs, and tags the retrieval embedding
+  provider when it is one of them.
+
+- **Turn failures are shown where you are looking.** The renderer never
+  displayed the reason in a `work.failed` event — a refusal looked like an
+  employee ignoring you, and a direct-line drawer waiting on a refused turn
+  stayed busy for good (queued follow-ups never sent). The direct line now
+  shows the reason under the transcript (`TurnFailureNotice`) and stops
+  waiting; timeline rows name the employee and give the reason. The
+  orchestrator also reports a turn refused at provider resolution itself, so
+  ticket creation, assignment, participant wake-ups, delegation pickups and
+  meetings no longer fail silently (chat.send, which already reported them,
+  does not repeat it).
+
+- **Meeting minutes summarise and file action items.** Minutes were the raw
+  transcript and action items a literal empty array, so the ticket-creation
+  loop never ran. The chair's model (budget-checked, 60 s timeout, capped
+  transcript) now writes a summary and action items; assignees must have
+  attended and at most 20 tickets are filed. Any failure falls back to the
+  transcript and the meeting still ends.
+
+- **Installed Extensions panel.** MCP servers and skills could be added but
+  never disabled or removed, so an added MCP server's subprocess could not
+  be stopped from the app. Settings → Extensions now enables, disables and
+  removes (with confirmation) each server and skill.
+
+- **Proactive Mode autonomy control.** `settings.setProactive` had no caller.
+  The dashboard control offers conservative / balanced / autonomous and says
+  what each does today: only conservative changes behaviour (it blocks goal
+  breakdown); autonomous currently runs like balanced and is recorded on
+  audit events.
+
+- **Copilot answers are grounded in Enhanced AI.** A new system-copilot tool,
+  `search_company_knowledge` (`apps/desktop/src/main/services/agentic-tools-copilot.ts`),
+  gives `copilot.ask` semantic search over the company's indexed messages,
+  tickets, meeting minutes and vault files, plus the facts long-term memory has
+  kept and the knowledge-graph entities a question mentions. It returns
+  grounding only — the Copilot's own model writes the answer, and the search
+  shows in the step stream. Long-Term Memory and Knowledge Graph in Settings →
+  Enhanced AI decide whether facts and entities are included. Completed
+  Copilot exchanges are handed to long-term memory, so what a conversation
+  establishes is recalled later. Built on a new retrieval-only
+  `AiService.retrieve` in `@team-x/intelligence`, so no second model call is
+  spent on an answer nobody reads.
+
+- **Long-term memory and the knowledge graph persist.** Facts, summaries and
+  graph nodes lived in in-memory stores and vanished when the app exited.
+  Migration `0037_enhanced_ai_memory` adds four tables and
+  `db/repos/enhanced-ai-memory.ts` implements the package's memory and graph
+  repos over them; a shared contract spec holds the SQL repos to exactly the
+  in-memory behaviour. A company's memory is deleted with it.
+
+- **Paperclip Import can hand its result to Portability.** "Save as package…"
+  (`paperclip.savePackage`) converts the export again in the main process and
+  writes it as a `.teamx-package.json` through a native save dialog; "Review &
+  import in Portability" puts that file in the Portability import field. The
+  preview used to end by pointing at Portability, which imports a package
+  file, while nothing ever wrote one.
+
 - **Approximate retrieval for large corpora.** RAG ranked by scoring every
   stored chunk on every query (`rag/service.ts`, `listByCompany` then a full
   cosine scan) — O(N·D), which at 10k chunks and 768 dimensions is ~7.7M
@@ -19,8 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   TypeScript: k-means partitions the vectors, and a query scans only the
   nearest `nProbe` partitions. No native extension, so it is exercised under
   Vitest — the constraint that ruled out reinstating sqlite-vec.
-  `rag/service.ts:258` drives it, reachable from
-  `apps/desktop/src/main/index.ts:1298`.
+  `rag/service.ts` drives it from `retrieve`, for the RAG service the desktop
+  app builds at startup (`buildRagService` in `apps/desktop/src/main/index.ts`).
 
   It is approximate, so two properties are pinned rather than assumed.
   Probing every partition reproduces brute force *exactly* — same ids, same
@@ -51,12 +134,177 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `paperclip.preview`
   (`apps/desktop/src/main/ipc/paperclip-handlers.ts:41`) and the panel at
   `apps/desktop/src/renderer/src/features/settings/paperclip-import-section.tsx`.
-  The panel previews and stops: adapters that will not convert and secrets that
-  must be re-entered are listed with their reasons, and committing stays with
-  `companyPortability.importPackage`, which already owns secret binding and the
-  per-entity plan.
+  Adapters that will not convert and secrets that must be re-entered are listed
+  with their reasons. "Save as package…" writes the converted package to a
+  `.teamx-package.json` (`paperclip.savePackage`), and "Review & import in
+  Portability" hands that file to the Portability import, so committing stays
+  with `companyPortability.importPackage`, which already owns secret binding
+  and the per-entity plan.
+
+- **A Models tab — the local GGUF subsystem is now something you can use.**
+  Everything below existed as tested main-process code and IPC channels with no
+  way to reach it. It now has four panels:
+  - **Library** — register a `.gguf` file or point Team-X at a folder to watch,
+    see each model's architecture, quantization, parameter count and size, load
+    and unload against the pool, and open a per-model drawer for its system
+    prompt, chat-template override and advanced tuning. A model whose header
+    could not be parsed reads as "Unknown" rather than showing zeroes, and a
+    broken split set explains itself in the row.
+  - **Discover** — search Hugging Face for GGUF repositories, open a repo to see
+    its files and sizes, and queue downloads. Transfers can be paused, resumed
+    and cancelled; a paused transfer keeps the bytes already on disk, and
+    quitting the app pauses rather than discards.
+  - **Endpoints** — add an LM Studio, Ollama, llama-server, KoboldCPP or vLLM
+    box on your network, probe it for reachability with a measured latency, and
+    edit or remove it. A non-local address is refused, and the refusal says why.
+  - **Runtime** — the GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU,
+    the active backend and any automatic fallback with its reason, the bundled
+    llama.cpp build, and the LRU pool with its capacity.
+
+  Per-model benchmarks record prompt-eval and generation throughput measured
+  from llama-server's own timings, a wall-clock time to first token, and peak
+  VRAM where the hardware can report it. Where a figure genuinely cannot be
+  measured the panel says so — "Not measured", "Unknown", or no percentage at
+  all — rather than printing a zero.
+
+- **`localGguf.library.listFolders`** — a new channel, and the reason watched
+  folders are manageable at all. `removeFolder` and `scanFolder` each take a
+  folder id, and nothing in the contract could produce one, so both were live
+  handlers with no reachable caller. The Library panel now lists every watched
+  folder with its reachability, rescans it on demand, and can stop watching it
+  (with a confirmation, since that drops the models it contributed).
+
+- **A native `.gguf` file picker** (`system.selectGgufFile`). The bridge had
+  only a directory picker, so there was no way to hand `library.addFile` a
+  path. The directory picker also hardcoded the title "Select skill folder",
+  which would have appeared over the model-folder dialog; the title is now the
+  caller's to supply.
+
+- **The local GGUF backend is complete end to end.** Fourteen of the thirty-five
+  `localGguf.*` IPC channels (thirty-six once `library.listFolders` landed) were
+  registered handlers that threw
+  `"not implemented yet (Phase 1 stub)"`. The preload bridge advertised the
+  whole namespace, so the surface looked live while a third of it could only
+  fail at the moment anything reached it. All fourteen now delegate to real
+  services:
+  - **Remote LAN endpoints** (`endpoint.list/add/remove/test/update`) — add an
+    LM Studio, Ollama, llama-server, KoboldCPP or vLLM box on your network,
+    probe it over the OpenAI-compatible `/v1/models` route with a measured
+    latency, and store an optional auth header in the OS keychain. Endpoints
+    are validated as genuinely local-network: loopback, RFC1918, link-local,
+    `.local` mDNS or a bare LAN hostname. A public host is refused rather than
+    stored under a `Local` privacy-tier label it does not deserve.
+  - **Hugging Face browser** (`hf.search/modelCard/startDownload/pauseDownload/
+    resumeDownload/cancelDownload/activeDownloads`) — GGUF-scoped repository
+    search, model cards with real file sizes and a description read from the
+    repo README, and a resumable download manager. Bytes land in a `.part`
+    file and are renamed only once the transfer completes, so an interrupted
+    download is never mistaken for a usable model; resuming continues from the
+    byte offset instead of starting over, and quitting the app pauses rather
+    than discards.
+  - **Benchmark runner** (`benchmark.run/history`) — loads a model through the
+    pool, drives one fixed completion, and records prompt-eval and generation
+    throughput from llama-server's own timings, a wall-clock time-to-first-token,
+    and peak VRAM sampled from `nvidia-smi` where that is available.
 
 ### Fixed
+
+- **The Linux AppImage no longer needs FUSE 2** (#16, following #4). The
+  legacy electron-builder toolset embedded an AppImage runtime that
+  `dlopen()`s `libfuse.so.2`. Ubuntu 22.04+ no longer installs it, so a stock
+  desktop could not start the AppImage. `toolsets.appimage: "1.0.2"` in
+  `apps/desktop/electron-builder.yml` embeds AppImage's static-pie
+  type2-runtime instead, which has no shared-library dependencies and mounts
+  through the stock `fusermount3`.
+  - Verified on a host with zero `libfuse.so.2`: the image self-mounts and
+    boots headlessly.
+  - `release.yml` now proves the same before publishing. It removes FUSE 2,
+    installs only `fuse3`, asserts the runtime is statically linked, then
+    mounts and boots the image.
+  - The README, BUILD_GUIDE, quick start and FAQ drop the FUSE 2 install step
+    for new releases, keep it for v3.4.0 and earlier, and now give the real
+    installer file names (`x86_64.AppImage`, `amd64.deb`, `-Setup-x64.exe`).
+
+- **Review of this branch (`/review`, Stage 2).** Ten findings. Each one was
+  reproduced or confirmed against the code and fixed with a test that fails
+  on the previous code:
+  - **Oversized chunks.** Both RAG chunkers could emit one chunk of any
+    length. This happened for text with no blank lines, minified JSON, code,
+    or one big fence, and the probe produced a single 138 KB chunk.
+    `maxChunkTokens` is now a hard ceiling. The fixed window splits at
+    whitespace, or cuts an unbroken run.
+  - **Local Only refused employees with no explicit provider.** The built-in
+    fallback tried Anthropic first, so those employees were refused even with
+    Ollama configured. Built-in defaults the tier forbids are now skipped. An
+    explicit choice (the employee's or the company default) is still refused,
+    never swapped.
+  - **Ending a meeting twice.** Two ends racing the minutes call both ran:
+    two model calls, duplicate tickets, two `meeting.ended` events. The
+    second end is now refused, and so are interjections while the meeting is
+    ending.
+  - **Enhanced AI used the wrong company.** Its model calls ran on the first
+    live company's provider, with no budget check and no run row. Each call
+    now carries the company that caused it (AsyncLocalStorage). Calls go
+    through `runGovernedCompletion`: a read-only hard-cap check, a run row,
+    and spend posted to the ledger. Command-palette classification is now
+    recorded the same way.
+  - **Model setting with an external runtime.** Setting an Enhanced AI model
+    while the system agent ran on an external runtime handed `runtime:<kind>`
+    to the provider factory, which failed every call. The runtime is now
+    used as-is.
+  - **Knowledge-graph lookups.** Ingesting N new entities rescanned the
+    company's whole graph N+1 times. Labels are now loaded once per company.
+  - **One copy of the privacy rule.** The Privacy panel kept its own copy of
+    the tier rule and labels. Both now live in `@team-x/shared-types`. The
+    `getProviderFactory()` singleton now enforces the tier as well.
+  - **Hire dialog and autonomy mode.** These choosers styled their selection
+    inline and focused with a ring, which is invisible on caps in Night Ops.
+    They now use the console chooser recipe (`.cap` + `.cap-select`, outline
+    focus).
+
+- **The command palette never used a model.** Production classified every
+  command with a closure that ignored its input and answered
+  `complex_request` at confidence 0, so no structured intent (hire, assign,
+  …) ever resolved. `palette-classifier.ts` streams the classifier prompts
+  through the company's system-agent provider, gives up after 15 s, skips
+  the model for a company over a budget hard cap, and falls back to the
+  agentic loop whenever it cannot classify.
+- **Settings → Agentic Loop and Settings → Memory did nothing.** Max Steps,
+  Max Tokens and Timeout were never passed to the loop, and the memory
+  budget and recent-turn limit shaped only the renderer's preview. Both are
+  now read per run / per turn.
+- **Query expansion was computed and discarded.** Retrieval used the first
+  expansion, which is always the original query. It now retrieves for the
+  original plus up to three expansions and keeps each chunk's best weighted
+  score; `similarity` stays the raw cosine, so the threshold keeps its
+  meaning.
+- **Semantic Chunking reached only an indexer nothing calls.** The switch
+  now chooses the chunker of the RAG index the app uses (read per indexing
+  call; Rebuild re-chunks existing content).
+- **A refused embedding provider failed every chat turn.** Retrieval now
+  continues without vector search — tickets, goals, projects and vault still
+  match — and indexing pauses, with one log line instead of one per message
+  (`embedding-refusal-reporter.ts`).
+- **Proactive Mode's per-company switch turned every company off**, and the
+  per-company state was lost on restart. Each company's opt-out is stored in
+  its settings; Settings → Extensions holds the master switch.
+- **Re-enabling an MCP server left its tools invisible** until restart: it
+  reconnected with the row's stale `enabled: false`.
+- **The Hire dialog offered two roles.** It lists the full catalog, grouped
+  by level and searchable.
+- **The operator was hard-coded as "Rocky"** in minutes, the meeting detail,
+  the audit view and the Commands card, and meeting messages were filed
+  under `user-rocky` while everything else uses `rocky`. The operator is
+  "You", employees are named from the roster, Copilot-issued commands read
+  "Copilot", and meetings use the local owner id.
+- **Trace sampling, cache invalidation and stats in `@team-x/intelligence`.**
+  `traceSampleRate` was never read (every trace was recorded); per-company
+  and per-source cache invalidation flushed everything; and
+  `avgExpansionsPerQuery` returned a total. `minConfidence`, the planning
+  threshold and the GPU probe timeout are now honoured.
+- **An intermittent port-allocator test failure** was test pollution:
+  default-range allocations stayed reserved inside the fixed-range tests'
+  windows. Those tests now use 40xxx.
 
 - **Factory methods no longer depend on their call site.** 18 object literals
   across the repos, the intelligence package and `ipc/handlers.ts` called their
@@ -119,76 +367,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the collision in test). Reservations expire after a spawn window rather than
   needing release, and a probe that throws releases its claim.
 
-- **A Models tab — the local GGUF subsystem is now something you can use.**
-  Everything below existed as tested main-process code and IPC channels with no
-  way to reach it. It now has four panels:
-  - **Library** — register a `.gguf` file or point Team-X at a folder to watch,
-    see each model's architecture, quantization, parameter count and size, load
-    and unload against the pool, and open a per-model drawer for its system
-    prompt, chat-template override and advanced tuning. A model whose header
-    could not be parsed reads as "Unknown" rather than showing zeroes, and a
-    broken split set explains itself in the row.
-  - **Discover** — search Hugging Face for GGUF repositories, open a repo to see
-    its files and sizes, and queue downloads. Transfers can be paused, resumed
-    and cancelled; a paused transfer keeps the bytes already on disk, and
-    quitting the app pauses rather than discards.
-  - **Endpoints** — add an LM Studio, Ollama, llama-server, KoboldCPP or vLLM
-    box on your network, probe it for reachability with a measured latency, and
-    edit or remove it. A non-local address is refused, and the refusal says why.
-  - **Runtime** — the GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU,
-    the active backend and any automatic fallback with its reason, the bundled
-    llama.cpp build, and the LRU pool with its capacity.
-
-  Per-model benchmarks record prompt-eval and generation throughput measured
-  from llama-server's own timings, a wall-clock time to first token, and peak
-  VRAM where the hardware can report it. Where a figure genuinely cannot be
-  measured the panel says so — "Not measured", "Unknown", or no percentage at
-  all — rather than printing a zero.
-
-- **`localGguf.library.listFolders`** — a new channel, and the reason watched
-  folders are manageable at all. `removeFolder` and `scanFolder` each take a
-  folder id, and nothing in the contract could produce one, so both were live
-  handlers with no reachable caller. The Library panel now lists every watched
-  folder with its reachability, rescans it on demand, and can stop watching it
-  (with a confirmation, since that drops the models it contributed).
-
-- **A native `.gguf` file picker** (`system.selectGgufFile`). The bridge had
-  only a directory picker, so there was no way to hand `library.addFile` a
-  path. The directory picker also hardcoded the title "Select skill folder",
-  which would have appeared over the model-folder dialog; the title is now the
-  caller's to supply.
-
-- **The local GGUF backend is complete end to end.** Fourteen of the twenty-six
-  `localGguf.*` IPC channels were registered handlers that threw
-  `"not implemented yet (Phase 1 stub)"`. The preload bridge advertised the
-  whole namespace, so the surface looked live while a third of it could only
-  fail at the moment anything reached it. All fourteen now delegate to real
-  services:
-  - **Remote LAN endpoints** (`endpoint.list/add/remove/test/update`) — add an
-    LM Studio, Ollama, llama-server, KoboldCPP or vLLM box on your network,
-    probe it over the OpenAI-compatible `/v1/models` route with a measured
-    latency, and store an optional auth header in the OS keychain. Endpoints
-    are validated as genuinely local-network: loopback, RFC1918, link-local,
-    `.local` mDNS or a bare LAN hostname. A public host is refused rather than
-    stored under a `Local` privacy-tier label it does not deserve.
-  - **Hugging Face browser** (`hf.search/modelCard/startDownload/pauseDownload/
-    resumeDownload/cancelDownload/activeDownloads`) — GGUF-scoped repository
-    search, model cards with real file sizes and a description read from the
-    repo README, and a resumable download manager. Bytes land in a `.part`
-    file and are renamed only once the transfer completes, so an interrupted
-    download is never mistaken for a usable model; resuming continues from the
-    byte offset instead of starting over, and quitting the app pauses rather
-    than discards.
-  - **Benchmark runner** (`benchmark.run/history`) — loads a model through the
-    pool, drives one fixed completion, and records prompt-eval and generation
-    throughput from llama-server's own timings, a wall-clock time-to-first-token,
-    and peak VRAM sampled from `nvidia-smi` where that is available.
-
-  Note this is backend and IPC only. **There is still no model-library UI**, so
-  none of it is reachable from the app yet.
-
-### Fixed
-
 - **Enhanced AI answered from a simulation layer instead of your model.** The
   desktop Enhanced AI service accepted a fully-wired LLM completion function,
   embedder, RAG repository and embedding dimension from the composition root
@@ -202,9 +380,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Every Settings → Enhanced AI toggle was inert.** All seven switches
   (query expansion, semantic chunking, long-term memory, knowledge graph,
   multi-turn planning, streaming, tracing) persisted a value that no code
-  read — the settings getter and setter were their only consumers. They now
-  gate real behaviour; the per-call gates take effect immediately, while
-  query expansion and tracing apply on next launch.
+  read — the settings getter and setter were their only consumers. The
+  service now reads them; the per-call gates take effect immediately, while
+  query expansion and tracing apply on next launch. (Reading them was not
+  enough on its own — see "Enhanced AI was unreachable and off by default"
+  below. Streaming and planning were later removed instead — see Removed —
+  and Semantic Chunking now drives the app's RAG index.)
 - **Answer generation in `@team-x/intelligence` was fabricated.** The unified
   AI service built its "answer" by concatenating the first 50 characters of
   the top three retrieved chunks, never consulting the configured model.
@@ -237,7 +418,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and trigger-message creation that the already-implemented (and fully
   tested, but never instantiated) proactive dispatcher performs. That
   dispatcher is now the only dispatch route, and round-robin assignment
-  actually rotates instead of always selecting the first eligible employee.
+  rotates within a scan instead of always selecting the first eligible
+  employee (and, with the Proactive Mode fix below, across scans too).
 - **Blocked-work audit events recorded a false autonomy mode.** Every
   `proactive.blocked` payload carried a hardcoded `balanced`, so operators
   running in conservative or autonomous mode had an audit trail describing a
@@ -260,7 +442,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and was superseded by read-time resolution in the provider factory; it has
   been removed rather than repaired.
 
+- **`embeddings.getStats().avgChunksPerSource` was mathematically meaningless.**
+  It divided the total row count by the total row count, so it returned exactly
+  `1.0` for every company and `total` when called without a company. It now
+  divides by `COUNT(DISTINCT source_id)` and returns `0` rather than `NaN` on
+  an empty set.
+
+- **`embeddings.batchUpsert` reached through `this`** inside the object
+  literal returned by `createEmbeddingsRepo`, so it threw whenever the repo
+  was destructured — which is exactly how `RagRepo` consumes it. `upsert` is
+  now a closure both call sites share.
+
+- **Enhanced AI was unreachable and off by default.** Main created the
+  service only when `llm_provider` was not `'auto'` — and `'auto'` is the
+  default — so with default settings it did not exist; and when it did,
+  nothing called it (its seven `enhancedAi.*` channels are not bridged to the
+  renderer). It is now created whenever RAG has an embedding provider and is
+  used by the Copilot (see Added). Settings → Enhanced AI → Provider and Model
+  were written and never read; they now choose the model Enhanced AI uses
+  ('auto' keeps the system agent's). Max Tokens and Temperature are removed:
+  no provider adapter accepts either, so they could not take effect.
+
+- **Enhanced AI ran every operation against a company that does not exist.**
+  Without a `companyId` it fell back to `'default'`, which no company row has,
+  and the `enhancedAi.query` / `queryKnowledge` handlers dropped the caller's
+  `companyId` — so retrieval came back empty. Company scope is now required.
+  Re-indexing a document into fewer chunks also left its old trailing chunks
+  serving deleted text; every chunk row of the previous indexing is cleared
+  first.
+
+- **The knowledge graph never answered a natural question.** It compiled the
+  whole question into a RegExp and tested it against each short node label,
+  so "What is Dana working on?" matched nothing — and a question containing
+  `+`, `?` or `(` threw. It now finds the entities a question mentions.
+  Remembered-fact retrieval ignored the question entirely and returned the
+  freshest facts; it now ranks by relevance to the question. Fact extraction
+  threw on the usual fenced JSON reply (```json … ```), so no fact was ever
+  stored; replies are now parsed and validated field by field.
+
+- **Enhanced AI saw new content up to five minutes late.** It built a second
+  RAG service with its own query cache, which the indexer's writes never
+  invalidated. It now retrieves through the indexer's service. The ANN cache
+  also rebuilds when another instance re-indexes with the same row count
+  (it compared counts, not row ids), and rows from a different embedding
+  model are ignored instead of producing meaningless scores.
+
+- **Markdown documents crashed the semantic chunker** with a stack overflow
+  (it re-entered itself with the same content type), and short code or data
+  documents still produced no chunks. Both are fixed, along with a zero-overlap
+  bug that made every code chunk repeat all the lines before it.
+
+- **`getStats` in `@team-x/intelligence` reported placeholders** — a literal
+  `0.8` freshness, a `0` latency "to be tracked", and plan, span and cache
+  counters that nothing incremented. Every figure is now measured.
+
+- **Hugging Face downloads**: a double-clicked Download ran two transfers into
+  one `.part` file and registered a corrupt model; a transfer paused after its
+  last byte failed on resume and could only be cancelled, deleting the finished
+  file. Both fixed. Downloads now accept only `.gguf` files into an absolute,
+  existing folder.
+
+- **LAN endpoints**: any dotless or `.local` hostname passed the "local
+  network only" check on sight, though `http://ai` is a public TLD and search
+  domains can expand a bare name to a public host. Such names are now resolved
+  and every address must be private, at add, update and every probe; probes no
+  longer follow redirects. Benchmarks no longer count an `nvidia-smi` spawn as
+  time to first token.
+
+- **Proactive Mode**: round-robin assignment restarted at the first worker on
+  every scan, and two overlapping scans dispatched the same tickets twice (a
+  duplicate budget spend). Rotation now continues across scans and a second
+  scan joins the one in flight.
+
+- **Paperclip Import** previewed any folder — a mistyped path, an unrelated
+  directory — as an empty, importable company. It now refuses anything that is
+  not a Paperclip export, naming what it looked for, and refuses export files
+  over 50 MB.
+
+- **Linux GPU detection** reported VM and server-BMC display adapters (QXL,
+  virtio, VMware, ASPEED, Matrox G200…) as a GPU.
+
+- **The RAG file logger** kept a backup with `maxFiles: 0`, and one failed
+  rotation (EBUSY on Windows) turned file logging off for the rest of the run.
+
+- **CI could not install `main`.** The lockfile still listed the three
+  dependencies the audit removed, and every CI and release job installs with
+  `--frozen-lockfile`.
+
+- **The claim-evidence merge gate verified nothing.** It read its claims from
+  tables `CLAUDE.md` no longer has, so it reported "0 verified … out of 0" and
+  passed. It now checks every channel documented in `API_ENDPOINTS.md` (219
+  at the time of writing) and fails if it ever parses none.
+
+- **Windows CI**: every Hugging Face download test failed on Windows because
+  the test filesystem double seeded unresolved paths.
+
 ### Removed
+
+- **The `team-x-ai` CLI and the eval entry points.** Every CLI command printed
+  fabricated output (and ran twice); `ai:eval` pointed at a missing script and
+  the golden dataset held only placeholder ids. The tested evaluator stays,
+  reachable through `AiService.evaluate`.
+- **Settings → Enhanced AI → Streaming Responses and Multi-Turn Planning.**
+  Only Enhanced AI paths the app never calls read them, so they changed
+  nothing. A sweep guard keeps them out until a reachable path uses them.
+- **Unread options**: `rag.enableRerank`, `knowledge.enableInference`, the
+  four `ExtractionOptions` switches, `StreamOptions.transport` and
+  `TracerOptions.schemaUrl`.
 
 - **The `localGguf` Phase 1 stub thrower.** With every channel delegating to a
   real service, the shared `notImplemented()` helper has no callers and is
@@ -299,8 +587,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   migration, the orphan `scripts/migrate-embeddings-to-vec.ts` backfill CLI,
   the now-meaningless `forceBruteForce` option and `RagRepo.similaritySearch`
   member, and the unused `sqlite-vec` dependency. **Retrieval behaviour is
-  unchanged** — the fallback that already served every query is now the only
-  path, minus one spurious `console.warn` per retrieval.
+  unchanged** — the in-process cosine scan that already served every query
+  stays, minus one spurious `console.warn` per retrieval; above
+  `ann.minVectors` it is now relaxed by the IVF index described under Added.
 
 - **`orchestrator/queue.ts` and its test.** The file's own header claimed it
   was "the orchestrator's only scheduler primitive" through which "every agent
@@ -314,7 +603,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`db/vec-init.ts` and its test.** Created a `vec_embeddings` table — note
   the name, the opposite word order from the `embeddings_vec` the repo queried
   — and was never called from anywhere. Unlike its sibling `initFts5`, which
-  runs at `main/index.ts:690`, `initVec` had no caller at all. The `schema.ts`
+  runs at startup from `main/index.ts`, `initVec` had no caller at all. The `schema.ts`
   comment that pointed readers at it as the creator of the vector table has
   been corrected.
 
@@ -324,24 +613,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   importers. Their two now-stranded dependencies, `@radix-ui/react-collapsible`
   and `@radix-ui/react-tabs`, were dropped with them.
 
-### Fixed — correctness
-
-- **`embeddings.getStats().avgChunksPerSource` was mathematically meaningless.**
-  It divided the total row count by the total row count, so it returned exactly
-  `1.0` for every company and `total` when called without a company. It now
-  divides by `COUNT(DISTINCT source_id)` and returns `0` rather than `NaN` on
-  an empty set.
-
-- **`embeddings.batchUpsert` reached through `this`** inside the object
-  literal returned by `createEmbeddingsRepo`, so it threw whenever the repo
-  was destructured — which is exactly how `RagRepo` consumes it. `upsert` is
-  now a closure both call sites share.
+- **Settings → Enhanced AI → Max Tokens and Temperature.** No provider
+  adapter accepts a token cap or a temperature, so both persisted values
+  nothing could apply. Removed from the panel, the IPC contract and the
+  handlers; a source guard keeps them out until the provider stream contract
+  can carry them.
 
 ### Documentation — corrections
 
 - **README's RAG bullet claimed "sqlite-vec embeddings".** It never had them;
-  the line now says what the code does — BLOBs ranked by brute-force cosine
-  similarity in-process.
+  the line now says what the code does — BLOBs ranked in-process by cosine
+  similarity, exactly per company and through the IVF index above 4,096
+  vectors.
 - **README claimed 38 migrations.** There were 38 `.sql` files but only 37
   journaled; with the dead one deleted, both numbers are 37. A new case in
   `apps/desktop/src/readme-claims.test.ts` now asserts the README count, the
@@ -352,10 +635,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shipped".** Both are library-only: `createPrivateOperatorAccessService`,
   `previewPaperclipImportBridge` and `loadPaperclipExportFolder` have zero
   importers outside their own tests — no IPC channel, no transport, no UI.
-  Both statuses now say so, and `docs/runtime/private-operator-access.md` and
-  `docs/runtime/paperclip-import-bridge.md` carry a status banner. The
-  Paperclip doc's "Operator Workflow" is relabelled as intended-not-yet-
-  reachable, because an operator cannot perform step 1 today.
+  That was true when written; both were then wired to the renderer (see
+  Added), so the plan statuses, both runtime docs and their banners now
+  describe the shipped panels instead.
 - **The `[1.0.0]` entry claimed "All docs include table of contents,
   cross-references, and code examples".** 13 of 42 files under
   `docs/user-guide/` carry an explicit table-of-contents heading. Narrowed to

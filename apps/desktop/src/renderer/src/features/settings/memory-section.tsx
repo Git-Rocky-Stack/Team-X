@@ -77,9 +77,10 @@ export function MemorySection() {
         </div>
 
         <p className="text-body-sm text-muted-foreground">
-          These defaults shape how Team-X condenses long threads into digests, how much recent
-          conversation it prioritizes, and how deep the checkpoint trail stays visible in the
-          operator memory surface.
+          The pack budget and recent turn window shape the context every agent turn sees: how many
+          tokens its thread history and memory blocks are packed into, and how much recent
+          conversation is kept ahead of older context. Changes apply from the next turn. Checkpoint
+          depth sets how much resume history the operator memory view shows.
         </p>
 
         {/* Default pack budget — headline envelope readout + armed chooser */}
@@ -113,7 +114,8 @@ export function MemorySection() {
             })}
           </div>
           <p className="text-caption text-muted-foreground/70">
-            Autonomy &gt; Memory starts from this token envelope before any per-session override.
+            Token envelope that every agent turn packs its context into; Autonomy &gt; Memory
+            previews packs at this size by default.
           </p>
         </div>
 

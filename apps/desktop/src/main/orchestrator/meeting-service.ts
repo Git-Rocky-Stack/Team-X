@@ -6,10 +6,11 @@
  *
  *   1. callMeeting — pause the company, create meeting+thread, chair speaks first.
  *   2. nextTurn — dispatch the next attendee's turn (round-robin).
- *   3. interject — Rocky sends a mid-meeting message, then triggers the
+ *   3. interject — the operator sends a mid-meeting message, then triggers the
  *      next scheduled speaker.
- *   4. endMeeting — generate minutes, extract action items, create tickets,
- *      resume the company.
+ *   4. endMeeting — ask the chair's model for a summary + action items
+ *      (see `meeting-minutes.ts`), create tickets for the items, resume the
+ *      company. Without a usable model the minutes are the transcript.
  *
  * Turn state is ephemeral (in-memory). Only the meeting row, thread, and
  * messages are persisted. This matches the design doc: "Turn state tracked
@@ -25,8 +26,10 @@ import type { MeetingActionItem, MeetingMode } from '@team-x/shared-types';
 import type { CreateMeetingInput, MeetingRow } from '../db/repos/meetings.js';
 import type { AppendMessageInput } from '../db/repos/messages.js';
 import type { CreateTicketInput } from '../db/repos/tickets.js';
+import { LOCAL_OWNER_OPERATOR_ID } from '../services/operator-access-service.js';
 
 import type { EventBus } from './event-bus.js';
+import { type MeetingMinutesModelDeps, generateMeetingMinutes } from './meeting-minutes.js';
 
 import type { Orchestrator, OrchestratorEmployeesRepo, OrchestratorMessagesRepo } from './index.js';
 
@@ -74,6 +77,13 @@ interface TurnState {
 
 const activeTurnState = new Map<string, TurnState>();
 
+/**
+ * Meetings whose end is in progress. `endMeeting` awaits the chair's minutes
+ * call (up to 60 s) before the row is marked ended; the claim stops a second
+ * end, or an interjection, from slipping into that window.
+ */
+const endingMeetings = new Set<string>();
+
 // ---------------------------------------------------------------------------
 // Service options
 // ---------------------------------------------------------------------------
@@ -86,8 +96,18 @@ export interface MeetingServiceOptions {
   messagesRepo: MeetingServiceMessagesRepo;
   employeesRepo: OrchestratorEmployeesRepo;
   ticketsRepo: MeetingServiceTicketsRepo;
-  /** Human user id for "Rocky" messages. */
+  /**
+   * Actor id of the human operator (interjections, thread membership, filed
+   * tickets). Defaults to the local owner id the rest of the app uses.
+   */
   humanUserId?: string;
+  /**
+   * Model access for end-of-meeting minutes (chair summary + action-item
+   * extraction). Omitted → minutes are the plain transcript and no
+   * action-item tickets are created.
+   */
+  minutes?: MeetingMinutesModelDeps;
+  logger?: { warn: (msg: string, err?: unknown) => void };
 }
 
 export interface CallMeetingArgs {
@@ -126,15 +146,65 @@ export function createMeetingService(opts: MeetingServiceOptions) {
     messagesRepo,
     employeesRepo,
     ticketsRepo,
-    humanUserId = 'user-rocky',
+    humanUserId = LOCAL_OWNER_OPERATOR_ID,
+    minutes,
+    logger = {
+      warn: (msg: string, err?: unknown) => console.warn('[meeting-service]', msg, err),
+    },
   } = opts;
+
+  /**
+   * Run the chair-model minutes call; null (after one log line) on any
+   * failure so `endMeeting` falls back to the transcript-only minutes.
+   */
+  async function generateMinutesOrNull(
+    meeting: MeetingRow,
+    attendeeIds: string[],
+    transcript: string,
+  ): Promise<{ summary: string; actionItems: MeetingActionItem[] } | null> {
+    if (!minutes) return null;
+    try {
+      const chair = employeesRepo.getById(meeting.chairId);
+      if (!chair) throw new Error(`chair employee not found: ${meeting.chairId}`);
+      const attendees = attendeeIds
+        .map((id) => employeesRepo.getById(id))
+        .filter((e): e is NonNullable<typeof e> => e !== null)
+        .map((e) => ({ id: e.id, name: e.name, title: e.title }));
+      return await generateMeetingMinutes(minutes, {
+        companyId: meeting.companyId,
+        threadId: meeting.threadId,
+        chair,
+        agenda: meeting.agenda,
+        attendees,
+        transcript,
+      });
+    } catch (err) {
+      logger.warn(
+        `minutes for meeting ${meeting.id} fell back to the transcript — chair model unavailable or reply invalid`,
+        err,
+      );
+      return null;
+    }
+  }
+
+  /** Markdown checklist line per action item, naming the assignee when known. */
+  function formatActionItems(items: readonly MeetingActionItem[]): string {
+    if (items.length === 0) return 'None recorded.';
+    return items
+      .map((item) => {
+        const owner = item.assigneeId ? employeesRepo.getById(item.assigneeId)?.name : undefined;
+        const meta = [owner, item.priority].filter(Boolean).join(', ');
+        return `- [ ] ${item.title}${meta ? ` (${meta})` : ''}`;
+      })
+      .join('\n');
+  }
 
   return {
     /**
      * Start a meeting:
      *   1. Pause the company (drain in-flight work).
      *   2. Create a meeting thread (kind='meeting').
-     *   3. Add all attendees + Rocky as thread members.
+     *   3. Add all attendees + the operator as thread members.
      *   4. Create the meeting row.
      *   5. Post the agenda as the first system message.
      *   6. Initialize turn state.
@@ -286,13 +356,16 @@ export function createMeetingService(opts: MeetingServiceOptions) {
     },
 
     /**
-     * Rocky interjects mid-meeting. Posts the message, emits an event,
+     * The operator interjects mid-meeting. Posts the message, emits an event,
      * then optionally triggers the next turn.
      */
     interject(meetingId: string, content: string): InterjectResult {
       const meeting = meetingsRepo.getById(meetingId);
       if (!meeting || meeting.status !== 'active') {
         throw new Error(`meeting-service: meeting not active: ${meetingId}`);
+      }
+      if (endingMeetings.has(meetingId)) {
+        throw new Error(`meeting-service: meeting is ending: ${meetingId}`);
       }
 
       const messageId = messagesRepo.append({
@@ -319,8 +392,9 @@ export function createMeetingService(opts: MeetingServiceOptions) {
 
     /**
      * End a meeting:
-     *   1. Generate minutes (simplified — concatenate thread messages).
-     *   2. Extract action items from minutes.
+     *   1. Build the transcript of all non-system messages.
+     *   2. Ask the chair's model for a summary + action items. Any failure
+     *      falls back to transcript-only minutes — never fails the end.
      *   3. Create tickets for action items.
      *   4. Update meeting row with minutes + action items.
      *   5. Emit 'meeting.ended' event.
@@ -332,77 +406,102 @@ export function createMeetingService(opts: MeetingServiceOptions) {
       if (!meeting) {
         throw new Error(`meeting-service: meeting not found: ${meetingId}`);
       }
-      if (meeting.status !== 'active') {
+      if (meeting.status !== 'active' || endingMeetings.has(meetingId)) {
         throw new Error(`meeting-service: meeting already ended: ${meetingId}`);
       }
+      endingMeetings.add(meetingId);
+      try {
+        // 1. Transcript of all non-system messages — the minutes' Discussion
+        // section and the input to the chair's summary.
+        const messages = (messagesRepo as unknown as OrchestratorMessagesRepo).listByThread(
+          meeting.threadId,
+        );
+        const transcript = messages
+          .filter((m) => m.authorKind !== 'system')
+          .map((m) => {
+            const emp = employeesRepo.getById(m.authorId);
+            // The human operator reads the minutes, so they are "You" (no
+            // user-editable operator display name exists to use instead).
+            const speaker = emp ? emp.name : m.authorKind === 'user' ? 'You' : m.authorId;
+            return `**${speaker}:** ${m.content}`;
+          })
+          .join('\n\n');
 
-      // 1. Generate minutes — simplified summarization.
-      // In Phase 4, this would use an LLM. For now, build a markdown
-      // transcript of all non-system messages.
-      const messages = (messagesRepo as unknown as OrchestratorMessagesRepo).listByThread(
-        meeting.threadId,
-      );
-      const transcript = messages
-        .filter((m) => m.authorKind !== 'system')
-        .map((m) => {
-          const emp = employeesRepo.getById(m.authorId);
-          const speaker = emp ? emp.name : m.authorKind === 'user' ? 'Rocky' : m.authorId;
-          return `**${speaker}:** ${m.content}`;
-        })
-        .join('\n\n');
+        // 2. Chair summary + action items. Skipped for an empty meeting
+        // (nothing to summarize) or when no model deps are wired.
+        const attendeeIds = parseAttendeeIds(meeting.attendeesJson);
+        const generated =
+          transcript.length > 0 && minutes
+            ? await generateMinutesOrNull(meeting, attendeeIds, transcript)
+            : null;
+        const actionItems: MeetingActionItem[] = generated?.actionItems ?? [];
 
-      const minutesMd =
-        transcript.length > 0
-          ? `# Meeting Minutes\n\n**Agenda:** ${meeting.agenda || '(none)'}\n\n## Discussion\n\n${transcript}`
-          : null;
+        const header = `# Meeting Minutes\n\n**Agenda:** ${meeting.agenda || '(none)'}`;
+        const discussion = `## Discussion\n\n${transcript}`;
+        const minutesMd =
+          transcript.length === 0
+            ? null
+            : generated
+              ? [
+                  header,
+                  `## Summary\n\n${generated.summary}`,
+                  `## Action Items\n\n${formatActionItems(actionItems)}`,
+                  discussion,
+                ].join('\n\n')
+              : `${header}\n\n${discussion}`;
 
-      // 2. Action items — for now, empty. Phase 4 will use LLM extraction.
-      // The infrastructure is in place: the repo, the ticket creation path,
-      // and the event payload all support action items.
-      const actionItems: MeetingActionItem[] = [];
-      const ticketIds: string[] = [];
+        // 3. Create tickets for any action items. One bad row must not fail
+        // the meeting end (the company is still paused until step 6), so each
+        // insert is isolated and a failure is logged and skipped.
+        const ticketIds: string[] = [];
+        for (const item of actionItems) {
+          try {
+            const ticketId = ticketsRepo.create({
+              companyId: meeting.companyId,
+              title: item.title,
+              description: `Action item from the meeting "${meeting.agenda || 'Meeting'}".`,
+              priority: item.priority ?? 'medium',
+              reporterId: humanUserId,
+              reporterKind: 'system',
+              assigneeId: item.assigneeId ?? null,
+            });
+            ticketIds.push(ticketId);
+          } catch (err) {
+            logger.warn(`could not create a ticket for action item "${item.title}"`, err);
+          }
+        }
 
-      // 3. Create tickets for any action items.
-      for (const item of actionItems) {
-        const ticketId = ticketsRepo.create({
-          companyId: meeting.companyId,
-          title: item.title,
-          priority: item.priority ?? 'medium',
-          reporterId: humanUserId,
-          reporterKind: 'system',
-          assigneeId: item.assigneeId ?? null,
+        // 4. Update meeting row.
+        meetingsRepo.end(meetingId, {
+          minutesMd: minutesMd ?? undefined,
+          actionItemsJson: JSON.stringify(actionItems),
         });
-        ticketIds.push(ticketId);
+
+        // 5. Emit event.
+        bus.emit({
+          type: 'meeting.ended',
+          companyId: meeting.companyId,
+          actorId: humanUserId,
+          actorKind: 'user',
+          payload: {
+            meetingId,
+            threadId: meeting.threadId,
+            minutesMd,
+            actionItemCount: actionItems.length,
+            ticketIds,
+          },
+        });
+
+        // 6. Resume the company.
+        orchestrator.resumeCompany(meeting.companyId);
+
+        // 7. Clean up turn state.
+        activeTurnState.delete(meetingId);
+
+        return { minutesMd, actionItems, ticketIds };
+      } finally {
+        endingMeetings.delete(meetingId);
       }
-
-      // 4. Update meeting row.
-      meetingsRepo.end(meetingId, {
-        minutesMd: minutesMd ?? undefined,
-        actionItemsJson: JSON.stringify(actionItems),
-      });
-
-      // 5. Emit event.
-      bus.emit({
-        type: 'meeting.ended',
-        companyId: meeting.companyId,
-        actorId: humanUserId,
-        actorKind: 'user',
-        payload: {
-          meetingId,
-          threadId: meeting.threadId,
-          minutesMd,
-          actionItemCount: actionItems.length,
-          ticketIds,
-        },
-      });
-
-      // 6. Resume the company.
-      orchestrator.resumeCompany(meeting.companyId);
-
-      // 7. Clean up turn state.
-      activeTurnState.delete(meetingId);
-
-      return { minutesMd, actionItems, ticketIds };
     },
 
     /** Get the active meeting for a company (convenience accessor). */
@@ -410,4 +509,14 @@ export function createMeetingService(opts: MeetingServiceOptions) {
       return meetingsRepo.getActive(companyId);
     },
   };
+}
+
+/** Attendee ids from the meeting row; a malformed column yields no attendees. */
+function parseAttendeeIds(attendeesJson: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(attendeesJson);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
 }

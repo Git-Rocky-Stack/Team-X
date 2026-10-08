@@ -17,9 +17,11 @@ import type { RemoteEndpoint } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  type EndpointServiceDeps,
   EndpointServiceError,
   type EndpointServiceRepo,
   createEndpointService,
+  isLocalNetworkAddress,
 } from './endpoint-service.js';
 
 /**
@@ -108,23 +110,48 @@ const OK_MODELS = () =>
     headers: { 'content-type': 'application/json' },
   });
 
+type LookupFn = NonNullable<EndpointServiceDeps['lookup']>;
+
+/**
+ * DNS double. Names absent from `table` fail the way getaddrinfo does, so a
+ * test can never accidentally depend on the machine's real resolver.
+ */
+function makeLookup(table: Record<string, string[] | undefined>) {
+  return vi.fn(async (hostname: string) => {
+    const addresses = table[hostname];
+    if (!addresses) {
+      throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${hostname}`), { code: 'ENOTFOUND' });
+    }
+    return addresses.map((address) => ({ address, family: address.includes(':') ? 6 : 4 }));
+  });
+}
+
+/** The LAN names the default fixtures use, resolving where a home network would put them. */
+const LAN_DNS: Record<string, string[]> = {
+  'bench-rig': ['192.168.1.60'],
+  'bench-rig.local': ['192.168.1.61', 'fe80::1'],
+};
+
 function build(
   overrides: {
     fetchFn?: typeof fetch;
     secrets?: { getEndpointAuthHeader: (ref: string) => Promise<string | null> };
     now?: () => number;
     probeTimeoutMs?: number;
+    lookup?: LookupFn;
   } = {},
 ) {
   const repo = makeRepo();
+  const lookup = overrides.lookup ?? makeLookup(LAN_DNS);
   const service = createEndpointService({
     repo,
     fetchFn: overrides.fetchFn ?? (vi.fn(async () => OK_MODELS()) as unknown as typeof fetch),
     secrets: overrides.secrets,
     now: overrides.now ?? makeClock(),
     probeTimeoutMs: overrides.probeTimeoutMs,
+    lookup,
   });
-  return { repo, service };
+  return { repo, service, lookup };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +238,159 @@ describe('EndpointService — add', () => {
     await expect(
       service.add({ name: 'B', baseUrl: 'http://192.168.1.50:1234', authHeaderKeyRef: null }),
     ).rejects.toThrow(/already/i);
+  });
+});
+
+describe('isLocalNetworkAddress — IPv4-mapped IPv6', () => {
+  // A resolver may answer a v4 host as ::ffff:a.b.c.d, and WHATWG URL
+  // canonicalizes the literal to hex (::ffff:c0a8:105). Either way the
+  // embedded IPv4 address is what a connection reaches, so it decides.
+  it.each(['::ffff:192.168.1.5', '::ffff:c0a8:105', '[::ffff:10.0.0.7]', '::FFFF:7f00:1'])(
+    'treats %s as local',
+    (address) => {
+      expect(isLocalNetworkAddress(address)).toBe(true);
+    },
+  );
+
+  it.each(['::ffff:8.8.8.8', '::ffff:808:808'])('treats %s as public', (address) => {
+    expect(isLocalNetworkAddress(address)).toBe(false);
+  });
+});
+
+describe('EndpointService — hostname resolution', () => {
+  // A non-literal hostname proves nothing about where it points. `http://ai`
+  // is a real public TLD, and a dotless name can be expanded by a DNS search
+  // suffix into a public record. The only honest test is to resolve it and
+  // require every address to be local.
+
+  it('refuses a dotless name that resolves to a public address', async () => {
+    const { service, repo } = build({ lookup: makeLookup({ ai: ['34.120.5.6'] }) });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://ai:8080', authHeaderKeyRef: null }),
+    ).rejects.toThrow(/34\.120\.5\.6.*local network/i);
+    expect(repo.rows).toHaveLength(0);
+  });
+
+  it('refuses a .local name that resolves to a public address', async () => {
+    const { service } = build({ lookup: makeLookup({ 'rig.local': ['8.8.4.4'] }) });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://rig.local:1234', authHeaderKeyRef: null }),
+    ).rejects.toThrow(/local network/i);
+  });
+
+  it('accepts a dotless name whose every address is private', async () => {
+    const { service, lookup } = build({
+      lookup: makeLookup({ 'bench-rig': ['192.168.1.60', 'fd00::60'] }),
+    });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://bench-rig:1234', authHeaderKeyRef: null }),
+    ).resolves.toMatchObject({ baseUrl: 'http://bench-rig:1234' });
+    expect(lookup).toHaveBeenCalledWith('bench-rig', { all: true });
+  });
+
+  it('refuses a name with mixed private and public addresses', async () => {
+    // A client may connect to any of them, so one public answer is enough to
+    // break the Local tier.
+    const { service } = build({
+      lookup: makeLookup({ 'bench-rig': ['192.168.1.60', '2606:4700:4700::1111'] }),
+    });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://bench-rig:1234', authHeaderKeyRef: null }),
+    ).rejects.toThrow(/2606:4700:4700::1111/);
+  });
+
+  it('refuses a name that does not resolve, saying why', async () => {
+    const { service, repo } = build({ lookup: makeLookup({}) });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://ghost-box:1234', authHeaderKeyRef: null }),
+    ).rejects.toThrow(/could not be resolved/i);
+    expect(repo.rows).toHaveLength(0);
+  });
+
+  it('refuses a name whose lookup returns no addresses', async () => {
+    const { service } = build({ lookup: vi.fn(async () => []) });
+    await expect(
+      service.add({ name: 'X', baseUrl: 'http://bench-rig:1234', authHeaderKeyRef: null }),
+    ).rejects.toThrow(/could not be resolved/i);
+  });
+
+  it('applies the same resolution rule to an updated base URL', async () => {
+    const { service, repo } = build({
+      lookup: makeLookup({ ai: ['34.120.5.6'] }),
+    });
+    const e = await service.add({
+      name: 'A',
+      baseUrl: 'http://10.0.0.1:1234',
+      authHeaderKeyRef: null,
+    });
+    await expect(service.update(e.id, { baseUrl: 'http://ai:8080' })).rejects.toThrow(
+      /local network/i,
+    );
+    expect(repo.getById(e.id)?.baseUrl).toBe('http://10.0.0.1:1234');
+  });
+
+  it('does not consult DNS for IP literals or localhost', async () => {
+    const { service, lookup } = build();
+    await service.add({ name: 'A', baseUrl: 'http://10.0.0.1:1234', authHeaderKeyRef: null });
+    await service.add({ name: 'B', baseUrl: 'http://localhost:8080', authHeaderKeyRef: null });
+    await service.add({ name: 'C', baseUrl: 'http://[fd00::1]:8080', authHeaderKeyRef: null });
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('re-resolves at probe time and refuses to probe once the name points public', async () => {
+    // DNS can change between add and test. The verdict must describe where the
+    // name points now, and no request may reach a public host meanwhile.
+    const table: Record<string, string[]> = { 'bench-rig': ['192.168.1.60'] };
+    const fetchFn = vi.fn(async () => OK_MODELS());
+    const { service, repo } = build({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      lookup: makeLookup(table),
+    });
+    const e = await service.add({
+      name: 'A',
+      baseUrl: 'http://bench-rig:1234',
+      authHeaderKeyRef: null,
+    });
+
+    table['bench-rig'] = ['52.4.4.4'];
+    const result = await service.test(e.id);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(result.reachable).toBe(false);
+    expect(result.error).toEqual({ kind: 'endpoint-unreachable', url: 'http://bench-rig:1234' });
+    expect(repo.getById(e.id)?.status).toBe('unreachable');
+    expect(repo.getById(e.id)?.lastError).toMatch(/52\.4\.4\.4.*local network/i);
+  });
+
+  it('fails the probe when the name no longer resolves', async () => {
+    const table: Record<string, string[] | undefined> = { 'bench-rig': ['192.168.1.60'] };
+    const fetchFn = vi.fn(async () => OK_MODELS());
+    const { service, repo } = build({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      lookup: makeLookup(table),
+    });
+    const e = await service.add({
+      name: 'A',
+      baseUrl: 'http://bench-rig:1234',
+      authHeaderKeyRef: null,
+    });
+
+    table['bench-rig'] = undefined;
+    const result = await service.test(e.id);
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(result.reachable).toBe(false);
+    expect(repo.getById(e.id)?.lastError).toMatch(/could not be resolved/i);
+  });
+
+  it('probes a name that still resolves locally', async () => {
+    const { service } = build();
+    const e = await service.add({
+      name: 'A',
+      baseUrl: 'http://bench-rig:1234',
+      authHeaderKeyRef: null,
+    });
+    await expect(service.test(e.id)).resolves.toMatchObject({ reachable: true });
   });
 });
 
@@ -504,5 +684,34 @@ describe('EndpointService — test (reachability probe)', () => {
   it('throws a typed error for an unknown endpoint', async () => {
     const { service } = build();
     await expect(service.test('ghost')).rejects.toBeInstanceOf(EndpointServiceError);
+  });
+
+  it('does not follow redirects, so a LAN box cannot bounce the probe to a public host', async () => {
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://collector.example.com/v1/models' },
+        }),
+    );
+    const { service, repo } = build({ fetchFn: fetchFn as unknown as typeof fetch });
+    const e = await service.add({
+      name: 'A',
+      baseUrl: 'http://10.0.0.1:1234',
+      authHeaderKeyRef: null,
+    });
+
+    const result = await service.test(e.id);
+
+    const init = fetchFn.mock.calls[0]?.[1] as FetchInit | undefined;
+    expect(init?.redirect).toBe('manual');
+    expect(result.reachable).toBe(false);
+    expect(result.error).toEqual({
+      kind: 'endpoint-unreachable',
+      url: 'http://10.0.0.1:1234',
+      httpStatus: 302,
+    });
+    expect(repo.getById(e.id)?.status).toBe('unreachable');
+    expect(repo.getById(e.id)?.lastError).toMatch(/redirect/i);
   });
 });

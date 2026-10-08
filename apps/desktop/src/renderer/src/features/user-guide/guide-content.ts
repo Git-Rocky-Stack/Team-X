@@ -238,6 +238,14 @@ export const GUIDE_ACTIONS: GuideAction[] = [
     view: 'meetings',
   },
   {
+    id: 'open-models',
+    label: 'Open Models',
+    description:
+      'Jump to the Models tab: GGUF library, Hugging Face discovery, LAN endpoints, and runtime.',
+    kind: 'view',
+    view: 'models',
+  },
+  {
     id: 'open-settings',
     label: 'Open Settings',
     description:
@@ -703,7 +711,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'callout',
         tone: 'warning',
         title: 'Readiness check',
-        text: 'If employees stop responding or return empty output, check the enabled provider, provider test result, model name, privacy tier, concurrency cap, agentic loop caps, and budget settings before assuming the chat surface is broken. The fault is almost always upstream of the renderer.',
+        text: 'If a turn fails, the direct line shows why under the transcript and the timeline records the reason, including a privacy-tier refusal. If employees stop responding or return empty output without a reason, check the enabled provider, provider test result, model name, privacy tier, concurrency cap, agentic loop caps, and budget settings before assuming the chat surface is broken. The fault is almost always upstream of the renderer.',
       },
       {
         kind: 'callout',
@@ -714,6 +722,45 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     ],
     taskIds: ['provider-ready', 'settings-reviewed'],
     actionIds: ['open-settings-providers', 'open-settings'],
+  },
+  {
+    id: 'local-models',
+    title: 'Local Models',
+    summary:
+      'Run native GGUF models from the Models tab: library, Hugging Face discovery, LAN endpoints, runtime and GPU controls, and per-model benchmarks.',
+    category: 'Setup',
+    roles: OWNER_AND_BUILDER,
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: 'The Models tab in the top bar manages native GGUF models served by a bundled llama.cpp server. It has four panels: Library, Discover, Endpoints, and Runtime. The selected panel is remembered while you move between views, so you can leave mid-configuration and come back to the same place.',
+      },
+      {
+        kind: 'paragraph',
+        text: 'A GGUF model is not yet an agent provider. Employees, Copilot, and the command palette cannot be routed to a model loaded here; Ollama remains the local agent-provider path, configured in Settings > Providers. Use the Models tab to build, tune, and measure a local library.',
+      },
+      {
+        kind: 'bullets',
+        items: [
+          'Library: Add file picks a single .gguf; Add folder watches a folder including its subfolders. Rescan a watched folder or stop watching it, and Load or Unload individual models.',
+          'Model detail: set a per-model system prompt and chat template, and tune context length, GPU layers, CPU threads, batch size, and sampling (temperature, top-K, top-P, repeat penalty). Reset to auto hands every value back to automatic sizing from GGUF metadata and free VRAM.',
+          "Benchmarks: Run benchmark records prompt-eval and generation throughput, time to first token, and peak VRAM from llama-server's own timings, measured rather than estimated, and keeps a history per model.",
+          'Discover: search Hugging Face for GGUF repositories, open a model card, and queue resumable downloads you can pause, resume, or cancel. Only .gguf files are downloaded, into a folder that already exists, and only one transfer per destination file runs at a time.',
+          'Endpoints: register LM Studio, Ollama, llama-server, KoboldCPP, or vLLM servers on your LAN and Test them. Every address must be loopback, private (RFC1918), link-local, or IPv6 unique-local; bare and .local hostnames are resolved and every resolved address is checked, and a probe that answers with a redirect fails.',
+          'Runtime: GPU inventory across CUDA, ROCm, Vulkan, Metal, and CPU with Re-probe, the active backend, the default download folder, Max concurrent models for the pool, and the bundled llama.cpp build.',
+        ],
+      },
+      {
+        kind: 'callout',
+        tone: 'warning',
+        title: 'Not a provider yet',
+        text: 'Loading a model in the Models tab does not make it available to employees. If work must stay on this machine today, configure Ollama in Settings > Providers and set the privacy tier to Local Only.',
+      },
+    ],
+    // No checklist task: a new task would change every existing user's
+    // progress count for a section that is reference material.
+    taskIds: [],
+    actionIds: ['open-models', 'open-settings-providers'],
   },
   {
     id: 'enhanced-ai-capabilities',
@@ -729,24 +776,21 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         kind: 'paragraph',
-        text: 'The Enhanced AI panel is the configuration cockpit; the actual feature behavior shows up across Chat, Tickets, Mission Control, Autonomy > Memory, and Audit. Toggles save without an app restart and are scoped per workspace, so different companies can run different enhancement profiles. LLM configuration at the top controls the base model used for the enhanced operations themselves.',
+        text: 'Enhanced AI is active only while RAG is enabled with an embedding provider, because it grounds Copilot answers in the same index. Turn RAG on in Settings > RAG first and restart Team-X. Once active, Copilot can call its search_company_knowledge tool to pull retrieved passages, remembered facts, and knowledge-graph entities into an answer, and every completed Copilot question feeds long-term memory. Long-term memory and the knowledge graph are stored in the local database, so they survive a restart. These settings are global, not per workspace: one profile applies to every company.',
       },
       {
         kind: 'paragraph',
-        text: 'LLM Configuration controls the base model used for enhanced AI operations. Choose the provider (Ollama, OpenAI, Anthropic, etc.), model name, max tokens for generation, and temperature for creativity. Higher temperature (0.7-1.0) produces more diverse outputs; lower temperature (0.0-0.3) produces more deterministic results. Pair the choice with the right runtime strategy and privacy tier so enhanced features actually run on a permitted provider.',
+        text: "LLM Provider sets the provider and model Enhanced AI uses for fact extraction, conversation summaries, and query expansion. Leave both at 'auto' to use the system agent's provider, or enter a provider id (for example 'openai' or 'anthropic') and a model name; a change applies to the next call. Timing differs by switch: Long-Term Memory, Knowledge Graph, and Semantic Chunking apply immediately (Semantic Chunking to content indexed from then on), while Query Expansion and Distributed Tracing (including its sample rate) apply on the next launch.",
       },
       {
         kind: 'bullets',
         items: [
           'Query Expansion improves retrieval by generating semantic variations, synonyms, entity-based expansions, and hypothetical document embeddings (HyDE) for better matches.',
-          'Semantic Chunking v2 uses document structure-aware splitting that preserves code blocks, list integrity, and markdown hierarchy instead of naive token-based chunking.',
+          'Semantic Chunking v2 splits content the RAG index stores on document structure, preserving code blocks, list integrity, and markdown hierarchy instead of a fixed token window. It applies to content indexed after the switch changes; use Rebuild in Settings > RAG to re-chunk what is already indexed.',
           'Long-Term Memory extracts facts from conversations with freshness scoring (time decay + frequency boost), tracks summaries, and enables cross-thread context retention.',
           'Knowledge Graph builds a network of entities (people, concepts, events) and relationships (causes, belongs_to, related_to) for intelligent context retrieval and graph-based reasoning.',
-          'Multi-Turn Planning creates execution plans with topological sorting, auto-revision on failures, and configurable complexity thresholds for complex multi-step requests.',
-          'Streaming Responses enable real-time token-by-token output for better user experience on long-running generations, with configurable transport (SSE/WebSocket).',
           'Distributed Tracing provides W3C Trace Context compliance with full span hierarchy for debugging, performance analysis, and observability of AI operations.',
           'Sample rate controls trace volume in production. 1.0 traces every request and is appropriate during tuning; 0.1 (10%) is a typical production setting that keeps observability without overwhelming the trace store.',
-          'Planning threshold decides when a request is considered complex enough to invoke the planner. Lower thresholds mean more requests are decomposed; higher thresholds mean more direct execution.',
           'Long-term memory and knowledge graph share entities. Facts extracted from conversations promote into graph nodes when they pass the relevance threshold, which is why enabling them together compounds context quality.',
         ],
       },
@@ -760,7 +804,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         kind: 'callout',
         tone: 'warning',
         title: 'Resource considerations',
-        text: 'Knowledge graph operations and distributed tracing add computational overhead. Use sample rate for tracing (0.1 = 10% of requests) in production to balance observability with performance. Set planning threshold based on your typical task complexity, and watch Telemetry > Cost after enabling these features so the spend impact is visible.',
+        text: 'Knowledge graph operations and distributed tracing add computational overhead. Use sample rate for tracing (0.1 = 10% of requests) in production to balance observability with performance. Watch Telemetry > Cost after enabling these features so the spend impact is visible.',
       },
       {
         kind: 'callout',
@@ -1496,6 +1540,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'Template export is the right starter for new workspaces in the same domain. Pair it with a starter ticket set if the new workspace should hit the ground running.',
           'Queue shared operator invites in Autonomy > Access before expecting invited or cloud posture to become actionable. Portability moves the workspace shape; Access decides who can see it.',
           'The portability section emits audit events for every export, import, and template save so the package lineage is reconstructible months later.',
+          'Paperclip exports arrive through Settings > Paperclip Import: choose the export folder, review the preview, Save as package, then Review & import in Portability stages the saved file here, so the same preview, secret binding, and non-destructive import apply.',
         ],
       },
       {
@@ -1517,7 +1562,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: 'settings-privacy-backup',
     title: 'Settings, Privacy, And Backup',
     summary:
-      'Understand the full Settings surface: updater, runtime, privacy, RAG, enhanced AI, concurrency, permissions, planner, copilot, providers, portability, memory, and recovery.',
+      'Understand the full Settings surface: updater, runtime, privacy, RAG, enhanced AI, concurrency, permissions, planner, copilot, providers, portability, Paperclip import, private operator access, memory, and recovery.',
     category: 'Setup',
     roles: ALL_ROLES,
     blocks: [
@@ -1527,7 +1572,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         kind: 'paragraph',
-        text: 'The Settings view scrolls top-to-bottom in a deliberate order: Updater first (so you know whether the rest of the app is current), then Runtime, Privacy, RAG, Enhanced AI, Concurrency, Extensions, Permissions, Agentic Loop, Planner, Portability, Memory, Copilot, Providers, and Backup. Settings can be deep-linked from the user guide quick actions and the focus-section animation guides your eye to the right card.',
+        text: 'The Settings view scrolls top-to-bottom in a deliberate order: Updater first (so you know whether the rest of the app is current), then Runtime, Privacy, RAG, Enhanced AI, Concurrency, Extensions, Permissions, Agentic Loop, Planner, Portability, Paperclip Import, Private Operator Access, Memory, Copilot, Providers, and Backup. Settings can be deep-linked from the user guide quick actions and the focus-section animation guides your eye to the right card.',
       },
       {
         kind: 'paragraph',
@@ -1538,15 +1583,17 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         items: [
           'Updater checks for available app updates and surfaces update status. Apply updates before tuning anything downstream.',
           'Runtime Strategy chooses Auto, Hybrid (4 slots), Always-On (8 slots), or Lean (2 slots). Auto profiles hardware before deciding; the others are explicit.',
-          'Privacy Tier caps whether Local Only, Open-Source Cloud (Groq, Together, Fireworks, OpenRouter), or All Providers (including Anthropic, OpenAI, Google) can be used. Tier caps block providers above the limit even if individually enabled.',
-          'RAG controls retrieval-augmented context from the vault: enablement, top K (1-20), threshold (0-1, 0.05 step), context budget (100-4000 tokens, 100 step), embedding provider, embedding model, and embedding dimension (1-4096). Rebuild and Delete are explicit, confirmed actions.',
-          'Enhanced AI configures Phase 2 & 3 capabilities: query expansion, semantic chunking v2, long-term memory (facts, summaries), knowledge graph (entities, relationships), multi-turn planning with auto-revision, streaming responses, and distributed tracing with W3C compliance.',
+          'Privacy Tier caps whether Local Only, Open-Source Cloud (Groq, Together, Fireworks), or All Providers (including Anthropic, OpenAI, Google, OpenRouter) can be used. A provider above the cap is refused even if individually enabled, and the refusal says which provider and what to change. External runtimes count too: Codex, Claude Code, Cursor and command runtimes are Proprietary Cloud, and an HTTP runtime is Local only on your local network.',
+          'RAG controls retrieval-augmented context from the vault: enablement, top K (1-20), threshold (0-1, 0.05 step), context budget (100-4000 tokens, 100 step), embedding provider, embedding model, and embedding dimension (1-4096). Rebuild and Delete are explicit, confirmed actions. Turning RAG on or off and changing the embedding provider apply on the next launch.',
+          'Enhanced AI configures Phase 2 & 3 capabilities: query expansion, semantic chunking v2, long-term memory (facts, summaries), knowledge graph (entities, relationships), multi-turn planning with auto-revision, streaming responses, and distributed tracing with W3C compliance. It is active only while RAG is on, and its settings are global across workspaces.',
           'Concurrency caps keep provider calls within local hardware limits, cloud plan limits, and budget expectations. Orchestrator slots set the global ceiling; per-provider caps keep any single kind from saturating the pool.',
           'Permissions defines presets (Safe Mode, Standard, Advanced) for extension authority. Advanced toggles reveal the full per-capability, per-path matrix.',
           'Planner sets the approval level (officer, senior management, management, supervisor, lead) required for write-side decomposition and other guardrail thresholds. Officer approval is the safest default.',
           'Agentic Loop limits max steps, max tokens, and timeout milliseconds for complex command-palette runs. Wider caps trade time and tokens for completion depth.',
           'Copilot settings control analyzer enablement, interval (1-60 minutes), categories (Operational, Cost, Org, Workflow, Anomaly), and category weights. Saving restarts the analyzer timer immediately.',
           'Portability previews packages, exports workspaces, saves templates, and reviews sharing posture. Imports are non-destructive and emit audit events.',
+          'Paperclip Import reads a Paperclip export folder and previews what it would become (agents, runtimes, tickets, skills, unsupported adapters, missing secrets) without writing anything. Save as package writes a .teamx-package.json; Review & import in Portability hands it to the Portability import, which is the only path that creates a workspace.',
+          'Private Operator Access is a read-only decision record: for the selected workspace and exposure (Localhost, Tailscale, or Hosted bridge) it lists which supervision actions would be allowed, which are refused, and why. Asking for a plan changes nothing and opens no listener.',
           'Memory sets the default pack budget, recent-turn window, checkpoint depth, digest cadence, and dropped-history strategy used by long-running threads.',
           'Backup & Restore creates local backups containing the full database and vault files; restore intentionally replaces current data and is treated as destructive.',
           'Backup creation is one click; the result is dated and sized so the backup list is scannable. Restore prompts for confirmation because it overwrites everything in the active workspace.',
@@ -1655,7 +1702,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           'If a routine did not materialize work, inspect Autonomy > Routines, Budgets, Approvals, and Audit before editing the routine blindly. A budget hard stop or pending approval is the usual cause.',
           'If a workspace feels empty, verify the active company in the top-bar switcher, employee roster, enabled providers, tickets, projects, goals, files, and schedule entries.',
           'If a deliverable is missing, check Files, ticket attachments, Autonomy > Artifacts, and the employee thread before asking for regeneration.',
-          'If streaming is not visible during a run, check Enhanced AI > Streaming Responses and the runtime strategy. Some strategies disable streaming to preserve concurrency headroom.',
+          'If streaming is not visible during a run, check the runtime strategy. Some strategies disable streaming to preserve concurrency headroom.',
           'If RAG retrieval misses obvious matches, inspect RAG settings (top K, threshold, embedding provider/model/dim), trigger Rebuild from Settings, and confirm the source files are actually in the vault.',
           'If Copilot insights stop arriving, check Copilot enablement, interval (1-60 minutes), category set, and analyzer logs in Audit. Disabled categories produce no insights even when the analyzer is running.',
           'If a scheduled item did not wake an employee, confirm the assignee is set, the workspace is active at fire time, and the wake event is present in Audit.',

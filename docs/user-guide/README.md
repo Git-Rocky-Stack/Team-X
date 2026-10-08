@@ -15,6 +15,7 @@ Two shortcuts unlock most of the intelligence surface:
 
 ## Getting Started
 
+- [What's New](./whats-new.md): Release notes: what changed in each release, and upgrade notes for the next one.
 - [Getting Started](./getting-started.md): Install Team-X (Windows / macOS / Linux, or from source) and have your first conversation with an AI employee.
 - [Quick Start](./getting-started/quick-start.md): The 15-minute path: install, create a workspace, hire your first employee, and complete your first ticket.
 - [Demo Walkthrough](./demo-walkthrough.md): A 10-15 minute guided tour, from an empty Strategia-X company to the Copilot surfacing its first proactive insight.
@@ -26,7 +27,7 @@ Two shortcuts unlock most of the intelligence surface:
 - [Scheduling and Calendar](./scheduling-and-calendar.md): The Schedule calendar layer: ticket due dates, project/goal targets, reminders, and future agent wakeups.
 - [Using the Vault](./using-the-vault.md): Local file storage with SHA256 integrity, FTS5 search, ticket attachments, and agent-created deliverables.
 - [Backup and Restore](./backup-and-restore.md): Create portable `.teamx-backup` archives of your database and vault, and restore from them.
-- [Configuring Providers](./configuring-providers.md): Add any of the 10 supported LLM providers, set privacy tiers, and choose a runtime strategy.
+- [Configuring Providers](./configuring-providers.md): Add any of the 9 supported LLM providers, set privacy tiers, and choose a runtime strategy.
 - [Command Palette](./command-palette.md): The `Ctrl/Cmd+K` natural-language command surface: 15 intents, local-first classification, a destructive-action gate, and audited history.
 
 ## Intelligence & Autonomy
@@ -70,7 +71,7 @@ Two shortcuts unlock most of the intelligence surface:
 - [Troubleshooting](./troubleshooting.md): Fixes for installation, runtime/agent, and provider-connection issues.
 - [Glossary](./glossary.md): Definitions of Team-X terminology and concepts.
 - [Keyboard Shortcuts](./keyboard-shortcuts.md): The complete, authoritative shortcut surface (two global shortcuts plus the palette).
-- [CLI Reference](./cli-reference.md): Reference for both command surfaces: the natural-language palette and the automation CLI.
+- [CLI Reference](./cli-reference.md): Reference for the natural-language Command Palette, and why there is no separate command-line tool.
 - [Migration Guide](./migration-guide.md): Move to Team-X from other AI-workforce tools, PM systems, and freelance platforms.
 - [Accessibility Guide](./accessibility-guide.md): Accessibility features, how to use them, and inclusive-content best practices.
 

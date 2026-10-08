@@ -2,7 +2,7 @@
  * RAG Evaluation Types
  *
  * Types for evaluating retrieval-augmented generation systems.
- * Includes golden dataset structure, metrics, and evaluation results.
+ * Includes evaluation dataset structure, metrics, and evaluation results.
  */
 
 /**

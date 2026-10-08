@@ -62,7 +62,10 @@ function nodeDotClass(tone: LampTone): string {
   }
 }
 
-function eventDescription(event: DashboardEvent, employeeMap: Map<string, Employee>): string {
+export function eventDescription(
+  event: DashboardEvent,
+  employeeMap: Map<string, Employee>,
+): string {
   const actor = employeeMap.get(event.actorId);
   const actorName = actor?.name ?? event.actorId;
   const payload = event.payload as Record<string, unknown>;
@@ -76,8 +79,15 @@ function eventDescription(event: DashboardEvent, employeeMap: Map<string, Employ
       const latency = payload.latencyMs as number | undefined;
       return `${actorName} completed work (${tokens} tokens${latency ? `, ${(latency / 1000).toFixed(1)}s` : ''})`;
     }
-    case 'work.failed':
-      return `${actorName} work failed`;
+    case 'work.failed': {
+      // Emitted by the orchestrator; the payload names the employee.
+      const employeeId = payload.employeeId as string | undefined;
+      const name = (employeeId && employeeMap.get(employeeId)?.name) || actorName;
+      const error = payload.error;
+      return typeof error === 'string' && error.length > 0
+        ? `${name} work failed: ${error}`
+        : `${name} work failed`;
+    }
     case 'work.queued':
       return `${actorName} queued for processing`;
     case 'message.persisted':

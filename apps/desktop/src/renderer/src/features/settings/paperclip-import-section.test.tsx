@@ -25,6 +25,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PaperclipImportSection } from './paperclip-import-section.js';
 
+import { useAppStore } from '@/store/app-store.js';
+
 const currentDirname = dirname(fileURLToPath(import.meta.url));
 
 function makePreview(overrides: Record<string, unknown> = {}) {
@@ -47,6 +49,7 @@ function makePreview(overrides: Record<string, unknown> = {}) {
 }
 
 let preview: ReturnType<typeof vi.fn>;
+let savePackage: ReturnType<typeof vi.fn>;
 let selectDirectory: ReturnType<typeof vi.fn>;
 let client: QueryClient;
 
@@ -70,11 +73,15 @@ async function chooseFolder() {
 
 beforeEach(() => {
   preview = vi.fn().mockResolvedValue(makePreview());
+  savePackage = vi
+    .fn()
+    .mockResolvedValue({ canceled: false, packagePath: 'D:/out/acme.teamx-package.json' });
+  useAppStore.setState({ portabilityImportRef: null, settingsFocusSection: null });
   selectDirectory = vi
     .fn()
     .mockResolvedValue({ canceled: false, folderPath: 'D:/paperclip-export' });
   (window as unknown as { teamx: unknown }).teamx = {
-    paperclip: { preview },
+    paperclip: { preview, savePackage },
     system: { selectDirectory },
   };
   client = new QueryClient({
@@ -206,5 +213,51 @@ describe('PaperclipImportSection — Gate 2 wiring', () => {
     );
     expect(src).toContain('<PaperclipImportSection />');
     expect(src).toContain('data-settings-section="paperclip"');
+  });
+});
+
+describe('PaperclipImportSection — saving the package for Portability', () => {
+  // The preview used to end with "import the package from the Portability
+  // panel" — which reads a package file — while nothing ever wrote one.
+  async function previewThenSave() {
+    const user = userEvent.setup();
+    renderSection();
+    await chooseFolder();
+    await waitFor(() => expect(screen.getByText('Agents')).toBeVisible());
+    await user.click(screen.getByRole('button', { name: /save as package/i }));
+    return user;
+  }
+
+  it('saves the previewed folder as a package through the main process', async () => {
+    await previewThenSave();
+    await waitFor(() =>
+      expect(savePackage).toHaveBeenCalledWith({ folderPath: 'D:/paperclip-export' }),
+    );
+    await waitFor(() => expect(screen.getByText('D:/out/acme.teamx-package.json')).toBeVisible());
+  });
+
+  it('hands the saved file to the Portability import and scrolls there', async () => {
+    const user = await previewThenSave();
+    await user.click(
+      await screen.findByRole('button', { name: /review & import in portability/i }),
+    );
+
+    expect(useAppStore.getState().portabilityImportRef).toBe('D:/out/acme.teamx-package.json');
+    expect(useAppStore.getState().settingsFocusSection).toBe('portability');
+  });
+
+  it('shows nothing saved when the operator cancels the dialog', async () => {
+    savePackage.mockResolvedValue({ canceled: true, packagePath: null });
+    await previewThenSave();
+    await waitFor(() => expect(savePackage).toHaveBeenCalled());
+    expect(
+      screen.queryByRole('button', { name: /review & import in portability/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('reports a failed save with the main-process message', async () => {
+    savePackage.mockRejectedValue(new Error('EACCES: permission denied'));
+    await previewThenSave();
+    await waitFor(() => expect(screen.getByText(/EACCES: permission denied/)).toBeVisible());
   });
 });

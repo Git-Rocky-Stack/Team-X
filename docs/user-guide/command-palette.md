@@ -110,6 +110,6 @@ Slash commands bypass NLU entirely: no LLM call, instant navigation. Use them wh
 
 ## Privacy
 
-The classifier runs through your configured LLM provider via the provider router, same path as every other LLM call in Team-X. Privacy tier filtering applies: if your max tier is `local`, only Ollama is used. If you allow `proprietary-cloud`, the classifier may use Anthropic / OpenAI / Google. Your text never leaves your machine unless you have explicitly enabled a cloud provider.
+The classifier runs through your company's system-agent provider, the same resolution path as every other model call, so Settings → Privacy applies: if that provider is above your max tier it is refused and the command goes to the agentic loop unclassified (which is held to the same tier). Your text never leaves your machine unless your tier allows a cloud provider. Classification gives up after 15 seconds, and is skipped for a company over a budget hard cap; either way the command still runs through the agentic loop.
 
 No phone-home. No analytics. No third-party telemetry. The command palette honors invariant #7, same as the rest of the app.

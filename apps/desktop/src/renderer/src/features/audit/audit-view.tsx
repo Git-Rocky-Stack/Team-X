@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { Separator } from '@/components/ui/separator.js';
+import { actorLabel } from '@/features/audit/actor-label.js';
 import {
   AuditEventChip,
   buildRowSummary,
@@ -45,13 +46,6 @@ function formatTimestamp(ms: number): string {
     minute: '2-digit',
     second: '2-digit',
   });
-}
-
-function getActorLabel(actorId: string, actorKind: string, employees: Employee[]): string {
-  if (actorKind === 'user') return 'Rocky';
-  if (actorKind === 'system' || actorKind === 'orchestrator') return actorKind;
-  const emp = employees.find((e) => e.id === actorId);
-  return emp?.name ?? actorId;
 }
 
 function tryParsePayload(json: string): Record<string, unknown> | null {
@@ -169,7 +163,7 @@ function EventRow({
         <AuditEventChip eventType={event.eventType} />
 
         <span className="shrink-0 text-body text-[var(--display-fg)] opacity-85">
-          {getActorLabel(event.actorId, event.actorKind, employees)}
+          {actorLabel({ id: event.actorId, kind: event.actorKind }, employees)}
         </span>
 
         {rowSummary ? (

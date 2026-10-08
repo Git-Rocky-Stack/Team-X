@@ -159,8 +159,17 @@ export interface TracerOptions {
   /** Tracer version */
   version?: string;
 
-  /** Schema URL */
-  schemaUrl?: string;
+  /**
+   * Probability (0-1) that a new trace is recorded. The decision is drawn
+   * once per root span; every span started under it inherits that decision,
+   * so a trace is kept or dropped whole. Unsampled spans are still returned
+   * (callers end them as usual) but are never exported or handed to a
+   * processor. Default 1: record everything.
+   */
+  sampleRate?: number;
+
+  /** Source of the sampling draw, uniform on [0, 1). Default `Math.random`. */
+  random?: () => number;
 }
 
 /**
@@ -341,6 +350,12 @@ export function createTracer(
       });
     });
 
+  const sampleRate = options.sampleRate ?? 1;
+  if (!(sampleRate >= 0 && sampleRate <= 1)) {
+    throw new RangeError(`createTracer: sampleRate must be within [0, 1], got ${sampleRate}`);
+  }
+  const random = options.random ?? Math.random;
+
   const processors = options.processors ?? [];
   const rootSpans: Span[] = [];
   const activeSpans = new Map<string, Span>();
@@ -382,7 +397,8 @@ export function createTracer(
         traceId,
         spanId,
         parentSpanId: parentContext?.spanId,
-        sampled: parentContext?.sampled ?? Math.random() < 0.1, // 10% default sampling
+        // Children inherit the root's decision; only a new trace draws.
+        sampled: parentContext ? parentContext.sampled : random() < sampleRate,
       };
 
       const span: Span = {
@@ -397,8 +413,10 @@ export function createTracer(
         children: [],
       };
 
-      // Set this span as active
+      // Set this span as active. An unsampled span still becomes the current
+      // context so its children inherit the drop decision.
       currentContext = context;
+      if (!context.sampled) return span;
       activeSpans.set(spanId, span);
 
       // Notify processors
@@ -440,6 +458,9 @@ export function createTracer(
             }
           : null;
       }
+
+      // Dropped by sampling: never exported, never handed to a processor.
+      if (!span.context.sampled) return;
 
       activeSpans.delete(span.context.spanId);
 
@@ -489,6 +510,7 @@ export function createTracer(
       };
 
       // Notify processors
+      if (!span.context.sampled) return;
       for (const processor of processors) {
         try {
           processor.onError(exception, span);

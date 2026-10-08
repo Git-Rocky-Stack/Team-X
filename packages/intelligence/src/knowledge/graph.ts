@@ -9,6 +9,7 @@
 
 import type { FactType } from '../memory/long-term.js';
 import type { ExtractedFact } from '../memory/long-term.js';
+import { significantTerms } from '../memory/terms.js';
 
 /**
  * Knowledge graph node representing an entity or concept.
@@ -204,7 +205,8 @@ export interface KnowledgeGraphRepo {
   deleteEdge(id: string): boolean;
 
   // Queries
-  findNodesByLabel(companyId: string, labelPattern: string): KnowledgeNode[];
+  /** Nodes whose label contains `text`, case-insensitively. A literal match, not a pattern. */
+  findNodesByLabel(companyId: string, text: string): KnowledgeNode[];
   findRelatedNodes(nodeId: string, maxDepth: number): GraphQueryResult;
 
   // Cleanup
@@ -321,9 +323,13 @@ export function createInMemoryGraphRepo(): KnowledgeGraphRepo {
         .filter((e): e is KnowledgeEdge => e !== undefined && e.toNodeId === toId);
     },
 
-    findNodesByLabel(companyId, labelPattern) {
-      const regex = new RegExp(labelPattern, 'i');
-      return impl.getNodesByCompany(companyId).filter((n) => regex.test(n.label));
+    findNodesByLabel(companyId, text) {
+      // Literal, not `new RegExp(text)`: a label search for "C++" or "(beta)"
+      // threw a SyntaxError when the text was compiled as a pattern.
+      const needle = text.toLowerCase();
+      return impl
+        .getNodesByCompany(companyId)
+        .filter((n) => n.label.toLowerCase().includes(needle));
     },
 
     findRelatedNodes(nodeId, maxDepth) {
@@ -492,8 +498,64 @@ export function createKnowledgeGraphService(options: {
     options.idGen ?? (() => `node_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`);
   const edgeIdGen = () => `edge_${Math.random().toString(36).slice(2, 10)}${now().toString(36)}`;
 
-  // Node label cache for entity resolution
-  const labelToNodeId = new Map<string, string>(); // companyId:label -> nodeId
+  // Node label cache for entity resolution: companyId:lower(label) -> nodeId.
+  const labelToNodeId = new Map<string, string>();
+
+  /**
+   * The node already standing for `label`, if any. The cache alone is not
+   * enough: it starts empty in every process, so with a persistent repo the
+   * same entity mentioned after a restart would get a second node. A miss
+   * falls back to the repo, matching labels case-insensitively.
+   */
+  /**
+   * Companies whose stored labels are already in `labelToNodeId`. A miss used
+   * to rescan the whole company, so ingesting N new entities read every node
+   * N+1 times. The first lookup for a company loads all its labels once;
+   * nodes created later go through `rememberNodeId`, and a cached id whose
+   * node was deleted is re-checked below.
+   */
+  const warmedCompanies = new Set<string>();
+
+  function warmLabels(companyId: string): void {
+    if (warmedCompanies.has(companyId)) return;
+    for (const node of repo.getNodesByCompany(companyId)) {
+      const key = `${companyId}:${node.label.toLowerCase()}`;
+      if (!labelToNodeId.has(key)) labelToNodeId.set(key, node.id);
+    }
+    warmedCompanies.add(companyId);
+  }
+
+  function resolveNodeId(companyId: string, label: string): string | undefined {
+    const key = `${companyId}:${label.toLowerCase()}`;
+    warmLabels(companyId);
+    const cached = labelToNodeId.get(key);
+    if (cached === undefined) return undefined;
+    if (repo.getNode(cached)) return cached;
+    labelToNodeId.delete(key);
+    return undefined;
+  }
+
+  function rememberNodeId(companyId: string, label: string, nodeId: string): void {
+    labelToNodeId.set(`${companyId}:${label.toLowerCase()}`, nodeId);
+  }
+
+  /**
+   * Nodes a question mentions: every significant term of the node's label
+   * appears in the question. The inverse of the old approach, which compiled
+   * the whole question into a RegExp and tested it against each label — a
+   * full sentence never matches a short label like "billing migration", so
+   * natural questions found nothing. Most specific (most terms) first.
+   */
+  function nodesMentionedIn(companyId: string, question: string): KnowledgeNode[] {
+    const questionTerms = new Set(significantTerms(question));
+    if (questionTerms.size === 0) return [];
+    return repo
+      .getNodesByCompany(companyId)
+      .map((node) => ({ node, terms: significantTerms(node.label) }))
+      .filter(({ terms }) => terms.length > 0 && terms.every((t) => questionTerms.has(t)))
+      .sort((a, b) => b.terms.length - a.terms.length)
+      .map(({ node }) => node);
+  }
 
   // Named so sibling calls resolve lexically instead of through the receiver:
   // `this.x()` breaks the moment a method is destructured or passed as a
@@ -502,11 +564,11 @@ export function createKnowledgeGraphService(options: {
     ingestFacts(facts) {
       for (const fact of facts) {
         // Extract or create node from fact
-        let nodeId = labelToNodeId.get(`${fact.companyId}:${fact.fact}`);
+        let nodeId = resolveNodeId(fact.companyId, fact.fact);
 
         if (!nodeId) {
           nodeId = idGen();
-          labelToNodeId.set(`${fact.companyId}:${fact.fact}`, nodeId);
+          rememberNodeId(fact.companyId, fact.fact, nodeId);
 
           const node: KnowledgeNode = {
             id: nodeId,
@@ -527,7 +589,7 @@ export function createKnowledgeGraphService(options: {
         } else {
           // Update existing node
           const existing = options.repo.getNode(nodeId);
-          if (existing) {
+          if (existing && !existing.factIds.includes(fact.id)) {
             existing.factIds.push(fact.id);
             existing.updatedAt = now();
             existing.accessCount++;
@@ -538,11 +600,11 @@ export function createKnowledgeGraphService(options: {
         // Extract entities from fact and create relationship edges
         if (fact.entities && fact.entities.length > 0) {
           for (const entity of fact.entities) {
-            let entityNodeId = labelToNodeId.get(`${fact.companyId}:${entity}`);
+            let entityNodeId = resolveNodeId(fact.companyId, entity);
 
             if (!entityNodeId) {
               entityNodeId = idGen();
-              labelToNodeId.set(`${fact.companyId}:${entity}`, entityNodeId);
+              rememberNodeId(fact.companyId, entity, entityNodeId);
 
               const entityNode: KnowledgeNode = {
                 id: entityNodeId,
@@ -561,8 +623,20 @@ export function createKnowledgeGraphService(options: {
               options.repo.upsertNode(entityNode);
             }
 
-            // Create relationship edge
+            // Create the relationship edge, or reinforce the one already
+            // recorded between these two nodes — re-ingesting a fact must not
+            // multiply its edges.
             const relation = inferRelationFromFactType(fact.type);
+            const prior = options.repo
+              .getEdgesBetweenNodes(nodeId, entityNodeId)
+              .find((e) => e.relation === relation);
+            if (prior) {
+              if (!prior.factIds.includes(fact.id)) prior.factIds.push(fact.id);
+              prior.weight = Math.max(prior.weight, fact.confidence);
+              prior.observedAt = Math.max(prior.observedAt, fact.observedAt);
+              options.repo.upsertEdge(prior);
+              continue;
+            }
             const edgeId = edgeIdGen();
 
             const edge: KnowledgeEdge = {
@@ -590,8 +664,8 @@ export function createKnowledgeGraphService(options: {
       const maxDepth = context.maxDepth ?? 2;
       const maxResults = context.maxResults ?? 20;
 
-      // Find nodes matching the query
-      const matchingNodes = options.repo.findNodesByLabel(context.companyId, context.query);
+      // Find the nodes the question mentions
+      const matchingNodes = nodesMentionedIn(context.companyId, context.query);
 
       if (matchingNodes.length === 0) {
         return {

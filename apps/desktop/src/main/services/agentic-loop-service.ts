@@ -214,6 +214,28 @@ export interface AgenticLoopBudgets {
   timeoutMs: number;
 }
 
+/**
+ * Map the persisted Settings → Agentic Loop snapshot onto loop budgets.
+ *
+ * The UI's "Max Steps" (1–32, default 8) is an operator-facing count of
+ * tool turns, which is the loop's `maxIterations` — NOT its `maxSteps`
+ * (a step-entry ceiling: one turn emits 2–4 entries, so feeding 8 into
+ * `maxSteps` would stop a run after 2–3 turns). The step-entry safety
+ * net stays at `DEFAULT_MAX_STEPS`. Tokens and timeout map one-to-one.
+ */
+export function budgetsFromAgenticSettings(settings: {
+  maxSteps: number;
+  maxTokens: number;
+  timeoutMs: number;
+}): AgenticLoopBudgets {
+  return {
+    maxIterations: settings.maxSteps,
+    maxSteps: DEFAULT_MAX_STEPS,
+    maxTokens: settings.maxTokens,
+    timeoutMs: settings.timeoutMs,
+  };
+}
+
 export interface AgenticLoopResolvedComplete {
   complete: LoopCompleteFn;
   provider: string;
@@ -263,8 +285,10 @@ export interface AgenticLoopServiceDeps {
     systemAgentId: string;
   }): Promise<AgenticLoopResolvedComplete>;
   /**
-   * Returns current budget caps. Defaults to the intelligence package's
-   * `DEFAULT_*` constants if omitted. T7 wires up the real settings repo.
+   * Returns current budget caps; called once at each run start, so a
+   * Settings change applies to the next run. Defaults to the intelligence
+   * package's `DEFAULT_*` constants if omitted. The composition root
+   * passes `budgetsFromAgenticSettings(settingsRepo.getAgentic())`.
    */
   getBudgets?(): AgenticLoopBudgets;
   /** Actor id used for the human user ("rocky" in Phase 1 single-user mode). */

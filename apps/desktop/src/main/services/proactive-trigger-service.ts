@@ -105,6 +105,19 @@ export interface ProactiveTriggerServiceDeps {
     getProactive(): { enabled: boolean; autonomyMode: ExtensionsAutonomyMode };
   };
   /**
+   * Per-company proactive opt-out store. The workspace-wide
+   * `settings.proactive_enabled` flag is the MASTER switch; each company
+   * additionally carries `proactiveEnabled` in its own `companies.settings`
+   * JSON, so toggling one company never changes another and the choice
+   * survives a restart. Structural subset of the companies repo: rows
+   * expose the raw `settingsJson` column and `update` replaces it wholesale,
+   * so the service merges into the existing object before writing.
+   */
+  companiesRepo: {
+    getById(id: string): { settingsJson: string } | null;
+    update(id: string, patch: { settings: Record<string, unknown> }): void;
+  };
+  /**
    * Governed dispatch path for proactive work.
    *
    * `scanForWork` previously synthesized `proactive-thread-*` /
@@ -191,15 +204,20 @@ export function createProactiveTriggerService(
     error: (msg: string, err?: unknown) => console.error(msg, err),
   };
 
-  // Track explicitly disabled companies (in-memory; persisted via settingsRepo)
-  // When global settings.enabled is true, all companies are enabled UNLESS
-  // they're in this disabled set.
-  const disabledCompanies = new Set<string>();
-
   // Per-company runtime counters backing `getState`. Process-local by
   // design: they describe work in flight *right now* in this main process,
   // which is exactly what the dashboard tiles claim to show.
   const runtimeState = new Map<string, ProactiveRuntimeState>();
+
+  // Per-company round-robin position, carried across scans so the first
+  // ticket of every scan does not always land on the same worker. In-memory
+  // only: rotation restarts at the first eligible employee after a restart,
+  // which is harmless — it only spreads load, it does not record ownership.
+  const assignmentCursors = new Map<string, number>();
+
+  // The scan currently running for each company. A concurrent request joins
+  // it instead of starting a second pass over the same unassigned tickets.
+  const inFlightScans = new Map<string, Promise<{ queuedCount: number }>>();
 
   function stateFor(companyId: string): ProactiveRuntimeState {
     let current = runtimeState.get(companyId);
@@ -226,26 +244,49 @@ export function createProactiveTriggerService(
   }
 
   /**
+   * Parse a company's settings JSON. A malformed or non-object column reads
+   * as empty rather than throwing — the opt-out then falls back to the
+   * default (enabled) and the next toggle rewrites a well-formed object.
+   */
+  function readCompanySettings(row: { settingsJson: string }): Record<string, unknown> {
+    try {
+      const parsed: unknown = JSON.parse(row.settingsJson);
+      return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch (err) {
+      logger.warn('[proactive] company settings JSON is malformed; treating as empty', err);
+      return {};
+    }
+  }
+
+  /**
    * Check if proactive is enabled for a company.
-   * Returns true if global setting is enabled AND company is not explicitly disabled.
+   * Returns true if the global master flag is on AND the company has not
+   * persisted an explicit opt-out (`settings.proactiveEnabled === false`).
    */
   function isEnabled(companyId: string): boolean {
     const settings = deps.settingsRepo.getProactive();
     if (!settings.enabled) return false;
-    return !disabledCompanies.has(companyId);
+    const row = deps.companiesRepo.getById(companyId);
+    if (!row) return true;
+    return readCompanySettings(row).proactiveEnabled !== false;
   }
 
   /**
-   * Enable or disable proactive mode for a company.
-   * Emits proactive.enabled_changed event.
+   * Enable or disable proactive mode for ONE company. Persists into that
+   * company's settings JSON (other keys preserved); the global master flag
+   * is never touched here. Emits proactive.enabled_changed.
    */
   function setEnabled(args: { companyId: string; enabled: boolean }): void {
     const { companyId, enabled } = args;
-    if (enabled) {
-      disabledCompanies.delete(companyId);
-    } else {
-      disabledCompanies.add(companyId);
+    const row = deps.companiesRepo.getById(companyId);
+    if (!row) {
+      throw new Error(`[proactive] setEnabled: company "${companyId}" not found`);
     }
+    deps.companiesRepo.update(companyId, {
+      settings: { ...readCompanySettings(row), proactiveEnabled: enabled },
+    });
 
     try {
       deps.bus.emit({
@@ -433,12 +474,28 @@ Use the decompose_project tool to generate the proposal.`;
   /**
    * Scan for work opportunities and queue agent replies.
    * Finds unassigned tickets and creates proactive work items.
+   *
+   * At most one scan runs per company. A call that arrives while a scan is
+   * in flight (the "Scan for Work Now" button, a timer tick) receives that
+   * scan's promise: dispatching again would re-send the same still-unassigned
+   * tickets (duplicate budget spend) and clobber the running scan's
+   * `queuedWork` / `lastScanAt` counters. Joining keeps the return shape
+   * unchanged, so callers that refresh `getState` after awaiting still see
+   * the settled picture.
    */
-  async function scanForWork(args: {
-    companyId: string;
-  }): Promise<{ queuedCount: number }> {
+  function scanForWork(args: { companyId: string }): Promise<{ queuedCount: number }> {
     const { companyId } = args;
+    const inFlight = inFlightScans.get(companyId);
+    if (inFlight) return inFlight;
 
+    const scan = runScan(companyId).finally(() => {
+      inFlightScans.delete(companyId);
+    });
+    inFlightScans.set(companyId, scan);
+    return scan;
+  }
+
+  async function runScan(companyId: string): Promise<{ queuedCount: number }> {
     // Resolve the system agent for this company
     const systemAgentId = resolveSystemAgent(companyId);
     if (!systemAgentId) {
@@ -475,7 +532,6 @@ Use the decompose_project tool to generate the proposal.`;
     state.queuedWork = unassignedTickets.length;
 
     let queuedCount = 0;
-    let assignmentCursor = 0;
 
     try {
       for (const ticket of unassignedTickets) {
@@ -522,14 +578,16 @@ Use the decompose_project tool to generate the proposal.`;
         }
 
         // Round-robin across eligible employees so a single owner does not
-        // absorb every unassigned ticket in one scan. The
+        // absorb every unassigned ticket, within a scan or across scans. The
         // `employees.length === 0` guard above proves the index is in range;
         // the explicit guard narrows the type without a non-null assertion.
-        const assignedEmployee = employees[assignmentCursor % employees.length];
+        const cursor = assignmentCursors.get(companyId) ?? 0;
+        const assignedEmployee = employees[cursor % employees.length];
         if (!assignedEmployee) {
           continue;
         }
-        assignmentCursor += 1;
+        // Stored modulo the roster so the cursor stays bounded.
+        assignmentCursors.set(companyId, (cursor + 1) % employees.length);
 
         // Hand off to the governed dispatcher: it creates the thread and the
         // trigger message, enforces budget admission, re-checks pause state

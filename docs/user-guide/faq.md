@@ -435,34 +435,38 @@ The defaults are produced by `membershipCapabilitiesForRole()` in `operator-acce
 
 ### My Linux AppImage won't start. What do I do?
 
-This is almost always **FUSE 2**. An AppImage is a self-mounting image, and its
-runtime needs the FUSE 2 library (`libfuse.so.2`) on your machine; Team-X's own
-libraries are bundled, but FUSE is not. Modern Ubuntu (22.04+) stopped installing
-it by default, and Ubuntu 24.04 renamed the package to `libfuse2t64`, so a stock
-desktop double-clicks the AppImage and nothing happens.
+**First, check your version.** From the release after v3.4.0, the AppImage
+embeds AppImage's static runtime and starts on a stock Ubuntu 22.04 / 24.04
+desktop with no extra packages. If a current AppImage will not start, run it
+from a terminal and open a ticket with the output and your `lsb_release -a`.
 
-**Two ways to fix it:**
+**On v3.4.0 or earlier, it is almost always FUSE 2.** Those AppImages use a
+runtime that needs the FUSE 2 library (`libfuse.so.2`) to mount itself. Modern
+Ubuntu (22.04+) stopped installing it by default, and Ubuntu 24.04 renamed the
+package to `libfuse2t64`, so a stock desktop double-clicks the AppImage and
+nothing happens. The terminal shows `dlopen(): error loading libfuse.so.2`.
 
-1. **Run without installing anything** (extracts and runs in place):
+**Three ways to fix it:**
+
+1. **Update to the latest release**, which needs no FUSE 2.
+2. **Run without installing anything** (extracts and runs in place):
    ```
-   ./Team-X-<version>-x64.AppImage --appimage-extract-and-run
+   ./Team-X-<version>-x86_64.AppImage --appimage-extract-and-run
    ```
-2. **Install FUSE 2 once:**
+3. **Install FUSE 2 once:**
    - Ubuntu 24.04: `sudo apt install libfuse2t64`
    - Ubuntu 22.04 / Debian: `sudo apt install libfuse2`
    - Fedora: `sudo dnf install fuse-libs`
 
-**Prefer not to deal with FUSE at all?** Use the **`.deb`** instead; it installs
-like any system package and pulls its own dependencies:
+**Prefer a regular package?** Use the **`.deb`**; it installs like any system
+package and pulls its own dependencies:
 ```
-sudo apt install ./Team-X-<version>-x64.deb
+sudo apt install ./Team-X-<version>-amd64.deb
 ```
 
-To see the exact error, run the AppImage from a terminal; the message will name
-the missing piece (e.g. `dlopen(): error loading libfuse.so.2`). If you instead
-see a *sandbox* error mentioning user namespaces (common on Ubuntu 24.04), that's
-a different issue; please open a ticket with the full terminal output and your
-`lsb_release -a`.
+If you instead see a *sandbox* error mentioning user namespaces (common on
+Ubuntu 24.04), that is a different issue; please open a ticket with the full
+terminal output and your `lsb_release -a`.
 
 ### Agent run stuck. What do I do?
 

@@ -174,6 +174,7 @@ import type {
   PackedThreadContext,
   PaperclipImportBridgePreview,
   PaperclipPreviewRequest,
+  PaperclipSavePackageResponse,
   PreviewCompanyPackageImportRequest,
   PreviewCompanyPackageImportResponse,
   PrivateOperatorAccessPlan,
@@ -350,6 +351,7 @@ const CHANNELS = {
   runtimeProfilesValidate: 'runtimeProfiles.validate',
   runtimeOperationsSnapshot: 'runtimeOperations.snapshot',
   paperclipPreview: 'paperclip.preview',
+  paperclipSavePackage: 'paperclip.savePackage',
   privateOperatorPlan: 'privateOperator.plan',
   privateOperatorSnapshot: 'privateOperator.snapshot',
   autonomyDoctorRun: 'autonomyDoctor.run',
@@ -703,6 +705,8 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
     paperclip: {
       preview: (req: PaperclipPreviewRequest) =>
         ipc.invoke(CHANNELS.paperclipPreview, req) as Promise<PaperclipImportBridgePreview>,
+      savePackage: (req: PaperclipPreviewRequest) =>
+        ipc.invoke(CHANNELS.paperclipSavePackage, req) as Promise<PaperclipSavePackageResponse>,
     },
     privateOperator: {
       // Forwarded verbatim: the main-process handler is the trust boundary and
@@ -1137,11 +1141,11 @@ export function buildTeamXApi(ipc: IpcRendererLike): TeamXApi {
         ipc.invoke(CHANNELS.proactiveGetState, req) as Promise<ProactiveGetStateResponse>,
     },
     // Local & Networked GGUF Support (v3.3.0). Every method routes through
-    // the captured `ipc` to a `localGguf.*` channel whose handler is a
-    // Phase 1 not-implemented stub; the invoke rejects until the owning
-    // phase lands the real handler. Return casts pin each call to the
-    // `LocalGgufApi` contract in @team-x/shared-types via `ReturnType<…>`
-    // so no domain types need importing into this file.
+    // the captured `ipc` to a `localGguf.*` channel served by the real
+    // main-process handlers (library, runtime/pool, endpoint, hf and
+    // benchmark — see `main/ipc/local-gguf-*-handlers.ts`). Return casts
+    // pin each call to the `LocalGgufApi` contract in @team-x/shared-types
+    // via `ReturnType<…>` so no domain types need importing into this file.
     localGguf: {
       library: {
         list: () =>

@@ -120,7 +120,11 @@ import type {
   DashboardEvent,
 } from './events.js';
 import type { LocalGgufApi } from './local-gguf.js';
-import type { PaperclipImportBridgePreview, PaperclipPreviewRequest } from './paperclip.js';
+import type {
+  PaperclipImportBridgePreview,
+  PaperclipPreviewRequest,
+  PaperclipSavePackageResponse,
+} from './paperclip.js';
 import type {
   PrivateOperatorAccessPlan,
   PrivateOperatorAccessRequest,
@@ -1779,6 +1783,22 @@ export interface SettingsGetPrivacyResponse {
     privacyTier: PrivacyTier;
     allowed: boolean;
   }>;
+  /**
+   * Configured + enabled providers above `maxTier` — the ones the provider
+   * factory would refuse at run time. Empty when the tier blocks nothing.
+   */
+  blockedProviders: Array<{
+    id: string;
+    name: string;
+    kind: ProviderKind;
+    privacyTier: PrivacyTier;
+  }>;
+  /**
+   * The RAG embedding provider's id when it is among `blockedProviders` (RAG
+   * on): retrieval then runs without semantic search and indexing pauses.
+   * Null when retrieval is unaffected.
+   */
+  retrievalEmbeddingProviderId: string | null;
 }
 
 export interface SettingsSetPrivacyRequest {
@@ -2089,10 +2109,6 @@ export interface SettingsGetEnhancedAiConfigResponse {
   llmProvider: string;
   /** Model name within the LLM provider. 'auto' lets the resolver pick. */
   llmModel: string;
-  /** Maximum tokens to generate per completion. */
-  llmMaxTokens: number;
-  /** Temperature for sampling (0.0–2.0). */
-  llmTemperature: number;
 
   /** Enable query expansion for better retrieval recall. */
   queryExpansionEnabled: boolean;
@@ -2102,12 +2118,6 @@ export interface SettingsGetEnhancedAiConfigResponse {
   longTermMemoryEnabled: boolean;
   /** Enable knowledge graph for cross-thread entity relationships. */
   knowledgeGraphEnabled: boolean;
-  /** Enable multi-turn planning for complex queries. */
-  planningEnabled: boolean;
-  /** Minimum query length (chars) to trigger planning. */
-  planningThreshold: number;
-  /** Enable streaming responses for real-time output. */
-  streamingEnabled: boolean;
   /** Enable distributed tracing for observability. */
   tracingEnabled: boolean;
   /** Sample rate for tracing (0.0–1.0). */
@@ -2122,15 +2132,10 @@ export interface SettingsGetEnhancedAiConfigResponse {
 export interface SettingsSetEnhancedAiConfigRequest {
   llmProvider?: string;
   llmModel?: string;
-  llmMaxTokens?: number;
-  llmTemperature?: number;
   queryExpansionEnabled?: boolean;
   semanticChunkingEnabled?: boolean;
   longTermMemoryEnabled?: boolean;
   knowledgeGraphEnabled?: boolean;
-  planningEnabled?: boolean;
-  planningThreshold?: number;
-  streamingEnabled?: boolean;
   tracingEnabled?: boolean;
   tracingSampleRate?: number;
 }
@@ -2832,11 +2837,15 @@ export interface IpcContract {
     request: string;
     response: RagDeleteForCompanyResponse;
   };
-  // Paperclip import bridge (preview only — the commit path is
-  // companyPortability.importPackage)
+  // Paperclip import bridge (preview + save the converted package — the
+  // commit path is companyPortability.importPackage)
   'paperclip.preview': {
     request: PaperclipPreviewRequest;
     response: PaperclipImportBridgePreview;
+  };
+  'paperclip.savePackage': {
+    request: PaperclipPreviewRequest;
+    response: PaperclipSavePackageResponse;
   };
   // Private operator access (read-only supervision planning)
   'privateOperator.plan': {
@@ -3566,6 +3575,11 @@ export interface TeamXApi {
      * `packageData` to `companyPortability.importPackage` to commit.
      */
     preview(req: PaperclipPreviewRequest): Promise<PaperclipImportBridgePreview>;
+    /**
+     * Convert the folder again and write the package to a `.teamx-package.json`
+     * chosen in a native save dialog — the file Portability imports.
+     */
+    savePackage(req: PaperclipPreviewRequest): Promise<PaperclipSavePackageResponse>;
   };
   privateOperator: {
     /**
@@ -3713,11 +3727,10 @@ export interface TeamXApi {
   };
 
   /**
-   * Local & Networked GGUF Support (v3.3.0). The full typed surface ships
-   * in Phase 1; every channel is a not-implemented stub until its owning
-   * phase lands the real handler (runtime/pool → P2, library → P3,
-   * endpoint → P5, hf → P7, benchmark → P10). See `LocalGgufApi` in
-   * `local-gguf.ts` for the per-area method contracts.
+   * Local & Networked GGUF Support (v3.3.0). Every channel is served by a
+   * real main-process handler (runtime/pool, library, endpoint, hf and
+   * benchmark); the Phase 1 not-implemented stubs are gone. See
+   * `LocalGgufApi` in `local-gguf.ts` for the per-area method contracts.
    */
   localGguf: LocalGgufApi;
 }

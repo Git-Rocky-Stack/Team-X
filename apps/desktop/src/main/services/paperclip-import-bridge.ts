@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 import type {
@@ -722,22 +722,51 @@ export function previewPaperclipImportBridge(
   };
 }
 
-async function readJsonIfPresent(folderPath: string, fileNames: string[]): Promise<unknown> {
-  for (const fileName of fileNames) {
-    try {
-      const raw = await readFile(join(folderPath, fileName), 'utf8');
-      return JSON.parse(raw);
-    } catch (error) {
-      const code =
-        typeof error === 'object' && error !== null && 'code' in error
-          ? (error as { code?: unknown }).code
-          : null;
-      if (code !== 'ENOENT') {
-        throw error;
+/**
+ * Largest export file the loader will read. The files are parsed whole on the
+ * main process, so an unbounded `tasks.json` is unbounded main-process memory.
+ */
+export const MAX_PAPERCLIP_FILE_BYTES = 50 * 1024 * 1024;
+
+function errorCode(error: unknown): unknown {
+  return typeof error === 'object' && error !== null && 'code' in error
+    ? (error as { code?: unknown }).code
+    : null;
+}
+
+interface FolderReader {
+  /** First of `fileNames` present in the folder, parsed; undefined when none is. */
+  read(fileNames: string[]): Promise<unknown>;
+  /** Names of the export files actually found. */
+  readonly found: string[];
+}
+
+function createFolderReader(folderPath: string, maxFileBytes: number): FolderReader {
+  const found: string[] = [];
+  return {
+    found,
+    async read(fileNames) {
+      for (const fileName of fileNames) {
+        const filePath = join(folderPath, fileName);
+        let size: number;
+        try {
+          size = (await stat(filePath)).size;
+        } catch (error) {
+          if (errorCode(error) === 'ENOENT') continue;
+          throw error;
+        }
+        if (size > maxFileBytes) {
+          throw new Error(
+            `${fileName} is ${size} bytes, larger than the ${maxFileBytes}-byte limit for an export file`,
+          );
+        }
+        const parsed = JSON.parse(await readFile(filePath, 'utf8'));
+        found.push(fileName);
+        return parsed;
       }
-    }
-  }
-  return undefined;
+      return undefined;
+    },
+  };
 }
 
 function nestedArray(root: Record<string, unknown>, key: string, fallback: unknown): unknown[] {
@@ -752,38 +781,62 @@ function exportedAtFromRoot(root: Record<string, unknown>): string | number | nu
   return typeof value === 'string' || typeof value === 'number' ? value : null;
 }
 
+const EXPORT_FILES = {
+  root: ['paperclip-export.json', 'export.json', 'manifest.json'],
+  company: ['company.json', 'workspace.json'],
+  agents: ['agents.json', 'workers.json'],
+  adapters: ['adapters.json', 'runtimes.json'],
+  tasks: ['tasks.json'],
+  issues: ['issues.json'],
+  skills: ['skills.json'],
+} as const;
+
+/**
+ * Read a Paperclip export folder into a bundle.
+ *
+ * Refuses, with the folder named, anything that is not an export: a path that
+ * does not exist or is not a folder, and a folder holding none of the files
+ * an export is made of. Each candidate read used to swallow "file not found",
+ * so a mistyped path or an unrelated folder loaded as an empty export and
+ * previewed as an importable company with nothing in it.
+ */
 export async function loadPaperclipExportFolder(
   folderPath: string,
+  options: { maxFileBytes?: number } = {},
 ): Promise<PaperclipExportBundle> {
   const resolved = resolve(folderPath);
-  const root = await readJsonIfPresent(resolved, [
-    'paperclip-export.json',
-    'export.json',
-    'manifest.json',
-  ]);
+  try {
+    if (!(await stat(resolved)).isDirectory()) {
+      throw new Error(`"${resolved}" is not a folder`);
+    }
+  } catch (error) {
+    if (errorCode(error) === 'ENOENT') throw new Error(`"${resolved}" does not exist`);
+    throw error;
+  }
+
+  const reader = createFolderReader(resolved, options.maxFileBytes ?? MAX_PAPERCLIP_FILE_BYTES);
+  const root = await reader.read([...EXPORT_FILES.root]);
   const rootRecord = isRecord(root) ? root : {};
-  return {
+  const bundle: PaperclipExportBundle = {
     sourcePath: resolved,
     exportedAt: exportedAtFromRoot(rootRecord),
     company:
       (isRecord(rootRecord.company) ? rootRecord.company : null) ??
-      ((await readJsonIfPresent(resolved, ['company.json', 'workspace.json'])) as
+      ((await reader.read([...EXPORT_FILES.company])) as
         | Record<string, unknown>
         | null
         | undefined) ??
       null,
-    agents: nestedArray(
-      rootRecord,
-      'agents',
-      await readJsonIfPresent(resolved, ['agents.json', 'workers.json']),
-    ),
-    adapters: nestedArray(
-      rootRecord,
-      'adapters',
-      await readJsonIfPresent(resolved, ['adapters.json', 'runtimes.json']),
-    ),
-    tasks: nestedArray(rootRecord, 'tasks', await readJsonIfPresent(resolved, ['tasks.json'])),
-    issues: nestedArray(rootRecord, 'issues', await readJsonIfPresent(resolved, ['issues.json'])),
-    skills: nestedArray(rootRecord, 'skills', await readJsonIfPresent(resolved, ['skills.json'])),
+    agents: nestedArray(rootRecord, 'agents', await reader.read([...EXPORT_FILES.agents])),
+    adapters: nestedArray(rootRecord, 'adapters', await reader.read([...EXPORT_FILES.adapters])),
+    tasks: nestedArray(rootRecord, 'tasks', await reader.read([...EXPORT_FILES.tasks])),
+    issues: nestedArray(rootRecord, 'issues', await reader.read([...EXPORT_FILES.issues])),
+    skills: nestedArray(rootRecord, 'skills', await reader.read([...EXPORT_FILES.skills])),
   };
+
+  if (reader.found.length === 0) {
+    const looked = Object.values(EXPORT_FILES).flat().join(', ');
+    throw new Error(`no Paperclip export files in "${resolved}" (looked for ${looked})`);
+  }
+  return bundle;
 }

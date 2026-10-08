@@ -290,7 +290,16 @@ test.describe('Team-X Phase 5.6 M-D workspace switcher', () => {
     });
 
     await window.getByRole('button', { name: /Hire/i }).first().click();
-    await window.getByRole('button', { name: /Senior Fullstack Engineer/ }).click();
+    // Roles are a radio group (the full catalog, grouped by level). The radio
+    // itself is visually hidden, so pick it through its label.
+    const hireDialog = window.getByRole('dialog', { name: /Hire Employee/ });
+    await hireDialog
+      .locator('label')
+      .filter({ has: window.locator('[data-hire-role="senior-fullstack-engineer"]') })
+      .click();
+    await expect(
+      hireDialog.getByRole('radio', { name: 'Senior Fullstack Engineer' }),
+    ).toBeChecked();
     await window.locator('#hire-name').fill(hireName);
     await window.locator('[data-hire-manager-select]').selectOption(seeded.ceoId);
     await window.getByRole('button', { name: 'Confirm Hire' }).click();

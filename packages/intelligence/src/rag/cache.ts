@@ -343,8 +343,17 @@ export class LRUCache<K, V> {
 /**
  * Query cache for RAG retrieval.
  */
+/**
+ * What the query cache stores: the retrieval plus the company it was scoped
+ * to. Keys are one-way hashes, so the company has to ride on the entry for
+ * `invalidateByCompany` to find that company's entries — and only those.
+ */
+interface StoredRetrieval extends CachedRetrieval {
+  companyId: string;
+}
+
 export class QueryCache {
-  private cache: LRUCache<string, CachedRetrieval>;
+  private cache: LRUCache<string, StoredRetrieval>;
   private totalLookups = 0;
   private hits = 0;
   private misses = 0;
@@ -366,7 +375,7 @@ export class QueryCache {
 
     if (cached) {
       this.hits++;
-      return { ...cached, hit: true };
+      return { results: cached.results, cachedAt: cached.cachedAt, hit: true };
     }
 
     this.misses++;
@@ -385,33 +394,38 @@ export class QueryCache {
     const key = createCacheKey(query, options);
     const cachedAt = Date.now();
 
-    this.cache.set(key, { results, cachedAt, hit: false }, ttl);
+    this.cache.set(key, { results, cachedAt, hit: false, companyId: options.companyId }, ttl);
   }
 
   /**
-   * Invalidate cache entries for a company.
-   * Call this when content is added/updated/deleted.
+   * Invalidate every cached retrieval scoped to a company. Other companies'
+   * entries are untouched. Call this when the company's content is added or
+   * updated: any of its queries may now match differently.
+   *
+   * Returns the number of entries removed (also what `invalidations` grows by).
    */
-  invalidateByCompany(_companyId: string): number {
-    const deleted = this.cache.deleteWhere(() => {
-      // Key contains company hash, so we need to check by reconstructing
-      // For simplicity, we'll clear all entries (could be optimized)
-      return true; // Delete all for now
-    });
+  invalidateByCompany(companyId: string): number {
+    const deleted = this.cache.deleteWhere((_key, value) => value.companyId === companyId);
 
     this.invalidations += deleted;
     return deleted;
   }
 
   /**
-   * Invalidate cache entries for specific source IDs.
-   * Call this when specific documents are updated.
+   * Invalidate the cached retrievals whose results include any of these
+   * sources. Call this when documents are deleted: a result set that never
+   * held a deleted source is unaffected by its removal, so it stays warm.
+   *
+   * Returns the number of entries removed (also what `invalidations` grows by).
    */
-  invalidateBySourceIds(sourceIds: string[]): void {
-    // Clear entire cache for simplicity
-    // Could be optimized to only invalidate affected queries
-    this.cache.clear();
-    this.invalidations += sourceIds.length;
+  invalidateBySourceIds(sourceIds: string[]): number {
+    const stale = new Set(sourceIds);
+    const deleted = this.cache.deleteWhere((_key, value) =>
+      value.results.some((r) => stale.has(r.sourceId)),
+    );
+
+    this.invalidations += deleted;
+    return deleted;
   }
 
   /**

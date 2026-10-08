@@ -1,12 +1,15 @@
 # Paperclip Import Bridge
 
-> **Status: library only — not reachable from the running app.**
-> `loadPaperclipExportFolder()` and `previewPaperclipImportBridge()` are
-> implemented in `apps/desktop/src/main/services/paperclip-import-bridge.ts`
-> and covered by `paperclip-import-bridge.test.ts`, but nothing else imports
-> them: there is no IPC channel, no preload binding, and no UI. The "Operator
-> Workflow" below describes the intended flow once that wiring lands — it is
-> not something an operator can do today. Verified 2026-08-23.
+> **Status: wired — preview and save in the app; Portability commits.**
+> `loadPaperclipExportFolder()` and `previewPaperclipImportBridge()`
+> (`apps/desktop/src/main/services/paperclip-import-bridge.ts`) back two IPC
+> channels, `paperclip.preview` and `paperclip.savePackage`
+> (`apps/desktop/src/main/ipc/paperclip-handlers.ts`), and the
+> **Settings → Paperclip Import** panel. This bridge never creates a
+> workspace: `paperclip.savePackage` writes the converted package to a
+> `.teamx-package.json`, and committing it is the existing Portability import
+> (`companies.importPackage`), which owns secret binding, the per-entity plan,
+> and conflict resolution.
 
 P2.4 adds a local bridge that maps Paperclip export folders into Team-X workspace package previews. The bridge does not mutate local state directly; it creates the same package/preview contract used by Team-X portability so operators can review the dry-run plan before importing.
 
@@ -17,7 +20,9 @@ P2.4 adds a local bridge that maps Paperclip export folders into Team-X workspac
 - `paperclip-export.json`, `export.json`, or `manifest.json` root files;
 - split files such as `company.json`, `workspace.json`, `agents.json`, `workers.json`, `adapters.json`, `runtimes.json`, `tasks.json`, `issues.json`, and `skills.json`.
 
-`previewPaperclipImportBridge()` can also consume an in-memory bundle for tests or future UI/CLI wiring.
+`previewPaperclipImportBridge()` can also consume an in-memory bundle (used by the tests).
+
+The loader refuses, naming the folder: a path that does not exist, a path that is not a folder, a folder holding none of the export files above, and any export file larger than 50 MB.
 
 ## Mapping
 
@@ -29,10 +34,11 @@ P2.4 adds a local bridge that maps Paperclip export folders into Team-X workspac
 - Paperclip skills become Team-X skill extensions plus employee skill assignments.
 - Secret-looking adapter values become Team-X runtime `secret_ref` entries so inline secrets are not written into the package.
 
-## Operator Workflow (intended — requires the IPC + UI wiring described above)
+## Operator Workflow
 
-1. Load or paste a Paperclip export folder.
-2. Generate the bridge preview.
-3. Review mapped employees, runtime profiles, tickets, skill assignments, unsupported adapters, and missing secret refs.
-4. Bind missing secrets locally through the existing Team-X package import flow.
-5. Import the generated workspace package only after the preview is acceptable.
+1. In **Settings → Paperclip Import**, click **Choose export folder…** and pick the Paperclip export folder.
+2. Review the preview: counts of agents, runtimes, tickets, skills, unsupported adapters, and missing secrets, plus the "Will not convert" and "Secrets you will have to re-enter" lists. Nothing has been written yet.
+3. Click **Save as package…** and choose where to write the converted package (the save dialog defaults to `<slug>.teamx-package.json` in Portability's export folder). The package is rebuilt from the folder in the main process, never taken from the renderer.
+4. Click **Review & import in Portability** — this stages the saved file into the Portability panel's import field.
+5. In Portability, preview the package and bind the missing secrets locally.
+6. Import. Portability creates a fresh workspace only after you confirm the preview.

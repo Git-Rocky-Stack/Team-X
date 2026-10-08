@@ -13,8 +13,8 @@
  *                            `{ runId, threadId }` shape as M31's
  *                            `complex_request` path so M34's sidebar can
  *                            attach the step-stream with zero wire-format
- *                            divergence. T5 ships the **stub** — T6 wires the
- *                            full agentic-loop round-trip.
+ *                            divergence. The handler runs the full
+ *                            agentic-loop round-trip.
  *   - `copilot.configure`  — **test-only** manual-tick IPC: resolves when
  *                            `CopilotAnalyzerService.tick(companyId, { reason: 'manual' })`
  *                            completes so the T9 Playwright spec can force an

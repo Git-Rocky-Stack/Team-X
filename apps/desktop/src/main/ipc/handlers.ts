@@ -54,6 +54,7 @@ import {
   SHARED_OPERATOR_AUTH_MODES,
   STRATEGY_SLOTS,
   TELEMETRY_RUN_KINDS,
+  exceedsPrivacyTier,
   getLevelRank,
 } from '@team-x/shared-types';
 import type {
@@ -374,6 +375,7 @@ import type {
 } from '../db/repos/threads.js';
 import type { CreateTicketInput, TicketRow, UpdateTicketInput } from '../db/repos/tickets.js';
 import type { createMeetingService } from '../orchestrator/meeting-service.js';
+import { isWorkFailureReported } from '../orchestrator/work-failure-reports.js';
 import type { AuthorityResolverService } from '../services/authority-resolver-service.js';
 import type { ExtensionsRegistryService } from '../services/extensions-registry-service.js';
 import type { McpHost } from '../services/mcp-host.js';
@@ -1083,8 +1085,9 @@ export interface IpcHandlerDeps {
   providersService: IpcProvidersService;
   /**
    * Proactive trigger service — goal decomposition and background work scanning.
-   * Optional for now; handler falls through to a no-op + dev-mode warning if
-   * unwired so a missing composition root wiring does not surface as a hard IPC failure.
+   * Optional in the deps type, but every `proactive.*` handler throws
+   * `proactiveTriggerService dep is required` when it is unwired, so a missing
+   * composition-root wiring surfaces as a hard IPC failure rather than a silent no-op.
    * Phase 6 — Proactive Execution System — Slice 3.
    */
   proactiveTriggerService?: IpcProactiveTriggerService;
@@ -5040,7 +5043,8 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
                 row.authorKind === 'employee' &&
                 row.authorId === employeeId,
             );
-          if (!alreadyStarted) {
+          // The orchestrator already reported a turn it refused before start.
+          if (!alreadyStarted && !isWorkFailureReported(err)) {
             try {
               bus?.emit({
                 type: 'work.failed',
@@ -5242,7 +5246,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           name: config.name,
           transport: config.transport as 'stdio' | 'sse',
           configJson: config.configJson,
-          enabled: config.enabled,
+          // The row still says disabled — it is updated below. The host skips
+          // disabled servers in `listTools`, so passing the stale value would
+          // start the process while hiding its tools until the next launch.
+          enabled: true,
           lastHealth: config.lastHealth,
         });
       } else if (!enabled && server?.connected) {
@@ -6387,18 +6394,43 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
         'proprietary-cloud',
       );
       const providers = providersService.list();
-      const maxRank = PRIVACY_TIER_RANK[maxTier] ?? 2;
+      // The rule the provider factory enforces at run time (fail-closed both
+      // ways), from the one shared copy so the panel cannot disagree with it.
+      const isAllowed = (p: ProviderConfig) => !exceedsPrivacyTier(p.privacyTier, maxTier);
       const availableProviders = providers.map((p) => ({
         id: p.id,
         name: p.name,
         kind: p.kind,
         privacyTier: p.privacyTier,
-        allowed: (PRIVACY_TIER_RANK[p.privacyTier] ?? 0) <= maxRank,
+        allowed: isAllowed(p),
       }));
-      return { maxTier, availableProviders };
+      // The run-time consequence: providers the factory could actually pick
+      // (enabled + configured) that the tier refuses. Unconfigured or
+      // disabled rows above the tier are omitted — they cannot run anyway.
+      const blockedProviders: SettingsGetPrivacyResponse['blockedProviders'] = [];
+      for (const p of providers) {
+        if (!p.enabled || isAllowed(p)) continue;
+        if (!(await providersService.isConfigured(p.id))) continue;
+        blockedProviders.push({ id: p.id, name: p.name, kind: p.kind, privacyTier: p.privacyTier });
+      }
+      // Retrieval degrades rather than fails when its embedding provider is
+      // refused (no semantic search, indexing paused) — say which, if any.
+      const embeddingProvider = settingsRepo.get<boolean>('rag_enabled', false)
+        ? settingsRepo.get<string>('embedding_provider', 'ollama-local')
+        : null;
+      const retrievalEmbeddingProviderId =
+        embeddingProvider !== null && blockedProviders.some((p) => p.id === embeddingProvider)
+          ? embeddingProvider
+          : null;
+      return { maxTier, availableProviders, blockedProviders, retrievalEmbeddingProviderId };
     },
 
     async settingsSetPrivacy(req) {
+      // The IPC boundary is untyped — refuse an unknown tier rather than
+      // persist a value the enforcement path would have to guess about.
+      if (!Object.hasOwn(PRIVACY_TIER_RANK, req.maxTier)) {
+        throw new Error(`[ipc] settings.setPrivacy: unknown privacy tier "${String(req.maxTier)}"`);
+      }
       settingsRepo.set('max_privacy_tier', req.maxTier);
     },
 
@@ -6557,15 +6589,10 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       return {
         llmProvider: settingsRepo.get<string>('llm_provider', 'auto'),
         llmModel: settingsRepo.get<string>('llm_model', 'auto'),
-        llmMaxTokens: settingsRepo.get<number>('llm_max_tokens', 4096),
-        llmTemperature: settingsRepo.get<number>('llm_temperature', 0.7),
         queryExpansionEnabled: settingsRepo.get<boolean>('query_expansion_enabled', true),
         semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
         longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
         knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
-        planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
-        planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
-        streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
         tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
         tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
       };
@@ -6583,26 +6610,6 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           throw new Error('[ipc] settings.setEnhancedAiConfig: llmModel must be non-empty');
         }
         settingsRepo.set('llm_model', req.llmModel);
-      }
-      if (req.llmMaxTokens !== undefined) {
-        if (
-          !Number.isFinite(req.llmMaxTokens) ||
-          req.llmMaxTokens < 1 ||
-          req.llmMaxTokens > 32000
-        ) {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: llmMaxTokens must be 1..32000');
-        }
-        settingsRepo.set('llm_max_tokens', Math.round(req.llmMaxTokens));
-      }
-      if (req.llmTemperature !== undefined) {
-        if (
-          !Number.isFinite(req.llmTemperature) ||
-          req.llmTemperature < 0 ||
-          req.llmTemperature > 2
-        ) {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: llmTemperature must be 0..2');
-        }
-        settingsRepo.set('llm_temperature', req.llmTemperature);
       }
       if (req.queryExpansionEnabled !== undefined) {
         if (typeof req.queryExpansionEnabled !== 'boolean') {
@@ -6635,28 +6642,6 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
           );
         }
         settingsRepo.set('knowledge_graph_enabled', req.knowledgeGraphEnabled);
-      }
-      if (req.planningEnabled !== undefined) {
-        if (typeof req.planningEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: planningEnabled must be boolean');
-        }
-        settingsRepo.set('planning_enabled', req.planningEnabled);
-      }
-      if (req.planningThreshold !== undefined) {
-        if (
-          !Number.isFinite(req.planningThreshold) ||
-          req.planningThreshold < 50 ||
-          req.planningThreshold > 1000
-        ) {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: planningThreshold must be 50..1000');
-        }
-        settingsRepo.set('planning_threshold', Math.round(req.planningThreshold));
-      }
-      if (req.streamingEnabled !== undefined) {
-        if (typeof req.streamingEnabled !== 'boolean') {
-          throw new Error('[ipc] settings.setEnhancedAiConfig: streamingEnabled must be boolean');
-        }
-        settingsRepo.set('streaming_enabled', req.streamingEnabled);
       }
       if (req.tracingEnabled !== undefined) {
         if (typeof req.tracingEnabled !== 'boolean') {
@@ -7922,18 +7907,18 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
       if (typeof companyId !== 'string' || companyId.length === 0) {
         throw new Error('[ipc] proactive.setEnabled: companyId is required');
       }
+      if (typeof enabled !== 'boolean') {
+        throw new Error('[ipc] proactive.setEnabled: enabled must be a boolean');
+      }
       if (!proactiveTriggerService) {
         throw new Error('[ipc] proactive.setEnabled: proactiveTriggerService dep is required');
       }
-      // Persist to the settings table FIRST so `settings.getProactive()`
-      // returns the value the renderer just toggled. Without this, the
-      // optimistic Switch in the renderer snaps back when react-query
-      // invalidates ['settings','proactive'] and refetches the unchanged
-      // DB value. The trigger service's per-company `disabledCompanies`
-      // Set is in-memory only — it tracks per-company *overrides* on top
-      // of the global flag, but the global flag itself lives in the DB.
-      // Both sources of truth must move together.
-      settingsRepo.setProactive({ enabled });
+      // Per-company ONLY. The trigger service persists the choice into this
+      // company's settings JSON, so it survives restart and never touches
+      // another company. The workspace-wide master flag
+      // (`settings.proactive_enabled`) is written exclusively through
+      // `settings.setProactive` — writing it here made one company's switch
+      // flip proactive work for every company.
       proactiveTriggerService.setEnabled({ companyId, enabled });
     },
 

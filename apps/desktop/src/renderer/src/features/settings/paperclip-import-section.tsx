@@ -2,13 +2,15 @@
  * Paperclip Import — read a Paperclip export folder and show what importing it
  * into Team-X would produce.
  *
- * ## Preview, then hand off
+ * ## Preview, save, then hand off
  *
- * This panel stops at the preview and never creates a workspace. The
- * `packageData` it produces is handed to the existing portability import flow,
- * which already owns secret binding, the per-entity plan, and conflict
+ * This panel never creates a workspace. It previews, then saves the converted
+ * package as a `.teamx-package.json` and hands that file to the Portability
+ * import, which already owns secret binding, the per-entity plan, and conflict
  * resolution. A second write path that could create a workspace would be a
- * second place for that logic to drift out of step.
+ * second place for that logic to drift out of step. (The preview used to tell
+ * the operator to import "from the Portability panel" while nothing wrote the
+ * file Portability reads.)
  *
  * ## Losses are shown, not hidden
  *
@@ -41,8 +43,10 @@ import {
 import { Button } from '@/components/ui/button.js';
 import {
   usePaperclipImportPreview,
+  useSavePaperclipPackage,
   useSelectPaperclipFolder,
 } from '@/hooks/use-paperclip-import.js';
+import { useAppStore } from '@/store/app-store.js';
 
 function CountRow({ counts }: { counts: PaperclipImportBridgePreview['counts'] }) {
   return (
@@ -61,7 +65,10 @@ export function PaperclipImportSection() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const selectFolder = useSelectPaperclipFolder();
   const previewMutation = usePaperclipImportPreview();
+  const saveMutation = useSavePaperclipPackage();
+  const stagePortabilityImport = useAppStore((state) => state.stagePortabilityImport);
   const preview = previewMutation.data;
+  const savedPath = saveMutation.data?.packagePath ?? null;
 
   // Picking and previewing are chained at the call site rather than inside a
   // hook: a cancelled picker must not cascade into a filesystem read, and that
@@ -71,20 +78,23 @@ export function PaperclipImportSection() {
       onSuccess: (chosen) => {
         if (chosen === null) return;
         setFolderPath(chosen);
+        // A package saved from the previous folder must not be offered for
+        // this one.
+        saveMutation.reset();
         previewMutation.mutate(chosen);
       },
     });
   }
 
-  const busy = selectFolder.isPending || previewMutation.isPending;
+  const busy = selectFolder.isPending || previewMutation.isPending || saveMutation.isPending;
 
   return (
     <section data-settings-paperclip="">
       <Faceplate kicker="Paperclip" serial="IMPORT" bodyClassName="space-y-4">
         <p className="max-w-[68ch] text-caption text-muted-foreground leading-relaxed">
           Read a Paperclip export folder and see exactly what it would become in Team-X — before
-          anything is created. This panel only previews; commit the package it produces from the
-          Portability panel above.
+          anything is created. Save the result as a Team-X package, then review and import it in the
+          Portability panel above, which asks for any secrets the import needs.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -191,9 +201,43 @@ export function PaperclipImportSection() {
             ) : null}
 
             <p className="max-w-[68ch] text-caption text-muted-foreground leading-relaxed">
-              Nothing has been written. Import the package from the Portability panel above when
-              this preview looks right.
+              Nothing has been written. When this preview looks right, save it as a package and
+              import it from the Portability panel.
             </p>
+
+            <div className="flex flex-wrap items-center gap-3" data-paperclip-save="">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => folderPath && saveMutation.mutate(folderPath)}
+                disabled={busy || !folderPath}
+              >
+                {saveMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Saving package…
+                  </>
+                ) : (
+                  'Save as package…'
+                )}
+              </Button>
+              {savedPath ? (
+                <Button type="button" onClick={() => stagePortabilityImport(savedPath)}>
+                  Review &amp; import in Portability
+                </Button>
+              ) : null}
+            </div>
+
+            {savedPath ? (
+              <div className="flex flex-wrap items-center gap-2" data-paperclip-saved="">
+                <LampTile small interactive={false} label="SAVED" tone="go" />
+                <Tag mono>{savedPath}</Tag>
+              </div>
+            ) : saveMutation.isError ? (
+              <p className="text-caption text-[var(--led-nogo)]" role="alert">
+                Could not save the package: {saveMutation.error.message}
+              </p>
+            ) : null}
           </>
         )}
       </Faceplate>

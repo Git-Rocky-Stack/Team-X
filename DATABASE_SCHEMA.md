@@ -1,6 +1,6 @@
 # Team-X Database Schema
 
-**Version:** 3.2.1 (plus unreleased v3.3.0/v3.4.0 work on `main`)  
+**Version:** 3.4.0 (released 2026-07-11; plus unreleased work on `main`)  
 **Engine:** SQLite (WAL mode)  
 **ORM:** Drizzle ORM  
 **Migrations:** `apps/desktop/src/main/db/migrations/`
@@ -11,7 +11,7 @@ Team-X uses SQLite as its primary data store. The schema is organized into funct
 
 - **Core**: Companies, employees, threads, messages, events
 - **Work**: Tickets, goals, projects, meetings
-- **AI**: Runs, embeddings, RAG, copilot insights
+- **AI**: Runs, embeddings, RAG, copilot insights, Enhanced AI memory + knowledge graph
 - **Extensions**: MCP servers, skills, authority
 - **Governance**: Budgets, approvals, artifacts
 - **Runtime**: Profiles, sessions, heartbeats
@@ -337,7 +337,7 @@ RAG vector embeddings.
 | `embedding` | BLOB | NOT NULL | Float32Array (vector) |
 | `created_at` | INTEGER | NOT NULL | UNIX ms |
 
-**Companion table:** `vec_embeddings` (sqlite-vec virtual table) for vector similarity search.
+**No companion vector table.** Ranking happens in-process in `@team-x/intelligence`: cosine similarity over the `embedding` BLOBs, an exact scan per company that switches to an IVF approximate index (`packages/intelligence/src/rag/ann-index.ts`) once a company holds 4,096 or more vectors. No SQLite vector extension is loaded.
 
 ### `copilot_insights`
 
@@ -899,6 +899,76 @@ Run-owned ticket leases (prevent duplicate work).
 
 **Unique (conditional):** `ticket_id` where `status = 'active'` — one active checkout per ticket.
 
+## Enhanced AI Memory & Knowledge Graph
+
+Migration `0037_enhanced_ai_memory` persists Enhanced AI long-term memory and the knowledge graph
+(previously in-memory and lost at exit). Repos: `apps/desktop/src/main/db/repos/enhanced-ai-memory.ts`,
+backing the `LongTermMemoryRepo` / `KnowledgeGraphRepo` interfaces of `@team-x/intelligence`. Each row
+keeps the package's object verbatim in `data_json` and promotes only the columns the repos filter or
+join on. Every table cascades with its company.
+
+### `memory_facts`
+
+Facts extracted from conversations (including completed Copilot exchanges).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PK | Fact id |
+| `company_id` | TEXT | FK → companies.id, NOT NULL | CASCADE |
+| `source_id` | TEXT | NOT NULL | Conversation / source the fact came from |
+| `type` | TEXT | NOT NULL | Fact type |
+| `expires_at` | INTEGER | | UNIX ms; null = no expiry |
+| `data_json` | TEXT | NOT NULL | Package fact object, verbatim |
+| `updated_at` | INTEGER | NOT NULL | UNIX ms |
+
+**Indexes:** `company_id`, `source_id`
+
+### `memory_summaries`
+
+Conversation summaries.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PK | Summary id |
+| `company_id` | TEXT | FK → companies.id, NOT NULL | CASCADE |
+| `source_id` | TEXT | NOT NULL | Summarised source |
+| `data_json` | TEXT | NOT NULL | Package summary object, verbatim |
+| `updated_at` | INTEGER | NOT NULL | UNIX ms |
+
+**Indexes:** `company_id`, `source_id`
+
+### `knowledge_nodes`
+
+Knowledge-graph entities.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PK | Node id |
+| `company_id` | TEXT | FK → companies.id, NOT NULL | CASCADE |
+| `type` | TEXT | NOT NULL | Entity type |
+| `label` | TEXT | NOT NULL | Entity label |
+| `source_id` | TEXT | | Source the entity came from |
+| `data_json` | TEXT | NOT NULL | Package node object, verbatim |
+| `updated_at` | INTEGER | NOT NULL | UNIX ms |
+
+**Indexes:** `company_id`, `source_id`
+
+### `knowledge_edges`
+
+Knowledge-graph relationships.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PK | Edge id |
+| `company_id` | TEXT | FK → companies.id, NOT NULL | CASCADE |
+| `from_node_id` | TEXT | FK → knowledge_nodes.id, NOT NULL | CASCADE |
+| `to_node_id` | TEXT | FK → knowledge_nodes.id, NOT NULL | CASCADE |
+| `source_id` | TEXT | | Source the relationship came from |
+| `data_json` | TEXT | NOT NULL | Package edge object, verbatim |
+| `updated_at` | INTEGER | NOT NULL | UNIX ms |
+
+**Indexes:** `company_id`, `from_node_id`, `to_node_id`, `source_id`
+
 ## Database Initialization
 
 ### Boot Sequence
@@ -918,10 +988,14 @@ Run-owned ticket leases (prevent duplicate work).
 - `0036_local_gguf.sql` — v3.3.0 local GGUF domain (5 tables): `local_models`,
   `local_model_watch_folders`, `local_model_endpoints`,
   `local_model_advanced_params`, `local_model_benchmarks`
-  *(backend foundation — the model-library UI ships in a future release; the
-  table-by-table sections above cover the pre-GGUF domains)*
+  *(drives the renderer's Models tab; the table-by-table sections above cover the
+  pre-GGUF domains)*
+- `0037_enhanced_ai_memory.sql` — Enhanced AI persistence (4 tables): `memory_facts`,
+  `memory_summaries`, `knowledge_nodes`, `knowledge_edges` (see
+  [Enhanced AI Memory & Knowledge Graph](#enhanced-ai-memory--knowledge-graph))
+- **38 migrations (`0000`–`0037`), every one listed in `migrations/meta/_journal.json`**
 - Each migration is atomic and hand-authored (not `drizzle-kit generate`)
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-10-07*

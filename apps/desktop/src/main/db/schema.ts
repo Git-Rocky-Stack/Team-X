@@ -1869,3 +1869,96 @@ export const localModelBenchmarks = sqliteTable(
     ),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Enhanced AI — persistent long-term memory + knowledge graph (migration 0037)
+// ---------------------------------------------------------------------------
+
+/**
+ * Facts extracted by `@team-x/intelligence` long-term memory. The package owns
+ * the object shape, so the row keeps it verbatim in `data_json` and promotes
+ * only what the repo filters on. See db/repos/enhanced-ai-memory.ts.
+ */
+export const memoryFacts = sqliteTable(
+  'memory_facts',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    sourceId: text('source_id').notNull(),
+    type: text('type').notNull(),
+    expiresAt: integer('expires_at'),
+    dataJson: text('data_json').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_memory_facts_company').on(table.companyId),
+    sourceIdx: index('idx_memory_facts_source').on(table.sourceId),
+  }),
+);
+
+/** Conversation summaries from long-term memory, stored like `memory_facts`. */
+export const memorySummaries = sqliteTable(
+  'memory_summaries',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    sourceId: text('source_id').notNull(),
+    dataJson: text('data_json').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_memory_summaries_company').on(table.companyId),
+    sourceIdx: index('idx_memory_summaries_source').on(table.sourceId),
+  }),
+);
+
+/** Knowledge-graph nodes (facts and the entities they mention). */
+export const knowledgeNodes = sqliteTable(
+  'knowledge_nodes',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    label: text('label').notNull(),
+    /** `metadata.sourceId` of the node, promoted for `deleteBySource`. */
+    sourceId: text('source_id'),
+    dataJson: text('data_json').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_knowledge_nodes_company').on(table.companyId),
+    sourceIdx: index('idx_knowledge_nodes_source').on(table.sourceId),
+  }),
+);
+
+/** Knowledge-graph edges. Cascade away with either endpoint. */
+export const knowledgeEdges = sqliteTable(
+  'knowledge_edges',
+  {
+    id: text('id').primaryKey(),
+    companyId: text('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    fromNodeId: text('from_node_id')
+      .notNull()
+      .references(() => knowledgeNodes.id, { onDelete: 'cascade' }),
+    toNodeId: text('to_node_id')
+      .notNull()
+      .references(() => knowledgeNodes.id, { onDelete: 'cascade' }),
+    sourceId: text('source_id'),
+    dataJson: text('data_json').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => ({
+    companyIdx: index('idx_knowledge_edges_company').on(table.companyId),
+    fromIdx: index('idx_knowledge_edges_from').on(table.fromNodeId),
+    toIdx: index('idx_knowledge_edges_to').on(table.toNodeId),
+    sourceIdx: index('idx_knowledge_edges_source').on(table.sourceId),
+  }),
+);

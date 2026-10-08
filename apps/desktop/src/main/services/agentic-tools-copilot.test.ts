@@ -17,11 +17,15 @@ import { SYSTEM_AGENT_ROLE_ID, SYSTEM_COPILOT_ROLE_ID } from '@team-x/shared-typ
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  type CopilotKnowledgeContext,
+  type CopilotKnowledgeSource,
   type CopilotToolInsightRow,
   type CopilotToolInsightsRepo,
   MAX_COPILOT_ROWS,
+  MAX_KNOWLEDGE_EXCERPT_CHARS,
   buildCopilotToolRegistry,
   buildQueryCopilotInsightsTool,
+  buildSearchCompanyKnowledgeTool,
 } from './agentic-tools-copilot.js';
 import { createCopilotService } from './copilot-service.js';
 
@@ -285,5 +289,181 @@ describe('createCopilotService — ask()', () => {
     await expect(noCopilotService.ask({ companyId: 'c1', text: 'hi' })).rejects.toThrow(
       /system-copilot/,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// search_company_knowledge — Enhanced AI grounding for copilot.ask
+// ---------------------------------------------------------------------------
+
+describe('search_company_knowledge', () => {
+  function knowledge(result: Partial<CopilotKnowledgeContext> = {}) {
+    const calls: Array<{ query: string; companyId: string; topK?: number }> = [];
+    const source: CopilotKnowledgeSource = {
+      async retrieveContext(query, options) {
+        calls.push({ query, ...options });
+        return {
+          passages: [
+            {
+              sourceType: 'ticket',
+              sourceId: 't-9',
+              content: 'Release blocked: signing certificate expired.',
+              similarity: 0.91,
+            },
+          ],
+          facts: [
+            { fact: 'The signing certificate expired on Friday', type: 'status', confidence: 0.9 },
+          ],
+          related: [{ entity: 'signing certificate', relation: 'related' }],
+          ...result,
+        };
+      },
+    };
+    return { source, calls };
+  }
+
+  it('returns passages, facts and related entities for the scoped company', async () => {
+    const { source, calls } = knowledge();
+    const tool = buildSearchCompanyKnowledgeTool({ companyId: 'c1', knowledge: source });
+
+    const out = await tool.execute(
+      { query: 'why is the release blocked?', companyId: 'someone-else' },
+      makeCtx(),
+    );
+
+    // The company comes from the registry scope, never the model's argument.
+    expect(calls).toEqual([{ query: 'why is the release blocked?', companyId: 'c1', topK: 6 }]);
+    expect(out.passages[0]).toEqual({
+      sourceType: 'ticket',
+      sourceId: 't-9',
+      excerpt: 'Release blocked: signing certificate expired.',
+      similarity: 0.91,
+    });
+    expect(out.facts).toEqual([
+      { fact: 'The signing certificate expired on Friday', type: 'status', confidence: 0.9 },
+    ]);
+    expect(out.related).toEqual([{ entity: 'signing certificate', relation: 'related' }]);
+  });
+
+  it('caps each excerpt so one long document cannot flood the context window', async () => {
+    const { source } = knowledge({
+      passages: [
+        { sourceType: 'vault_file', sourceId: 'v1', content: 'x'.repeat(5000), similarity: 0.5 },
+      ],
+    });
+    const tool = buildSearchCompanyKnowledgeTool({ companyId: 'c1', knowledge: source });
+
+    const out = await tool.execute({ query: 'anything' }, makeCtx());
+
+    expect(out.passages[0]?.excerpt.length).toBeLessThanOrEqual(MAX_KNOWLEDGE_EXCERPT_CHARS + 1);
+    expect(out.passages[0]?.excerpt.endsWith('…')).toBe(true);
+  });
+
+  it('clamps the requested limit and rejects an empty query', async () => {
+    const { source, calls } = knowledge();
+    const tool = buildSearchCompanyKnowledgeTool({ companyId: 'c1', knowledge: source });
+
+    await tool.execute({ query: 'q', limit: 99 }, makeCtx());
+    expect(calls[0]?.topK).toBe(10);
+    expect(tool.schema.safeParse({ query: '' }).success).toBe(false);
+  });
+
+  it('is offered to system-copilot only when a knowledge source is wired', () => {
+    const base = { companyId: 'c1', copilotInsightsRepo: makeRepo(() => []) };
+    const { source } = knowledge();
+
+    expect(
+      buildCopilotToolRegistry(
+        { roleId: SYSTEM_COPILOT_ROLE_ID },
+        { ...base, knowledge: source },
+      ).map((t) => t.name),
+    ).toEqual(['query_copilot_insights', 'search_company_knowledge']);
+    expect(
+      buildCopilotToolRegistry({ roleId: SYSTEM_COPILOT_ROLE_ID }, base).map((t) => t.name),
+    ).toEqual(['query_copilot_insights']);
+    expect(
+      buildCopilotToolRegistry({ roleId: SYSTEM_AGENT_ROLE_ID }, { ...base, knowledge: source }),
+    ).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// copilot-service — completed exchanges feed long-term memory
+// ---------------------------------------------------------------------------
+
+describe('createCopilotService — long-term memory', () => {
+  type Listener = (event: { type: string; companyId: string; payload: unknown }) => void;
+
+  function harness(options: { completeDuringStart?: boolean } = {}) {
+    const listeners: Listener[] = [];
+    const bus = {
+      subscribe(listener: Listener) {
+        listeners.push(listener);
+        return () => undefined;
+      },
+    };
+    const emit = (type: string, payload: unknown) => {
+      for (const l of listeners) l({ type, companyId: 'c1', payload });
+    };
+    const remembered: Array<{ companyId: string; sourceId: string; conversation: string }> = [];
+    const memory = {
+      async remember(companyId: string, sourceId: string, conversation: string) {
+        remembered.push({ companyId, sourceId, conversation });
+        return 1;
+      },
+    };
+    const service = createCopilotService({
+      agenticLoopService: {
+        async start() {
+          // A run can finish before `start` resolves to the caller.
+          if (options.completeDuringStart) {
+            emit('agentic.completed', { runId: 'run-1', answer: 'Signing cert expired.' });
+          }
+          return { runId: 'run-1', threadId: 'thr-1' };
+        },
+      },
+      employeesRepo: { findSystemByRoleId: () => ({ id: 'sys-copilot' }) },
+      bus,
+      memory,
+    });
+    return { service, emit, remembered };
+  }
+
+  it('remembers the question and the answer once the run completes', async () => {
+    const { service, emit, remembered } = harness();
+    await service.ask({ companyId: 'c1', text: 'Why is the release blocked?' });
+    expect(remembered).toEqual([]);
+
+    emit('agentic.completed', { runId: 'run-1', answer: 'Signing cert expired.' });
+    await Promise.resolve();
+
+    expect(remembered).toEqual([
+      {
+        companyId: 'c1',
+        sourceId: 'copilot-run:run-1',
+        conversation: 'User: Why is the release blocked?\nCopilot: Signing cert expired.',
+      },
+    ]);
+  });
+
+  it('still remembers a run that completed before ask() returned', async () => {
+    const { service, remembered } = harness({ completeDuringStart: true });
+
+    await service.ask({ companyId: 'c1', text: 'Why is the release blocked?' });
+    await Promise.resolve();
+
+    expect(remembered.map((r) => r.sourceId)).toEqual(['copilot-run:run-1']);
+  });
+
+  it('remembers nothing for a failed run, an empty answer, or another run', async () => {
+    const { service, emit, remembered } = harness();
+    await service.ask({ companyId: 'c1', text: 'q' });
+
+    emit('agentic.completed', { runId: 'someone-elses-run', answer: 'x' });
+    emit('agentic.failed', { runId: 'run-1', reason: 'provider_error' });
+    emit('agentic.completed', { runId: 'run-1', answer: 'late' });
+    await Promise.resolve();
+
+    expect(remembered).toEqual([]);
   });
 });

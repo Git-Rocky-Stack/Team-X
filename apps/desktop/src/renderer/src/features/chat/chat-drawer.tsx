@@ -36,6 +36,7 @@ import {
   isAgentThread as checkAgentThread,
   isCopilotThread as checkCopilotThread,
 } from './thread-list.js';
+import { TurnFailureNotice } from './turn-failure-notice.js';
 
 import {
   LampTile,
@@ -133,6 +134,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   const dequeueQueuedDirectChatMessage = useAppStore((s) => s.dequeueQueuedDirectChatMessage);
   const setDirectChatStopping = useAppStore((s) => s.setDirectChatStopping);
   const setDirectChatAwaitingReply = useAppStore((s) => s.setDirectChatAwaitingReply);
+  const clearEmployeeFailure = useAppStore((s) => s.clearEmployeeFailure);
   const [threadTicketPreviewThreadId, setThreadTicketPreviewThreadId] = useState<string | null>(
     null,
   );
@@ -149,6 +151,9 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
   // `live.lastThreadId` can point at ticket or employee↔employee work,
   // so using it here routes Rocky's direct message into the wrong thread.
   const effectiveThreadId = activeThreadId;
+  // The latest turn on this line failed or was refused (work.failed).
+  const turnFailure =
+    live?.lastFailure && live.lastFailure.threadId === effectiveThreadId ? live.lastFailure : null;
 
   const { data: messages = [] } = useChatMessages(effectiveThreadId);
   const { data: threads = [] } = useThreadList(companyId);
@@ -296,6 +301,19 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     setDirectChatStopping,
   ]);
 
+  // A refused turn emits work.failed without ever going thinking, so the
+  // transition above never fires: stop waiting and show what is there.
+  const turnFailureAt = turnFailure?.at ?? null;
+  useEffect(() => {
+    if (turnFailureAt === null) return;
+    void qc.invalidateQueries({ queryKey: ['chat', effectiveThreadId] });
+  }, [turnFailureAt, effectiveThreadId, qc]);
+  useEffect(() => {
+    if (!selectedId || !turnFailure) return;
+    setDirectChatAwaitingReply(selectedId, false);
+    setDirectChatStopping(selectedId, false);
+  }, [selectedId, turnFailure, setDirectChatAwaitingReply, setDirectChatStopping]);
+
   useEffect(() => {
     if (!selectedId || !isThinking || !awaitingReply) return;
     setDirectChatAwaitingReply(selectedId, false);
@@ -319,6 +337,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     if (isThinking || sendMutation.isPending || awaitingReply || isStopping) return;
     const nextMessage = dequeueQueuedDirectChatMessage(selectedId);
     if (!nextMessage) return;
+    clearEmployeeFailure(selectedId);
     setDirectChatAwaitingReply(selectedId, true);
     sendMutation.mutate(
       {
@@ -342,6 +361,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
     awaitingReply,
     isStopping,
     dequeueQueuedDirectChatMessage,
+    clearEmployeeFailure,
     setDirectChatAwaitingReply,
     effectiveThreadId,
   ]);
@@ -350,6 +370,7 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
 
   function dispatchDirectMessage(content: string) {
     if (!selectedId) return;
+    clearEmployeeFailure(selectedId);
     setDirectChatAwaitingReply(selectedId, true);
     sendMutation.mutate(
       {
@@ -657,6 +678,12 @@ export function ChatDrawer({ employees }: ChatDrawerProps) {
                 isStreaming={isThinking}
                 employeeName={employee.name}
               />
+
+              {turnFailure ? (
+                <div className="border-t border-[var(--hairline)] px-4 py-3">
+                  <TurnFailureNotice employeeName={employee.name} error={turnFailure.error} />
+                </div>
+              ) : null}
 
               <Composer
                 onSend={handleSend}

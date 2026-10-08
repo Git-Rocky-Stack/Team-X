@@ -3,6 +3,7 @@ import {
   type AuthorityGrant,
   type AuthorityPermission,
   EXTENSIONS_AUTONOMY_MODES,
+  type McpServerSummary,
 } from '@team-x/shared-types';
 import { Loader2, Plug, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -27,7 +28,10 @@ import {
   useDeleteAuthorityGrant,
   useInstalledExtensions,
   useMcpServers,
+  useRemoveMcpServer,
+  useRemoveSkill,
   useReviewAuthorityRequest,
+  useToggleMcpServer,
 } from '@/hooks/use-extensions.js';
 import { useExtensionsSettings, useSetExtensionsSettings } from '@/hooks/use-settings.js';
 import { ipc } from '@/lib/ipc.js';
@@ -57,6 +61,55 @@ const PERMISSION_TONE: Record<AuthorityPermission, LampTone> = {
   prompt: 'hold',
 };
 
+/**
+ * Runtime lamp for an MCP server row — data-bound to the persisted enabled
+ * flag and the last health probe the host recorded (`error: …` on a failed
+ * connect). Disabled = STBY (process stopped), enabled + failed = NO-GO.
+ */
+function mcpServerLamp(server: McpServerSummary): { label: string; tone: LampTone } {
+  if (!server.enabled) return { label: 'STBY', tone: 'off' };
+  if (server.lastHealth?.startsWith('error')) return { label: 'NO-GO', tone: 'nogo' };
+  return { label: 'GO', tone: 'go' };
+}
+
+/** Inline confirm row for a destructive removal (backup-section pattern). */
+function ConfirmRemove({
+  prompt,
+  pending,
+  onConfirm,
+  onCancel,
+}: {
+  prompt: string;
+  pending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <span className="text-caption text-[var(--led-nogo)]">{prompt}</span>
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        className="h-7 px-2 text-button-sm"
+        onClick={onConfirm}
+        disabled={pending}
+      >
+        Confirm
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-7 px-2 text-button-sm"
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
+    </div>
+  );
+}
+
 function renderAuthorityScope(
   grant: AuthorityGrant,
   employeeNameById: Map<string, string>,
@@ -80,6 +133,11 @@ export function ExtensionsSection() {
   const employeesQuery = useEmployees(companyId);
   const reviewAuthorityRequest = useReviewAuthorityRequest(companyId);
   const deleteGrant = useDeleteAuthorityGrant(companyId);
+  const toggleMcp = useToggleMcpServer(companyId);
+  const removeMcp = useRemoveMcpServer(companyId);
+  const removeSkill = useRemoveSkill(companyId);
+  // Which row is asking "remove this?" — `mcp:<id>` or `skill:<id>`.
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Proactive state queries
@@ -117,14 +175,20 @@ export function ExtensionsSection() {
     refetchInterval: 5000,
   });
 
+  // MASTER switch — the workspace-wide `proactive_enabled` flag. Each
+  // workspace opts in/out separately from its dashboard Proactive panel
+  // (`proactive.setEnabled`), so this switch must never go through the
+  // per-company channel.
   async function handleProactiveToggle(checked: boolean) {
-    if (!companyId) return;
     const previous = proactiveEnabledOptimistic;
     setProactiveEnabledOptimistic(checked);
     setProactiveToggling(true);
     try {
-      await ipc.proactive.setEnabled({ companyId, enabled: checked });
-      await queryClient.invalidateQueries({ queryKey: ['settings', 'proactive'] });
+      await ipc.settings.setProactive({ enabled: checked });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['settings', 'proactive'] }),
+        queryClient.invalidateQueries({ queryKey: ['proactive', 'state'] }),
+      ]);
     } catch (err) {
       // Revert optimistic state on failure so the Switch reflects reality.
       setProactiveEnabledOptimistic(previous);
@@ -136,6 +200,9 @@ export function ExtensionsSection() {
 
   const extensions = extensionsQuery.data ?? [];
   const mcpServers = (mcpQuery.data ?? []).filter((server) => server.companyId !== null);
+  const companySkills = extensions.filter(
+    (extension) => extension.kind === 'skill' && extension.companyId === companyId,
+  );
   const authorityGrants = authorityQuery.data ?? [];
   const pendingAuthorityRequests = authorityRequestsQuery.data ?? [];
   const employees = employeesQuery.data ?? [];
@@ -226,15 +293,16 @@ export function ExtensionsSection() {
                   <div className="flex flex-col">
                     <span className="text-body-strong">Proactive Mode</span>
                     <span className="text-caption text-muted-foreground">
-                      Agents recognize opportunities and act autonomously
+                      Master switch for every workspace. Each workspace opts in or out from its
+                      dashboard Proactive panel.
                     </span>
                   </div>
                   <Switch
                     checked={proactiveEnabled}
+                    aria-label="Proactive master switch"
                     disabled={
                       proactiveSettingsQuery.isLoading ||
                       proactiveToggling ||
-                      !companyId ||
                       proactiveEnabledOptimistic === null
                     }
                     onCheckedChange={(checked) => void handleProactiveToggle(checked)}
@@ -255,6 +323,14 @@ export function ExtensionsSection() {
                       <div className="col-span-3 rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-2 py-1.5 text-body text-[var(--led-nogo)]">
                         Failed to load proactive status
                       </div>
+                    ) : !proactiveStateQuery.data.enabled ? (
+                      <SubviewState
+                        lampLabel="STBY"
+                        lampTone="off"
+                        title="This workspace has opted out of proactive work."
+                        description="Opt it back in from the dashboard Proactive panel."
+                        className="col-span-3 min-h-0 p-4"
+                      />
                     ) : (
                       <>
                         <MetricTile
@@ -358,6 +434,214 @@ export function ExtensionsSection() {
               <MetricTile label="MCP Extensions" value={String(mcpExtensionCount)} />
               <MetricTile label="Enabled" value={String(enabledExtensionCount)} />
               <MetricTile label="MCP Runtimes" value={`${enabledMcpCount}/${mcpServers.length}`} />
+            </div>
+          )}
+        </Faceplate>
+
+        <Faceplate
+          className="xl:col-span-2"
+          kicker="Runtime"
+          serial="INSTALLED"
+          bodyClassName="space-y-4"
+        >
+          <div>
+            <h3 className="text-h3 text-foreground">Installed Extensions</h3>
+            <p className="text-body-sm text-muted-foreground">
+              Stop, restart, or remove the MCP servers and skills this workspace has added.
+              Disabling an MCP server stops its process.
+            </p>
+          </div>
+
+          {!companyId ? (
+            <SubviewState
+              lampLabel="STBY"
+              lampTone="off"
+              title="Select a workspace to manage installed extensions."
+              className="min-h-0 p-6"
+            />
+          ) : extensionsQuery.isLoading || mcpQuery.isLoading ? (
+            <SubviewState
+              lampLabel="SYNC"
+              lampTone="hold"
+              title="Loading installed extensions…"
+              className="min-h-0 p-6"
+            />
+          ) : extensionsQuery.isError || mcpQuery.isError ? (
+            <SubviewState
+              lampLabel="NO-GO"
+              lampTone="nogo"
+              title="Failed to load installed extensions."
+              className="min-h-0 p-6"
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="space-y-2" data-installed-mcp-servers="">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-label text-silver-mute">MCP Servers</span>
+                  <Tag mono>{mcpServers.length}</Tag>
+                </div>
+                {mcpServers.length === 0 ? (
+                  <SubviewState
+                    lampLabel="STBY"
+                    lampTone="off"
+                    title="No MCP servers added."
+                    description="Use Add MCP above to connect one."
+                    className="min-h-0 p-4"
+                  />
+                ) : (
+                  mcpServers.map((server) => {
+                    const lamp = mcpServerLamp(server);
+                    const pendingToggle =
+                      toggleMcp.isPending && toggleMcp.variables?.serverId === server.id;
+                    const checked = pendingToggle
+                      ? (toggleMcp.variables?.enabled ?? server.enabled)
+                      : server.enabled;
+                    const confirmKey = `mcp:${server.id}`;
+                    return (
+                      <div
+                        key={server.id}
+                        className="rounded-inset border border-[var(--hairline)] px-3 py-3"
+                        data-mcp-server-row={server.id}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div
+                              className="truncate text-body-strong text-foreground"
+                              data-mcp-server-name=""
+                            >
+                              {server.name}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <Tag>{server.transport}</Tag>
+                              <Tag mono>{`${server.toolCount} tools`}</Tag>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <LampTile small label={lamp.label} tone={lamp.tone} />
+                            <Switch
+                              checked={checked}
+                              aria-label={`Enable ${server.name}`}
+                              disabled={pendingToggle || removeMcp.isPending}
+                              onCheckedChange={(enabled) =>
+                                toggleMcp.mutate({ serverId: server.id, enabled })
+                              }
+                            />
+                            {confirmRemove !== confirmKey && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-button-sm"
+                                aria-label={`Remove ${server.name}`}
+                                onClick={() => setConfirmRemove(confirmKey)}
+                                disabled={removeMcp.isPending}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {confirmRemove === confirmKey && (
+                          <div className="mt-2">
+                            <ConfirmRemove
+                              prompt="Remove this server? Its process stops and its grants are deleted."
+                              pending={removeMcp.isPending}
+                              onConfirm={() => {
+                                removeMcp.mutate(server.id);
+                                setConfirmRemove(null);
+                              }}
+                              onCancel={() => setConfirmRemove(null)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                {toggleMcp.isError && (
+                  <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
+                    Failed to update the MCP server.
+                  </div>
+                )}
+                {removeMcp.isError && (
+                  <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
+                    Failed to remove the MCP server.
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2" data-installed-skills="">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-label text-silver-mute">Skills</span>
+                  <Tag mono>{companySkills.length}</Tag>
+                </div>
+                {companySkills.length === 0 ? (
+                  <SubviewState
+                    lampLabel="STBY"
+                    lampTone="off"
+                    title="No skills installed."
+                    description="Use Add Skill above to install one."
+                    className="min-h-0 p-4"
+                  />
+                ) : (
+                  companySkills.map((extension) => {
+                    const confirmKey = `skill:${extension.id}`;
+                    return (
+                      <div
+                        key={extension.id}
+                        className="rounded-inset border border-[var(--hairline)] px-3 py-3"
+                        data-skill-row={extension.id}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div
+                              className="truncate text-body-strong text-foreground"
+                              data-skill-name=""
+                            >
+                              {extension.name}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <Tag>{extension.sourceKind}</Tag>
+                              {extension.version && <Tag mono>{`v${extension.version}`}</Tag>}
+                            </div>
+                          </div>
+                          {confirmRemove !== confirmKey && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 shrink-0 px-2 text-button-sm"
+                              aria-label={`Remove ${extension.name}`}
+                              onClick={() => setConfirmRemove(confirmKey)}
+                              disabled={removeSkill.isPending}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                        {confirmRemove === confirmKey && (
+                          <div className="mt-2">
+                            <ConfirmRemove
+                              prompt="Remove this skill? Its grants and installed files are deleted."
+                              pending={removeSkill.isPending}
+                              onConfirm={() => {
+                                removeSkill.mutate(extension.id);
+                                setConfirmRemove(null);
+                              }}
+                              onCancel={() => setConfirmRemove(null)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                {removeSkill.isError && (
+                  <div className="rounded-inset border border-[var(--led-nogo-edge)] bg-[var(--warn-soft)] px-3 py-2 text-body text-[var(--led-nogo)]">
+                    Failed to remove the skill.
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </Faceplate>

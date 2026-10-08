@@ -9,11 +9,19 @@
  * dropped on the floor.
  */
 
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { StructuredLogger } from './logging.js';
 
@@ -24,6 +32,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -93,6 +102,60 @@ describe('StructuredLogger file sink', () => {
 
     const rotated = readdirSync(dir).filter((f) => f.startsWith('rag.log.'));
     expect(rotated.length).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps no backups when maxFiles is 0', () => {
+    // 0 means "no backups": rotation truncates the live file in place. It
+    // used to fall through to the final rename and keep `rag.log.1` anyway.
+    const path = join(dir, 'rag.log');
+    const logger = new StructuredLogger({
+      console: false,
+      file: { path, maxSize: 100, maxFiles: 0 },
+    });
+
+    for (let i = 0; i < 20; i++) {
+      logger.logRetrieval({ event: 'retrieval', data: { i, pad: 'z'.repeat(40) } });
+    }
+
+    expect(readdirSync(dir)).toEqual(['rag.log']);
+    expect(statSync(path).size).toBeLessThanOrEqual(200);
+    // The entry that triggered the last truncation is still there.
+    const last = readLines(path).at(-1);
+    expect((last?.data as { i: number }).i).toBe(19);
+  });
+
+  it('keeps writing when a rotation fails, and retries it next time', () => {
+    // A rotation can fail transiently — on Windows a backup held open by a
+    // tail or an antivirus scan throws EBUSY. That used to latch the whole
+    // sink off for the life of the process. Here a directory squats on the
+    // backup name, so every rotation throws until it is removed.
+    const path = join(dir, 'rag.log');
+    const blocker = join(dir, 'rag.log.1');
+    mkdirSync(blocker);
+    writeFileSync(join(blocker, 'held'), 'x', 'utf8');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const logger = new StructuredLogger({
+      console: false,
+      file: { path, maxSize: 100, maxFiles: 1 },
+    });
+    for (let i = 0; i < 10; i++) {
+      logger.logRetrieval({ event: 'retrieval', data: { i, pad: 'w'.repeat(40) } });
+    }
+
+    // Every entry landed in the live file despite the failing rotations,
+    // and the failure was reported once, not once per line.
+    expect(readLines(path).map((l) => (l.data as { i: number }).i)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    // Once the obstruction clears, the next write rotates normally.
+    rmSync(blocker, { recursive: true, force: true });
+    logger.logRetrieval({ event: 'retrieval', data: { i: 10 } });
+
+    expect(statSync(blocker).isFile()).toBe(true);
+    expect(readLines(path).map((l) => (l.data as { i: number }).i)).toEqual([10]);
   });
 
   it('never throws when the log file cannot be written', () => {

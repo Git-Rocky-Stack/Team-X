@@ -20,6 +20,10 @@ const portabilitySectionSrc = readFileSync(PORTABILITY_SECTION_PATH, 'utf8');
 const portabilityHooksSrc = readFileSync(PORTABILITY_HOOKS_PATH, 'utf8');
 
 describe('Portability settings shell', () => {
+  it('takes a package path staged by Paperclip Import into its import field', () => {
+    expect(portabilitySectionSrc).toContain('useStagedPortabilityImport(setPackageRef);');
+  });
+
   it('mounts the portability section inside SettingsView with a focusable anchor', () => {
     expect(settingsViewSrc).toContain(
       "import { PortabilitySection } from './portability-section.js';",

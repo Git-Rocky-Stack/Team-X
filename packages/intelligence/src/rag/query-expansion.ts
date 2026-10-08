@@ -515,7 +515,9 @@ export interface QueryExpansionService {
    * Get expansion statistics.
    */
   getStats(): {
+    /** Expanded variants generated across all queries (the original query excluded). */
     totalExpansions: number;
+    /** `totalExpansions` divided by the number of queries expanded. */
     avgExpansionsPerQuery: number;
     methodCounts: Record<string, number>;
   };
@@ -525,6 +527,7 @@ export function createQueryExpansionService(options: {
   llm?: (prompt: string) => Promise<string>;
   hydeEnabled?: boolean;
 }): QueryExpansionService {
+  let queriesExpanded = 0;
   let totalExpansions = 0;
   const methodCounts: Record<string, number> = {};
 
@@ -533,7 +536,7 @@ export function createQueryExpansionService(options: {
   // callback, which is a trap this object literal has no reason to carry.
   const impl: QueryExpansionService = {
     async expand(query, context) {
-      totalExpansions++;
+      queriesExpanded++;
 
       // Use combined expansion strategy
       const expanded = await expandQueryCombined(query, context, {
@@ -545,6 +548,8 @@ export function createQueryExpansionService(options: {
         semanticVariations: 2,
         maxExpansions: 8,
       });
+      // `expansions` leads with the original query; only the variants count.
+      totalExpansions += expanded.expansions.filter((e) => e !== query).length;
 
       // Track method usage
       const methods =
@@ -564,7 +569,7 @@ export function createQueryExpansionService(options: {
     getStats() {
       return {
         totalExpansions,
-        avgExpansionsPerQuery: totalExpansions > 0 ? totalExpansions : 0,
+        avgExpansionsPerQuery: queriesExpanded > 0 ? totalExpansions / queriesExpanded : 0,
         methodCounts,
       };
     },

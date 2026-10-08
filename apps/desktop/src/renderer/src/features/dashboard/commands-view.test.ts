@@ -14,7 +14,12 @@
 import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
 import { describe, expect, it } from 'vitest';
 
-import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
+import {
+  commandActorLabel,
+  formatTimeAgo,
+  sortByNewestFirst,
+  truncateText,
+} from './commands-view-helpers.js';
 
 function makeEntry(id: string, executedAt: string): IpcCommandHistoryEntry {
   return {
@@ -90,5 +95,24 @@ describe('truncateText', () => {
   it('handles undefined / empty safely', () => {
     expect(truncateText(undefined)).toBe('');
     expect(truncateText('')).toBe('');
+  });
+});
+
+describe('commandActorLabel', () => {
+  // Palette commands record actor 'user'; Copilot insight actions record
+  // 'copilot'. Only the first was labelled — the second showed the raw id.
+  const employees = [{ id: 'emp-iris', name: 'Iris' }];
+
+  it('labels the operator the way the audit log does', () => {
+    expect(commandActorLabel('user', employees)).toBe('You');
+  });
+
+  it('labels Copilot-issued commands', () => {
+    expect(commandActorLabel('copilot', employees)).toBe('Copilot');
+  });
+
+  it('names an employee actor and keeps an unknown id traceable', () => {
+    expect(commandActorLabel('emp-iris', employees)).toBe('Iris');
+    expect(commandActorLabel('emp-gone', employees)).toBe('emp-gone');
   });
 });

@@ -7,9 +7,9 @@
   <meta name="description" content="Open-source, privacy-first desktop app for running AI-agent organizations. Hire employees, build org charts, manage projects, and watch your AI team work in real-time.">
   <meta name="keywords" content="AI agents, local-first, desktop app, LLM orchestration, Electron, open-source, privacy-first">
   <meta property="og:title" content="Team-X — Run an AI Company. Not a Prompt.">
-  <meta property="og:description" content="Open-source, privacy-first desktop app for running AI-agent organizations with 55 curated roles, real-time cockpit, and 10 LLM providers.">
+  <meta property="og:description" content="Open-source, privacy-first desktop app for running AI-agent organizations: 55 hireable roles, a real-time cockpit, enforced privacy tiers, local GGUF models, and 9 LLM providers.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://strategia-x.github.io/team-x/">
+  <meta property="og:url" content="https://git-rocky-stack.github.io/Team-X/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Team-X — Run an AI Company. Not a Prompt.">
   <meta name="twitter:description" content="Open-source, privacy-first desktop app for running AI-agent organizations.">
@@ -55,6 +55,7 @@
         <span class="font-semibold text-lg tracking-tight">Team-X</span>
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm text-zinc-400">
+        <a href="#whats-new" class="hover:text-zinc-100 transition-colors">What's New</a>
         <a href="#features" class="hover:text-zinc-100 transition-colors">Features</a>
         <a href="#architecture" class="hover:text-zinc-100 transition-colors">Architecture</a>
         <a href="#quickstart" class="hover:text-zinc-100 transition-colors">Quickstart</a>
@@ -72,7 +73,7 @@
     <div class="relative max-w-4xl mx-auto px-6 text-center">
       <div class="fade-in inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/60 border border-zinc-700/50 text-xs text-zinc-400 mb-8">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        Open Source &middot; Privacy-First &middot; Local-First
+        Open Source &middot; MIT &middot; Privacy-First &middot; Local-First
       </div>
       <h1 class="fade-in fade-in-delay-1 text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
         Run an AI company.<br><span class="gradient-text">Not a prompt.</span>
@@ -99,6 +100,47 @@
     </div>
   </section>
 
+  <!-- What's New -->
+  <section id="whats-new" class="py-20 md:py-28 border-t border-zinc-800/50">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 mb-4">Next release &middot; in review</div>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">What's new: every switch does what it says</h2>
+        <p class="text-zinc-400 text-lg max-w-2xl mx-auto">The release after v3.4.0 is about trust. Settings that looked live now work, refusals explain themselves, and every model call counts against your budget.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <h3 class="font-semibold text-lg mb-2">Privacy tiers, enforced</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Every model call, embedding and external runtime (Codex, Claude Code, Cursor, command, HTTP) is checked against Settings &rarr; Privacy at the moment it runs. A provider above your tier is refused with a reason, never silently swapped, and the Privacy panel lists who is affected before anything runs.</p>
+        </div>
+        <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <h3 class="font-semibold text-lg mb-2">Copilot that knows your company</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Copilot searches your messages, tickets, meeting minutes and vault files, and draws on long-term memory and a knowledge graph that now survive restarts. Every Enhanced AI switch takes effect.</p>
+        </div>
+        <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <h3 class="font-semibold text-lg mb-2">The Models tab</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Run GGUF models through a bundled llama.cpp, browse and download from Hugging Face with pause and resume, connect LM Studio / Ollama / vLLM servers on your network, and benchmark real throughput.</p>
+        </div>
+        <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-6">
+          <h3 class="font-semibold text-lg mb-2">Work that finishes</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">The command palette now classifies with a model. Meetings write minutes and file action items as tickets. The Hire dialog offers all 55 roles. Proactive Mode works per company, and failed turns say why.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-2xl bg-zinc-900/30 border border-zinc-800/40 p-5 text-sm text-zinc-400">
+        <span class="font-semibold text-zinc-200">Linux:</span> the AppImage now starts on a stock Ubuntu 22.04 / 24.04 desktop with no FUSE 2 install.
+        <span class="font-semibold text-zinc-200 ml-1">Removed:</span> the <code class="font-mono text-zinc-300">team-x-ai</code> CLI, whose output was not real.
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+        <a href="https://github.com/Git-Rocky-Stack/Team-X/blob/main/docs/user-guide/whats-new.md" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold transition-colors border border-zinc-700/50">Read the release notes</a>
+        <a href="https://github.com/Git-Rocky-Stack/Team-X/blob/main/CHANGELOG.md" class="text-zinc-400 hover:text-zinc-200 transition-colors">Full changelog &rarr;</a>
+      </div>
+      <p class="mt-4 text-center text-xs text-zinc-500">Latest published release: <a href="https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v3.4.0" class="underline hover:text-zinc-300">v3.4.0</a> (the Command Console redesign). The changes above ship in the next tagged release.</p>
+    </div>
+  </section>
+
   <!-- Features -->
   <section id="features" class="py-20 md:py-32">
     <div class="max-w-6xl mx-auto px-6">
@@ -114,8 +156,8 @@
           <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">55 Curated Roles</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Hand-written F10-quality role specs across 6 hierarchy levels. Officers, managers, leads, and ICs — each with unique decision frameworks and communication styles.</p>
+          <h3 class="font-semibold text-lg mb-2">57 Curated Roles</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Hand-written F10-quality role specs: 55 hireable roles across 6 hierarchy levels plus 2 hidden system roles. Officers, managers, leads, and ICs — each with unique decision frameworks and communication styles.</p>
         </div>
 
         <!-- Feature 2 -->
@@ -142,7 +184,7 @@
             <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
           </div>
           <h3 class="font-semibold text-lg mb-2">One-Click Meetings</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Call an all-hands with selected attendees. Interject mid-meeting. Auto-generated minutes with action items that become tickets.</p>
+          <p class="text-sm text-zinc-400 leading-relaxed">Call an all-hands with selected attendees. Interject mid-meeting. The chair writes the minutes and files each action item as a ticket for the attendee who owns it.</p>
         </div>
 
         <!-- Feature 5 -->
@@ -150,8 +192,8 @@
           <div class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">Privacy-First</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Zero phone-home. Ever. Runs fully on local models. API keys in the OS keychain. Privacy tier filtering controls which providers agents can use.</p>
+          <h3 class="font-semibold text-lg mb-2">Privacy-First, Enforced</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Zero phone-home. Ever. Runs fully on local models. API keys in the OS keychain. Your privacy tier is enforced on every model call and external runtime; anything above it is refused with a reason, never swapped.</p>
         </div>
 
         <!-- Feature 6 -->
@@ -159,8 +201,8 @@
           <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">10 LLM Providers</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Ollama, Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint. Adaptive runtime picks the best strategy.</p>
+          <h3 class="font-semibold text-lg mb-2">9 Providers + Local GGUF</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Ollama, Anthropic, OpenAI, Google, Groq, OpenRouter, Together, Fireworks, or any OpenAI-compatible endpoint, plus a Models tab for local GGUF models, Hugging Face downloads and LAN model servers.</p>
         </div>
 
         <!-- Feature 7 -->
@@ -168,8 +210,8 @@
           <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">MCP Tool Calling</h3>
-          <p class="text-sm text-zinc-400 leading-relaxed">Agents use Model Context Protocol tools via a singleton host. stdio and SSE connections with tools_allowed/tools_denied enforcement.</p>
+          <h3 class="font-semibold text-lg mb-2">MCP Tools + Copilot</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">Agents use Model Context Protocol tools via a singleton host, with per-role allow and deny lists, and servers you can enable, disable or remove. Copilot answers from your company's own knowledge and memory.</p>
         </div>
 
         <!-- Feature 8 -->
@@ -204,14 +246,17 @@
 
       <div class="rounded-2xl bg-zinc-900/50 border border-zinc-800/50 p-8 font-mono text-sm leading-relaxed overflow-x-auto">
 <pre class="text-zinc-300"><span class="text-zinc-500">Renderer (React 19)</span>
-  <span class="text-rose-400">|</span> typed IPC bridge (50+ channels)
+  <span class="text-rose-400">|</span> typed IPC bridge (229 channels)
   <span class="text-rose-400">v</span>
 <span class="text-zinc-500">Main Process (Node.js + TypeScript)</span>
-  <span class="text-amber-400">|--- Orchestrator</span> <span class="text-zinc-600">(agent scheduler, event bus, work queue)</span>
-  <span class="text-amber-400">|      |--- Provider Router</span> <span class="text-zinc-600">(10 adapters, privacy tiers, concurrency caps)</span>
-  <span class="text-amber-400">|      |--- Role Loader</span> <span class="text-zinc-600">(55 roles, template rendering)</span>
+  <span class="text-amber-400">|--- Orchestrator</span> <span class="text-zinc-600">(agent scheduler, event bus, dispatcher)</span>
+  <span class="text-amber-400">|      |--- Provider Factory</span> <span class="text-zinc-600">(enforces the privacy tier on every run)</span>
+  <span class="text-amber-400">|      |--- Provider Router</span> <span class="text-zinc-600">(9 adapters, concurrency caps, cost tracking)</span>
+  <span class="text-amber-400">|      |--- Role Loader</span> <span class="text-zinc-600">(57 roles, template rendering)</span>
   <span class="text-amber-400">|      |--- MCP Host</span> <span class="text-zinc-600">(singleton, stdio/SSE pool, tool enforcement)</span>
-  <span class="text-emerald-400">|--- SQLite + Drizzle</span> <span class="text-zinc-600">(8 migrations, append-only events)</span>
+  <span class="text-amber-400">|--- Enhanced AI</span> <span class="text-zinc-600">(RAG, long-term memory, knowledge graph)</span>
+  <span class="text-amber-400">|--- Local GGUF</span> <span class="text-zinc-600">(llama.cpp pool, Hugging Face, LAN endpoints)</span>
+  <span class="text-emerald-400">|--- SQLite + Drizzle</span> <span class="text-zinc-600">(38 migrations, append-only events)</span>
   <span class="text-blue-400">|--- Vault Service</span> <span class="text-zinc-600">(filesystem blobs, SHA256, FTS5)</span>
   <span class="text-violet-400">|--- Secrets Store</span> <span class="text-zinc-600">(OS keychain via keytar)</span></pre>
       </div>
@@ -234,7 +279,7 @@
           <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Backend</h3>
           <div class="flex flex-wrap gap-2">
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Electron</span>
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Node.js 20</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Node.js 22</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">better-sqlite3</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Drizzle ORM</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vercel AI SDK</span>
@@ -245,8 +290,8 @@
         <div class="rounded-xl bg-zinc-900/30 border border-zinc-800/40 p-5">
           <h3 class="font-semibold mb-3 text-sm text-zinc-300 uppercase tracking-wider">Quality</h3>
           <div class="flex flex-wrap gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vitest (602 tests)</span>
-            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Playwright (3 E2E)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Vitest (4,463 tests)</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Playwright (19 E2E specs, 26 cases)</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Biome</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">GitHub Actions CI</span>
           </div>
@@ -262,6 +307,7 @@
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenRouter</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Together</span>
             <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">Fireworks</span>
+            <span class="px-2.5 py-1 rounded-lg bg-zinc-800 text-xs text-zinc-300">OpenAI-compatible</span>
           </div>
         </div>
       </div>
@@ -272,7 +318,8 @@
   <section id="quickstart" class="py-20 md:py-32 border-t border-zinc-800/50">
     <div class="max-w-3xl mx-auto px-6">
       <div class="text-center mb-12">
-        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Get started in 3 commands</h2>
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">Get started</h2>
+        <p class="text-zinc-400 text-lg max-w-2xl mx-auto">Download the installer for <a class="underline hover:text-zinc-200" href="https://github.com/Git-Rocky-Stack/Team-X/releases">Windows, macOS or Linux</a> (<code class="font-mono text-zinc-300 text-base">-Setup-x64.exe</code>, <code class="font-mono text-zinc-300 text-base">.dmg</code>, <code class="font-mono text-zinc-300 text-base">x86_64.AppImage</code> or <code class="font-mono text-zinc-300 text-base">amd64.deb</code>), or build from source in three commands:</p>
       </div>
 
       <div class="space-y-6">
@@ -333,11 +380,12 @@
     <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-zinc-500">
       <div class="flex items-center gap-2">
         <div class="w-5 h-5 rounded bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center font-bold text-white text-[10px]">T</div>
-        <span>Team-X &middot; MIT License</span>
+        <span>Team-X &middot; <a href="https://github.com/Git-Rocky-Stack/Team-X/blob/main/LICENSE" class="hover:text-zinc-300 transition-colors">MIT License</a></span>
       </div>
       <div class="flex items-center gap-6">
         <a href="https://github.com/Git-Rocky-Stack/Team-X" class="hover:text-zinc-300 transition-colors">GitHub</a>
         <a href="https://github.com/Git-Rocky-Stack/Team-X/releases" class="hover:text-zinc-300 transition-colors">Releases</a>
+        <a href="https://github.com/Git-Rocky-Stack/Team-X/blob/main/docs/user-guide/README.md" class="hover:text-zinc-300 transition-colors">User Guide</a>
         <a href="https://strategia-x.com" class="hover:text-zinc-300 transition-colors">Strategia-X</a>
       </div>
       <span>&copy; 2026 Rocky Elsalaymeh</span>

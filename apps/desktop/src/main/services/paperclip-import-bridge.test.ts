@@ -187,3 +187,42 @@ describe('paperclip import bridge', () => {
     expect(preview.importPreview.source?.packagePath).toBe(tempDir);
   });
 });
+
+describe('loadPaperclipExportFolder — refusing what is not an export', () => {
+  // Every candidate read swallowed ENOENT, so a mistyped path or any
+  // non-Paperclip folder "loaded" as an empty export — zero agents, zero
+  // tasks, a preview that looked importable. The handler's "could not read"
+  // error could never fire against the real loader.
+  it('refuses a folder that does not exist', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'teamx-paperclip-'));
+
+    await expect(loadPaperclipExportFolder(join(tempDir, 'missing'))).rejects.toThrow(
+      /does not exist/,
+    );
+  });
+
+  it('refuses a path that is a file, not a folder', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'teamx-paperclip-'));
+    const file = join(tempDir, 'company.json');
+    await writeFile(file, '{}', 'utf8');
+
+    await expect(loadPaperclipExportFolder(file)).rejects.toThrow(/is not a folder/);
+  });
+
+  it('refuses a folder holding none of the Paperclip export files', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'teamx-paperclip-'));
+    await writeFile(join(tempDir, 'notes.txt'), 'hello', 'utf8');
+
+    await expect(loadPaperclipExportFolder(tempDir)).rejects.toThrow(/no Paperclip export files/);
+  });
+
+  it('refuses an export file larger than the read cap', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'teamx-paperclip-'));
+    await writeFile(join(tempDir, 'company.json'), JSON.stringify({ name: 'Big' }), 'utf8');
+    await writeFile(join(tempDir, 'tasks.json'), `[${'0,'.repeat(64)}0]`, 'utf8');
+
+    await expect(loadPaperclipExportFolder(tempDir, { maxFileBytes: 32 })).rejects.toThrow(
+      /tasks\.json is .* larger than/,
+    );
+  });
+});

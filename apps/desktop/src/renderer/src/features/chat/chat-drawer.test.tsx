@@ -109,6 +109,22 @@ describe('Interruptible direct chat renderer wiring', () => {
     expect(chatDrawerSrc).toContain('onClose={() => setThreadTicketPreviewThreadId(null)}');
   });
 
+  it('shows why a direct-line turn failed and stops waiting for a reply that will not come', () => {
+    // A refused turn (Settings → Privacy) emits work.failed with no
+    // work.started, so the thinking → idle transition never fires.
+    expect(chatDrawerSrc).toContain(
+      'live?.lastFailure && live.lastFailure.threadId === effectiveThreadId',
+    );
+    expect(chatDrawerSrc).toContain('<TurnFailureNotice');
+    expect(chatDrawerSrc).toMatch(
+      /if \(!selectedId \|\| !turnFailure\) return;\s+setDirectChatAwaitingReply\(selectedId, false\);/,
+    );
+    // Sending again dismisses the old reason.
+    expect(chatDrawerSrc).toMatch(
+      /function dispatchDirectMessage[\s\S]*?clearEmployeeFailure\(selectedId\);[\s\S]*?sendMutation\.mutate/,
+    );
+  });
+
   it('labels ticket threads distinctly in the thread index', () => {
     expect(threadListSrc).toContain("type ThreadKind = 'copilot' | 'agent' | 'ticket' | 'regular'");
     expect(threadListSrc).toContain("if (thread.kind === 'ticket') return 'ticket';");

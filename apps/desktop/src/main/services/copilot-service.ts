@@ -65,9 +65,30 @@ export interface CopilotServiceEmployeesRepo {
   findSystemByRoleId(companyId: string, roleId: string): { id: string } | null;
 }
 
+/** Where a finished exchange is remembered — `EnhancedAiService.extractAndStoreFacts`. */
+export interface CopilotServiceMemory {
+  remember(companyId: string, sourceId: string, conversation: string): Promise<unknown>;
+}
+
+/** The slice of the event bus this service listens on. */
+export interface CopilotServiceBus {
+  subscribe(
+    listener: (event: { type: string; companyId: string; payload: unknown }) => void,
+  ): () => void;
+}
+
 export interface CopilotServiceDeps {
   readonly agenticLoopService: CopilotServiceAgenticLoop;
   readonly employeesRepo: CopilotServiceEmployeesRepo;
+  /**
+   * Long-term memory. With both `memory` and `bus` wired, every completed
+   * `copilot.ask` run is handed to memory as a question/answer exchange, so
+   * facts it establishes are recalled by later questions. Omitted, asks work
+   * exactly as before and nothing is remembered.
+   */
+  readonly memory?: CopilotServiceMemory;
+  readonly bus?: CopilotServiceBus;
+  readonly logger?: { warn(message: string, err?: unknown): void };
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +113,61 @@ export interface CopilotService {
 // Factory
 // ---------------------------------------------------------------------------
 
+/** How many finished-but-unclaimed runs to hold while their ask() resolves. */
+const SETTLED_BUFFER_LIMIT = 50;
+
 export function createCopilotService(deps: CopilotServiceDeps): CopilotService {
+  const logger = deps.logger ?? { warn: (message, err) => console.warn(message, err) };
+
+  // Runs this service started and is waiting on, by run id.
+  const pending = new Map<string, { companyId: string; text: string }>();
+  // Runs that finished before `ask` registered them: a run can complete
+  // while `start` is still resolving. `null` marks a failure.
+  const settledEarly = new Map<string, string | null>();
+
+  function remember(
+    runId: string,
+    exchange: { companyId: string; text: string },
+    answer: string | null,
+  ): void {
+    if (!deps.memory || answer === null || answer.trim().length === 0) return;
+    void deps.memory
+      .remember(
+        exchange.companyId,
+        `copilot-run:${runId}`,
+        `User: ${exchange.text}\nCopilot: ${answer}`,
+      )
+      .catch((err: unknown) =>
+        logger.warn('[copilot-service] remembering an exchange failed', err),
+      );
+  }
+
+  if (deps.memory && deps.bus) {
+    deps.bus.subscribe((event) => {
+      if (event.type !== 'agentic.completed' && event.type !== 'agentic.failed') return;
+      const payload = event.payload as { runId?: unknown; answer?: unknown } | null;
+      if (typeof payload?.runId !== 'string') return;
+      const answer =
+        event.type === 'agentic.completed' && typeof payload.answer === 'string'
+          ? payload.answer
+          : null;
+
+      const exchange = pending.get(payload.runId);
+      if (exchange) {
+        pending.delete(payload.runId);
+        remember(payload.runId, exchange, answer);
+        return;
+      }
+      // Not ours yet (or not ours at all). Hold it briefly in case `ask` is
+      // about to claim it; the buffer is bounded, oldest first out.
+      settledEarly.set(payload.runId, answer);
+      if (settledEarly.size > SETTLED_BUFFER_LIMIT) {
+        const oldest = settledEarly.keys().next().value;
+        if (oldest !== undefined) settledEarly.delete(oldest);
+      }
+    });
+  }
+
   return {
     async ask(req) {
       if (typeof req.companyId !== 'string' || req.companyId.length === 0) {
@@ -114,6 +189,17 @@ export function createCopilotService(deps: CopilotServiceDeps): CopilotService {
         userText: req.text,
         employeeId: sys.id,
       });
+
+      if (deps.memory && deps.bus) {
+        const exchange = { companyId: req.companyId, text: req.text };
+        if (settledEarly.has(result.runId)) {
+          const answer = settledEarly.get(result.runId) ?? null;
+          settledEarly.delete(result.runId);
+          remember(result.runId, exchange, answer);
+        } else {
+          pending.set(result.runId, exchange);
+        }
+      }
 
       return { runId: result.runId, threadId: result.threadId };
     },

@@ -114,7 +114,7 @@ understands what *Intelligence Layer* means.
 
 ## Dependencies
 
-- Phase 5 M28 — `packages/intelligence` + sqlite-vec + RAG.
+- Phase 5 M28 — `packages/intelligence` + RAG (BLOB embeddings ranked in-process by cosine similarity; IVF index at 4,096+ vectors per company).
 - Phase 5 M29 — RAG into agent turns.
 - Phase 5 M30 — NLU engine + command palette.
 - Phase 5 M31 — agentic loop (read-side) + `system-agent`.

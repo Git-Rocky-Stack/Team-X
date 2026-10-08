@@ -178,6 +178,16 @@ function resolveWithinFolder(
     throw new HfServiceError(`The filename "${filename}" must not contain path traversal.`);
   }
 
+  // The Discover panel only offers `.gguf` siblings, so anything else reaching
+  // here came from somewhere other than that UI. Refusing it keeps a
+  // compromised renderer from using the Hub as a way to drop arbitrary repo
+  // files (scripts, DLLs, configs) onto disk.
+  if (!/\.gguf$/i.test(segments[segments.length - 1] ?? '')) {
+    throw new HfServiceError(
+      `Only GGUF model files can be downloaded; "${filename}" is not a .gguf file.`,
+    );
+  }
+
   const root = resolve(targetFolder);
   const full = resolve(root, ...segments);
   // Encode per segment: encodeURIComponent over the whole string would turn
@@ -187,6 +197,24 @@ function resolveWithinFolder(
     throw new HfServiceError(`The filename "${filename}" resolves outside the target folder.`);
   }
   return { root, full, urlPath };
+}
+
+/**
+ * Comparison key for a destination path. Windows and macOS filesystems are
+ * case-insensitive by default, so `Model.gguf` and `model.gguf` are one file
+ * there and must count as one destination.
+ */
+function destinationKey(path: string): string {
+  return process.platform === 'win32' || process.platform === 'darwin' ? path.toLowerCase() : path;
+}
+
+/**
+ * The full length from a 416's `Content-Range: bytes *\/TOTAL`, or null when
+ * the server did not say.
+ */
+function unsatisfiedRangeTotal(response: Response): number | null {
+  const match = response.headers.get('content-range')?.match(/^bytes \*\/(\d+)\s*$/i);
+  return match?.[1] ? Number(match[1]) : null;
 }
 
 /** Strip a secret from any text bound for the renderer or the progress record. */
@@ -492,6 +520,23 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
         { method: 'GET', headers, signal: controller.signal },
       );
 
+      // 416 to a ranged request means "you already have everything" when the
+      // `.part` is exactly the full length — a pause or quit that landed after
+      // the last byte but before the rename. Failing here would strand a
+      // complete model behind a Retry that can never succeed, and a Cancel
+      // that deletes it. The server's reported total is authoritative; the
+      // previous attempt's total is the fallback when it omits one.
+      if (response.status === 416 && resumeFrom > 0) {
+        const total =
+          unsatisfiedRangeTotal(response) ?? (record.bytesTotal > 0 ? record.bytesTotal : null);
+        if (total === resumeFrom) {
+          await response.body?.cancel().catch(() => undefined);
+          record.bytesReceived = resumeFrom;
+          await finishCompleted(record);
+          return;
+        }
+      }
+
       if (!response.ok) {
         throw apiError(response, `downloading ${record.filename}`);
       }
@@ -537,9 +582,7 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
         return;
       }
 
-      await fs.rename(record.partPath, record.finalPath);
-      record.state = 'completed';
-      record.bytesTotal = record.bytesReceived;
+      await finishCompleted(record);
     } catch (err) {
       if (sink) await sink.close().catch(() => undefined);
       if (controller.signal.aborted) {
@@ -553,6 +596,13 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
       record.controller = null;
       record.running = null;
     }
+  }
+
+  /** Promote a fully received `.part` to its final name. */
+  async function finishCompleted(record: DownloadRecord): Promise<void> {
+    await fs.rename(record.partPath, record.finalPath);
+    record.state = 'completed';
+    record.bytesTotal = record.bytesReceived;
   }
 
   /** Settle a transfer that was aborted, honouring pause vs cancel semantics. */
@@ -592,6 +642,12 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
     targetFolder: string,
   ): Promise<{ handleId: string }> {
     assertRepoId(repoId);
+    // Resolving a relative folder would anchor it at the main process's cwd —
+    // a destination nobody chose. The renderer always holds an absolute path
+    // (the configured library folder or a native folder-picker result).
+    if (!isAbsolute(targetFolder)) {
+      throw new HfServiceError(`The target folder "${targetFolder}" must be an absolute path.`);
+    }
     // `root` is the resolved form of `targetFolder`. Every filesystem call
     // below uses resolved paths so a caller passing `/models` on Windows and
     // the service's own `dirname(partPath)` never disagree about the location.
@@ -599,6 +655,28 @@ export function createHfService(deps: HfServiceDeps = {}): HfService {
 
     if (!(await fs.isDirectory(root))) {
       throw new HfServiceError(`The target folder "${targetFolder}" does not exist.`);
+    }
+
+    // One transfer per destination. A second transfer to a file whose `.part`
+    // another is still writing (a double-clicked Download) would send a Range
+    // request and append into it — interleaved bytes, then a corrupt model
+    // registered as complete. So a repeat request is idempotent: it gets the
+    // existing handle. A failed record is retried in place rather than joined
+    // by a rival, because cancelling the stale one would delete the `.part` the
+    // new one is writing. Checked synchronously with the insert below (no
+    // `await` between them), so two racing clicks cannot both get past it.
+    const key = destinationKey(finalPath);
+    const existing = [...downloads.values()].find(
+      (r) => !TERMINAL.includes(r.state) && destinationKey(r.finalPath) === key,
+    );
+    if (existing) {
+      if (existing.repoId !== repoId) {
+        throw new HfServiceError(
+          `"${filename}" is already being downloaded into that folder from ${existing.repoId}. Cancel that download first.`,
+        );
+      }
+      if (existing.state === 'failed') launch(existing);
+      return { handleId: existing.handleId };
     }
 
     const record: DownloadRecord = {

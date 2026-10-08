@@ -6,18 +6,32 @@
 
 [![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-3%2C982%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-4%2C463%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
 
-[Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
+[Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [What's New](docs/user-guide/whats-new.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
 ![Team-X Mission Control — Night Ops](docs/media/hero-night-ops.png)
 
 *Mission Control in **Night Ops**. The whole app is built on the Command Console design system — brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
 
 </div>
+
+---
+
+## What's new
+
+The next release (in review in [#39](https://github.com/Git-Rocky-Stack/Team-X/pull/39)) is about trust: every setting now does what its label says.
+
+- **Enforced privacy tiers.** Every model call, embedding and external runtime is checked against Settings → Privacy. A provider above the tier is refused with a reason and is never silently swapped.
+- **Copilot grounded in your company's knowledge**, with long-term memory and a knowledge graph that survive restarts.
+- **The Models tab.** Run GGUF models locally, browse Hugging Face, and connect LAN model servers.
+- **A palette that understands commands**, plus meeting minutes that file action items, a Hire dialog with all 55 roles, and a per-company Proactive Mode that works.
+- **A Linux AppImage with no FUSE 2 requirement.**
+
+Full release notes: **[What's New](docs/user-guide/whats-new.md)**.
 
 ---
 
@@ -73,12 +87,12 @@ A full operator console for governed autonomous work (the **Autonomy** tab, 10 s
 - **MCP tool calling** — agents use Model Context Protocol tools via a singleton host with connection pooling and `tools_allowed`/`tools_denied` enforcement
 - **Skills & authority** — install skills from a local folder or GitHub URL, import MCP servers from templates or manual config, and govern everything through authority grants and per-employee permissions
 - **Employee-to-employee messaging** — agents communicate with colleagues via built-in tools, forming collaborative workflows
-- **Local GGUF models** — a **Models** tab with four panels: **Library** (add a `.gguf` file or watch a folder, rescan or stop watching it, per-model system prompt / chat template / advanced tuning, load and unload), **Discover** (search Hugging Face, browse a repo's files, queue resumable downloads that survive a pause or a quit), **Endpoints** (LM Studio / Ollama / llama-server / KoboldCPP / vLLM on your LAN, validated as local-network only and probed for reachability), and **Runtime** (GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU, active backend, LRU pool capacity, bundled llama.cpp build). Per-model benchmarks record prompt-eval and generation throughput measured from llama-server's own timings — never an estimate. Ollama also remains supported as a provider
+- **Local GGUF models** — a **Models** tab with four panels: **Library** (add a `.gguf` file or watch a folder, rescan or stop watching it, per-model system prompt / chat template / advanced tuning, load and unload), **Discover** (search Hugging Face, browse a repo's files, queue resumable downloads that survive a pause or a quit), **Endpoints** (LM Studio / Ollama / llama-server / KoboldCPP / vLLM on your LAN, validated as local-network only and probed for reachability), and **Runtime** (GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU, active backend, LRU pool capacity, bundled llama.cpp build). Per-model benchmarks record prompt-eval and generation throughput measured from llama-server's own timings — never an estimate. A GGUF model is not yet an agent provider — Ollama remains the local path for employees
 
 ### Intelligence Layer
 
-- **RAG-grounded agent turns** — every agent prompt is augmented with retrieved context from messages and vault files via the `@team-x/intelligence` package (embeddings stored as BLOBs in SQLite and ranked by brute-force cosine similarity in-process, token-aware chunking with overlap, cosine-threshold gating, SHA256-dedup attribution blocks)
-- **Enhanced AI subsystem** — semantic chunking (splits on headings, paragraphs and code fences instead of a blind character window), query expansion, long-term memory with LLM fact extraction, a cross-thread knowledge graph, multi-turn planning, streaming responses, and span tracing. Each is an independent toggle in Settings → Enhanced AI, and answers are generated by your configured provider grounded in retrieved context with inline citations — never synthesized from snippets
+- **RAG-grounded agent turns** — every agent prompt is augmented with retrieved context from messages and vault files via the `@team-x/intelligence` package (embeddings stored as BLOBs in SQLite and ranked in-process by cosine similarity: an exact per-company scan, or an IVF approximate index once a company holds 4,096 or more vectors; token-aware chunking with overlap, cosine-threshold gating, SHA256-dedup attribution blocks)
+- **Enhanced AI subsystem** — semantic chunking for the RAG index (splits on headings, paragraphs and code fences instead of a blind character window), query expansion, long-term memory with LLM fact extraction, a cross-thread knowledge graph (both persisted in SQLite), and sampled span tracing. It is active whenever RAG is enabled with an embedding provider, grounds Copilot answers through the `search_company_knowledge` tool, and remembers completed Copilot exchanges. Each is a toggle in Settings → Enhanced AI; the Copilot's own model writes the answer from that grounding and cites its sources
 - **Natural-language command palette** (`Cmd+K`) — 14 structured intents (hire / fire / promote / assign / create / close / reopen / project / goal / meeting / status / navigation / vault search) plus a `complex_request` fallback that hands off to the agentic loop. LLM-backed classifier with JSON-output retry, fuzzy entity resolution, FTS5 ticket lookup, destructive-action confirmation gate, last-20 command history
 - **Agentic loop for complex questions** — ask free-form questions like *"why is the frontend team behind schedule?"* and get a grounded multi-paragraph answer citing specific tickets, employees, and events. Runs a ReAct-style loop on a hidden `system-agent` pseudo-employee, dispatches six read-only query tools, and terminates under hard step / token / wall-clock budgets (defaults 8 / 8000 / 120s — configurable in Settings → Agentic Loop)
 - **Live step log + persisted thread** — the palette streams each loop step as a labeled card (plan → tool call → tool result → answer) with provider and token footer; full transcripts persist for later reference, and every run can be canceled mid-flight
@@ -92,7 +106,9 @@ A full operator console for governed autonomous work (the **Autonomy** tab, 10 s
 - **One-click backup/restore** — full SQLite + vault archive with manifest validation
 - **Append-only audit log** — filterable event timeline with summary cards, actor search, date range picker, and CSV/JSON export
 - **Workspace portability** — export a company as a template package, preview and import packages, share with a reviewed posture
-- **In-app User Guide** — role-based onboarding (owner / operator / builder) with 22 sections, progress tracking, and deep links that jump straight into the referenced view or settings section
+- **Paperclip Import** — preview a Paperclip export folder (agents, runtimes, tickets, skills, unsupported adapters, missing secrets), save it as a `.teamx-package.json`, and review & import it through Portability — nothing is created until Portability commits it
+- **Private Operator Access** — a read-only decision record of what a non-workstation device would be allowed to do in a workspace (Localhost / Tailscale / Hosted bridge), with every refusal and its reason; nothing opens a listener
+- **In-app User Guide** — role-based onboarding (owner / operator / builder) with 25 sections, progress tracking, and deep links that jump straight into the referenced view or settings section
 - **Cross-platform installers** — Windows (NSIS), macOS (DMG), Linux (AppImage + .deb) via electron-builder
 - **User-triggered updates** — check for new versions from GitHub Releases on demand (zero phone-home)
 
@@ -106,11 +122,11 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 | Platform | File | Architecture |
 |----------|------|--------------|
-| Windows | `Team-X-Setup-x.x.x.exe` | x64, arm64 |
-| macOS | `Team-X-x.x.x.dmg` | x64 (Intel), arm64 (Apple Silicon) |
-| Linux | `Team-X-x.x.x.AppImage` / `.deb` | x64 |
+| Windows | `Team-X-x.x.x-Setup-x64.exe` / `Team-X-x.x.x-Setup-arm64.exe` | x64, arm64 |
+| macOS | `Team-X-x.x.x-x64.dmg` / `Team-X-x.x.x-arm64.dmg` | x64 (Intel), arm64 (Apple Silicon) |
+| Linux | `Team-X-x.x.x-x86_64.AppImage` / `Team-X-x.x.x-amd64.deb` | x64 |
 
-> **Linux AppImage note:** the AppImage runtime requires **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora). If the AppImage won't start, either install that package or run `./Team-X-x.x.x-x64.AppImage --appimage-extract-and-run`. The `.deb` needs no FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-x64.deb`).
+> **Linux AppImage note:** releases after v3.4.0 embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
 
 ### From Source
 
@@ -145,8 +161,8 @@ Add any supported provider in **Settings > AI Providers**: enter your API key, t
 Team-X/
   apps/desktop/             Electron app
     src/main/               Main process (Node.js + TypeScript)
-      db/                   SQLite + Drizzle ORM (37 migrations)
-      ipc/                  Typed IPC handlers (195 registrations / 224 bridge methods)
+      db/                   SQLite + Drizzle ORM (38 migrations)
+      ipc/                  Typed IPC handlers (236 registrations / 229 bridge methods)
       orchestrator/         Agent scheduler + event bus
       services/             Vault, backup, MCP host, providers, updater,
                             rag-indexer, command-service, agentic-loop,
@@ -187,7 +203,7 @@ Team-X/
 - **Orchestrator is the only scheduler.** Pause semantics (e.g., during meetings) are race-free because nothing dispatches without the orchestrator's consent.
 - **MCP Host is a singleton.** One pool of connections shared across all agents — no N-client sprawl.
 - **Storage is SQLite + filesystem.** Metadata in SQLite, blobs on disk, SHA256 integrity. File blobs never go in the database.
-- **Provider router is the single LLM gateway.** Enforces privacy tiers, concurrency caps, and cost tracking in one place.
+- **Provider resolution is the single LLM gateway.** The provider factory and runtime-profile resolver enforce the privacy tier on every run; the provider router carries concurrency caps and cost tracking.
 - **Events table is append-only.** Source of truth for the real-time dashboard and audit log.
 - **The design system is law.** Every surface follows `DESIGN.md` (Command Console / Carbon Pro): four-layer hardware depth, dual-shift theming, displays-stay-dark, data-bound instrumentation only.
 - **Zero phone-home. Ever.** No telemetry, no analytics, no auto-update checks. Updates are explicitly user-triggered.
@@ -208,13 +224,13 @@ Team-X/
 | LLM integration | Vercel AI SDK + provider packages |
 | Agent framework | Custom orchestrator (not LangChain/CrewAI) |
 | MCP | @modelcontextprotocol/sdk |
-| Local models | Ollama today; `@team-x/local-gguf-runtime` (llama.cpp `b9371`) foundation for native GGUF |
-| Database | better-sqlite3 + Drizzle ORM (37 migrations) |
+| Local models | Ollama as the local agent provider; native GGUF via `@team-x/local-gguf-runtime` (llama.cpp `b9371`) and the Models tab |
+| Database | better-sqlite3 + Drizzle ORM (38 migrations) |
 | Full-text search | SQLite FTS5 |
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
-| Unit tests | Vitest (3,982 tests / 316 files) |
+| Unit tests | Vitest (4,463 tests / 354 files) |
 | E2E tests | Playwright (19 specs / 26 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
@@ -222,7 +238,7 @@ Team-X/
 
 ## Documentation
 
-Team-X includes comprehensive documentation across 136 files:
+Team-X includes comprehensive documentation across 137 files:
 
 ### Getting Started
 - **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users
@@ -308,7 +324,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **3,982 unit tests** across 316 files and **19 Playwright E2E specs** (26 cases):
+Team-X ships with **4,463 unit tests** across 354 files and **19 Playwright E2E specs** (26 cases):
 
 | Spec | Coverage |
 |------|----------|
@@ -348,7 +364,7 @@ Team-X is built with a privacy-first posture:
 - **Local-first by default.** Runs entirely on local models (Ollama) with no cloud dependency.
 - **Zero phone-home.** No analytics, no telemetry, no crash reporting, no auto-update checks.
 - **OS keychain for secrets.** API keys are stored in the system keychain via keytar, never in plaintext config files.
-- **Privacy tier filtering.** Choose which provider tiers (local, open-source cloud, proprietary cloud) your agents are allowed to use.
+- **Enforced privacy tiers.** Choose which provider tiers (local, open-source cloud, proprietary cloud) may be used. Every model call and external runtime is checked; a provider above the tier is refused with a reason, never silently swapped.
 - **Your data stays yours.** All data lives in a local SQLite database and filesystem vault on your machine.
 
 ---

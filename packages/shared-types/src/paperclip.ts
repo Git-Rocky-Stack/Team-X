@@ -56,3 +56,13 @@ export interface PaperclipPreviewRequest {
   /** Absolute path to the Paperclip export folder the operator picked. */
   folderPath: string;
 }
+
+/**
+ * Result of `paperclip.savePackage`. `packagePath` is the written
+ * `.teamx-package.json` — the file `companyPortability.importPackage` commits —
+ * or null when the operator cancelled the save dialog.
+ */
+export interface PaperclipSavePackageResponse {
+  canceled: boolean;
+  packagePath: string | null;
+}

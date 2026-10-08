@@ -222,6 +222,63 @@ describe('buildAnnIndex / queryAnnIndex', () => {
     expect(ids(hits)).toEqual(['keep-1', 'keep-2']);
   });
 
+  it('excludes entries whose dimension differs from the index', () => {
+    // Vectors are stored flattened at `row * dimension`. A wider vector used
+    // to spill into the next row's slot and a narrower one left a zero-padded
+    // stub that scored as a perfect match on its prefix. Neither has a
+    // meaningful cosine against a query of the index dimension, so both are
+    // left out — and the zero vector after the wide one keeps scoring 0.
+    const index = buildAnnIndex(
+      [
+        { id: 'first', vector: [0, 1, 0, 0] },
+        { id: 'wide', vector: [1, 0, 0, 0, 5, 5] },
+        { id: 'zero', vector: [0, 0, 0, 0] },
+        { id: 'narrow', vector: [1, 0] },
+        { id: 'real', vector: [1, 1, 0, 0] },
+      ],
+      { clusters: 2, seed: 1 },
+    );
+
+    expect(index.dimension).toBe(4);
+    expect(index.size).toBe(3);
+    expect([...index.ids].sort()).toEqual(['first', 'real', 'zero']);
+
+    const hits = queryAnnIndex(index, [1, 1, 0, 0], {
+      topK: 10,
+      threshold: -1,
+      nProbe: index.clusterCount,
+    });
+    expect(ids(hits).sort()).toEqual(['first', 'real', 'zero']);
+    expect(hits.find((h) => h.id === 'zero')?.similarity).toBe(0);
+  });
+
+  it('takes the expected dimension from options over the first entry', () => {
+    const index = buildAnnIndex(
+      [
+        { id: 'stray', vector: [1, 0] },
+        { id: 'a', vector: [1, 0, 0] },
+        { id: 'b', vector: [0, 1, 0] },
+      ],
+      { clusters: 2, seed: 1, dimension: 3 },
+    );
+
+    expect(index.dimension).toBe(3);
+    expect([...index.ids].sort()).toEqual(['a', 'b']);
+  });
+
+  it('returns nothing for a query of the wrong dimension', () => {
+    const index = buildAnnIndex(
+      [
+        { id: 'a', vector: [1, 0, 0] },
+        { id: 'b', vector: [0, 1, 0] },
+      ],
+      { clusters: 2, seed: 1 },
+    );
+
+    expect(queryAnnIndex(index, [1, 0], { topK: 5, threshold: -1, nProbe: 2 })).toEqual([]);
+    expect(queryAnnIndex(index, [1, 0, 0, 7], { topK: 5, threshold: -1, nProbe: 2 })).toEqual([]);
+  });
+
   it('ranks by direction, not magnitude', () => {
     // Cosine is scale-invariant; a 100x-longer vector pointing the same way
     // must not outrank a closer-pointing one.

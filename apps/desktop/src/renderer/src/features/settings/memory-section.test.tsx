@@ -37,4 +37,14 @@ describe('Memory settings shell', () => {
     expect(memorySectionSrc).toContain('useMemorySettings()');
     expect(memorySectionSrc).toContain('useSetMemorySettings()');
   });
+
+  // The pack budget + recent-turn window feed every agent turn's context
+  // packing (orchestrator `getContextMemorySettings`, read per turn). The
+  // copy used to describe them as thread-digest / preview-only knobs.
+  it('describes the budget and turn window as live per-turn agent context controls', () => {
+    expect(memorySectionSrc).toContain('every agent turn');
+    expect(memorySectionSrc).toContain('next turn');
+    expect(memorySectionSrc).not.toContain('condenses long threads into digests');
+    expect(memorySectionSrc).not.toContain('starts from this token envelope');
+  });
 });

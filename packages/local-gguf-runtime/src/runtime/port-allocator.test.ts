@@ -38,8 +38,8 @@ describe('allocatePort', () => {
     // (Avoids hard-coded ports, which flake on shared CI runners.)
     await expect(
       allocatePort({
-        rangeStart: 50000,
-        rangeEnd: 50005,
+        rangeStart: 40000,
+        rangeEnd: 40005,
         maxAttempts: 3,
         probe: async () => false,
       }),
@@ -48,10 +48,10 @@ describe('allocatePort', () => {
 
   it('returns the first port the probe reports available', async () => {
     // Deterministic: probe accepts only one specific port in the range.
-    const target = 50003;
+    const target = 40003;
     const port = await allocatePort({
-      rangeStart: 50000,
-      rangeEnd: 50005,
+      rangeStart: 40000,
+      rangeEnd: 40005,
       maxAttempts: 500,
       probe: async (p) => p === target,
     });
@@ -104,10 +104,16 @@ describe('allocatePort', () => {
  * the outcome is decided by the reservation rather than by the draw.
  */
 describe('allocatePort reservations', () => {
+  // Fixed-range tests here and above use 40xxx, below the default 49152–65535
+  // range on purpose. Reservations are process-wide and last 60s, and the
+  // default-range tests (including the 200-trial perf test) leave ~200 random
+  // ports reserved. With these windows inside the default range, a stray
+  // reservation landed in one about 5% of runs and the partition test failed
+  // with port-exhausted — test pollution, not a flaky allocator.
   it('does not hand out a port it has already handed out', async () => {
-    const opts = { rangeStart: 50100, rangeEnd: 50100, maxAttempts: 5, probe: async () => true };
+    const opts = { rangeStart: 40100, rangeEnd: 40100, maxAttempts: 5, probe: async () => true };
     const first = await allocatePort(opts);
-    expect(first).toBe(50100);
+    expect(first).toBe(40100);
 
     // The only candidate in range is now spoken for. Availability is not the
     // question — the probe still says yes — so returning it again would mean
@@ -121,24 +127,24 @@ describe('allocatePort reservations', () => {
     // again, so holding the number forever would leak the range.
     let clock = 1_000_000;
     const opts = {
-      rangeStart: 50101,
-      rangeEnd: 50101,
+      rangeStart: 40101,
+      rangeEnd: 40101,
       maxAttempts: 5,
       probe: async () => true,
       reservationMs: 30_000,
       now: () => clock,
     };
-    expect(await allocatePort(opts)).toBe(50101);
+    expect(await allocatePort(opts)).toBe(40101);
 
     clock += 30_001;
-    expect(await allocatePort(opts)).toBe(50101);
+    expect(await allocatePort(opts)).toBe(40101);
   });
 
   it('gives concurrent callers distinct ports across a small range', async () => {
     // Four callers, four ports, all probing as available: without reservation
     // this is a birthday draw and repeats are expected. With it, the four
     // callers must partition the range exactly.
-    const opts = { rangeStart: 50110, rangeEnd: 50113, maxAttempts: 50, probe: async () => true };
+    const opts = { rangeStart: 40110, rangeEnd: 40113, maxAttempts: 50, probe: async () => true };
     const ports = await Promise.all([
       allocatePort(opts),
       allocatePort(opts),
@@ -146,7 +152,7 @@ describe('allocatePort reservations', () => {
       allocatePort(opts),
     ]);
     expect(new Set(ports).size).toBe(4);
-    expect([...ports].sort()).toEqual([50110, 50111, 50112, 50113]);
+    expect([...ports].sort()).toEqual([40110, 40111, 40112, 40113]);
   });
 
   it('does not strand a reservation when the probe throws', async () => {
@@ -155,8 +161,8 @@ describe('allocatePort reservations', () => {
     // one-port range that would wedge the range until the TTL expired — up to
     // a minute of spurious `port-exhausted` for a transient probe error.
     const boom = {
-      rangeStart: 50120,
-      rangeEnd: 50120,
+      rangeStart: 40120,
+      rangeEnd: 40120,
       maxAttempts: 1,
       probe: async () => {
         throw new Error('probe exploded');
@@ -164,7 +170,7 @@ describe('allocatePort reservations', () => {
     };
     await expect(allocatePort(boom)).rejects.toThrow('probe exploded');
 
-    const ok = { rangeStart: 50120, rangeEnd: 50120, maxAttempts: 1, probe: async () => true };
-    expect(await allocatePort(ok)).toBe(50120);
+    const ok = { rangeStart: 40120, rangeEnd: 40120, maxAttempts: 1, probe: async () => true };
+    expect(await allocatePort(ok)).toBe(40120);
   });
 });

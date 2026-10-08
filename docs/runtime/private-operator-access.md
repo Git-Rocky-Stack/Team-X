@@ -1,12 +1,16 @@
 # Private Operator Access
 
-> **Status: policy contract only — no transport, not reachable from the app.**
-> `createPrivateOperatorAccessService` is implemented in
-> `apps/desktop/src/main/services/private-operator-access-service.ts` and
-> covered by `private-operator-access-service.test.ts`, but nothing
-> constructs it: there is no local HTTP listener, no hosted bridge adapter,
-> no IPC channel, and no UI. Nothing described below is currently exposed to
-> an operator or a phone. Verified 2026-08-23.
+> **Status: wired as a read-only decision record — no transport exists.**
+> `createPrivateOperatorAccessService`
+> (`apps/desktop/src/main/services/private-operator-access-service.ts`) is
+> constructed in the main process and reachable through two IPC channels,
+> `privateOperator.plan` and `privateOperator.snapshot`
+> (`apps/desktop/src/main/ipc/private-operator-handlers.ts`), and through the
+> **Settings → Private Operator Access** panel. The panel shows, per workspace
+> and per exposure (Localhost / Tailscale / Hosted bridge), which actions would
+> be allowed, which are refused, and why. Asking for a plan changes nothing:
+> nothing opens a listener, and there is no local HTTP adapter or hosted
+> bridge, so nothing described below is exposed to a phone or another device.
 
 P2.3 adds the policy and read-only data contract for optional private operator supervision. The surface is intentionally local-first:
 
@@ -16,7 +20,7 @@ P2.3 adds the policy and read-only data contract for optional private operator s
 - enable approval review only after explicit operator opt-in and membership checks;
 - keep runtime launch and secret changes behind late-stage, explicit gates.
 
-The implementation lives in `createPrivateOperatorAccessService`. It is a pure policy/snapshot function today; the adapter that would serve it over a local listener or a hosted bridge has not been built.
+The implementation lives in `createPrivateOperatorAccessService`. It is a pure policy/snapshot function, read by the IPC channels and the Settings panel above; the adapter that would serve it over a local listener or a hosted bridge has not been built.
 
 ## Capabilities
 

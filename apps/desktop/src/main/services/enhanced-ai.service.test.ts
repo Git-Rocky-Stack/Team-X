@@ -21,6 +21,11 @@
  * Settings -> Enhanced AI was inert.
  */
 
+import {
+  createInMemoryGraphRepo,
+  createInMemoryMemoryRepo,
+  createRagService,
+} from '@team-x/intelligence';
 import type { EmbeddingSourceType } from '@team-x/shared-types';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -206,7 +211,116 @@ describe('enhanced-ai — real answers (F4)', () => {
       companyId: 'co-1',
     });
 
-    expect(service.getStats().memory.factsCount).toBeGreaterThan(0);
+    expect(service.getStats('co-1').memory.factsCount).toBeGreaterThan(0);
+  });
+});
+
+describe('enhanced-ai — retrieveContext (Copilot grounding)', () => {
+  it('returns passages without asking the model for an answer', async () => {
+    const { service, prompts } = buildService();
+    await seed(service);
+
+    const context = await service.retrieveContext('why is the release blocked?', {
+      companyId: 'co-1',
+    });
+
+    expect(context.passages.map((p) => p.sourceId)).toEqual(['msg-1']);
+    expect(context.passages[0]?.content).toBe(SOURCE_TEXT);
+    expect(prompts.some((p) => p.includes('Answer the question'))).toBe(false);
+  });
+
+  it('includes remembered facts and graph entities while both switches are on', async () => {
+    const { service } = buildService();
+    await service.extractAndStoreFacts('The signing cert expired on Friday.', {
+      sourceId: 'thread-1',
+      companyId: 'co-1',
+    });
+
+    const context = await service.retrieveContext('is the signing certificate still valid?', {
+      companyId: 'co-1',
+    });
+
+    expect(context.facts.map((f) => f.fact)).toEqual(['The signing certificate expired on Friday']);
+    expect(context.related.map((r) => r.entity)).toContain('signing certificate');
+  });
+
+  it('leaves facts and entities out when their switches are off', async () => {
+    let flags = { longTermMemoryEnabled: true, knowledgeGraphEnabled: true };
+    const { service } = buildService({ features: () => flags });
+    await service.extractAndStoreFacts('The signing cert expired on Friday.', {
+      sourceId: 'thread-1',
+      companyId: 'co-1',
+    });
+
+    flags = { longTermMemoryEnabled: false, knowledgeGraphEnabled: false };
+    const context = await service.retrieveContext('is the signing certificate still valid?', {
+      companyId: 'co-1',
+    });
+
+    expect(context.facts).toEqual([]);
+    expect(context.related).toEqual([]);
+  });
+});
+
+describe('enhanced-ai — company scope and persistence', () => {
+  it('refuses an unscoped call instead of using a company that does not exist', async () => {
+    const { service } = buildService();
+
+    await expect(
+      // @ts-expect-error — exercising the runtime guard behind the type.
+      service.enhancedQuery('anything', {}),
+    ).rejects.toThrow(/companyId is required/);
+    await expect(
+      // @ts-expect-error — exercising the runtime guard behind the type.
+      service.extractAndStoreFacts('text', { sourceId: 's' }),
+    ).rejects.toThrow(/companyId is required/);
+  });
+
+  it('remembers facts across service instances through an injected memory repo', async () => {
+    const memoryRepo = createInMemoryMemoryRepo();
+    const knowledgeRepo = createInMemoryGraphRepo();
+    const { service } = buildService({ memoryRepo, knowledgeRepo });
+    await service.extractAndStoreFacts('The signing cert expired on Friday.', {
+      sourceId: 'thread-1',
+      companyId: 'co-1',
+    });
+
+    const { service: nextLaunch } = buildService({ memoryRepo, knowledgeRepo });
+    const context = await nextLaunch.retrieveContext('when did the signing certificate expire?', {
+      companyId: 'co-1',
+    });
+
+    expect(context.facts.map((f) => f.fact)).toEqual(['The signing certificate expired on Friday']);
+  });
+});
+
+describe('enhanced-ai — re-indexing', () => {
+  it('drops every chunk row of the previous indexing when a source shrinks', async () => {
+    const repo = makeRagRepo();
+    const { service } = buildService({
+      ragRepo: repo as unknown as EnhancedAiServiceOptions['ragRepo'],
+      features: { semanticChunkingEnabled: false },
+    });
+    const long = Array.from({ length: 40 }, (_, i) => `Paragraph ${i} about the release.`).join(
+      ' ',
+    );
+
+    await service.indexWithSemanticChunking({
+      companyId: 'co-1',
+      sourceType: 'message' as EmbeddingSourceType,
+      sourceId: 'doc-1',
+      content: long,
+    });
+    expect(repo.listByCompany('co-1').map((r) => r.sourceId)).toContain('doc-1#2');
+
+    await service.indexWithSemanticChunking({
+      companyId: 'co-1',
+      sourceType: 'message' as EmbeddingSourceType,
+      sourceId: 'doc-1',
+      content: 'Now a single short note.',
+    });
+
+    expect([...new Set(repo.listByCompany('co-1').map((r) => r.sourceId))]).toEqual(['doc-1']);
   });
 });
 
@@ -297,5 +411,77 @@ describe('enhanced-ai — feature flags actually gate behaviour (F5)', () => {
 
     // HyDE expansion prompts the model to draft a hypothetical document.
     expect(prompts.some((p) => /hypothetical/i.test(p))).toBe(false);
+  });
+});
+
+describe('enhanced-ai — shares the indexer’s RAG service', () => {
+  it('sees content indexed through the shared service without waiting out a cache', async () => {
+    const repo = makeRagRepo() as unknown as EnhancedAiServiceOptions['ragRepo'];
+    const shared = createRagService({
+      embedText: async (texts: string[]) => texts.map(embedOne),
+      dimension: DIM,
+      repo,
+    });
+    const { service } = buildService({ ragService: shared, ragRepo: repo });
+
+    await service.retrieveContext('why is the release blocked?', { companyId: 'co-1' });
+    await shared.indexSource({
+      companyId: 'co-1',
+      sourceType: 'message' as EmbeddingSourceType,
+      sourceId: 'msg-9',
+      content: SOURCE_TEXT,
+    });
+
+    const context = await service.retrieveContext('why is the release blocked?', {
+      companyId: 'co-1',
+    });
+    expect(context.passages.map((p) => p.sourceId)).toEqual(['msg-9']);
+  });
+});
+
+describe('enhanced-ai — model calls know their company', () => {
+  // llmComplete took only a prompt, so the composition root answered every
+  // Enhanced AI call with the FIRST live company's system agent: company B's
+  // Copilot exchanges were sent through company A's provider and billed to
+  // nobody. The wrapper now passes the company of the call that caused it.
+  it('passes the calling company to every model call it makes', async () => {
+    const seen: Array<string | null> = [];
+    const { service } = buildService({
+      llmComplete: async (prompt: string, ctx: { companyId: string | null }) => {
+        seen.push(ctx.companyId);
+        return prompt.includes('Extract key facts') ? FACTS_JSON : ANSWER;
+      },
+    });
+
+    await service.extractAndStoreFacts('Dana: the cert expires Friday.', {
+      companyId: 'co-b',
+      sourceId: 'thread-1',
+    });
+    await service.enhancedQuery('why is the release blocked?', {
+      companyId: 'co-a',
+      threshold: 0,
+    });
+
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen[0]).toBe('co-b');
+    expect(seen.slice(1).every((c) => c === 'co-a')).toBe(true);
+  });
+
+  it('keeps concurrent calls for different companies apart', async () => {
+    const seen: Array<string | null> = [];
+    const { service } = buildService({
+      llmComplete: async (prompt: string, ctx: { companyId: string | null }) => {
+        await new Promise((r) => setTimeout(r, ctx.companyId === 'co-a' ? 5 : 0));
+        seen.push(ctx.companyId);
+        return prompt.includes('Extract key facts') ? FACTS_JSON : ANSWER;
+      },
+    });
+
+    await Promise.all([
+      service.extractAndStoreFacts('a', { companyId: 'co-a', sourceId: 't-a' }),
+      service.extractAndStoreFacts('b', { companyId: 'co-b', sourceId: 't-b' }),
+    ]);
+
+    expect(seen.sort()).toEqual(['co-a', 'co-b']);
   });
 });

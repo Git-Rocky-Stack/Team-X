@@ -1,0 +1,40 @@
+# Publish the project site (docs/site/) to GitHub Pages.
+#
+# The site was committed but never deployed — no workflow published it and
+# both its URLs 404'd. This deploys docs/site/ as-is on every push to main
+# that touches it (or on demand). One-time setup by a repo admin:
+# Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel one that is already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+      - id: deployment
+        uses: actions/deploy-pages@v4

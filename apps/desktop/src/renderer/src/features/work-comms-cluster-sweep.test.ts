@@ -210,7 +210,11 @@ describe('hire-dialog', () => {
     expect(src).toContain("from '@/components/console");
     expect(src).toContain('<Tag');
     expect(src).toContain('well-input');
-    expect(src).toContain('var(--armed-edge)');
+    // Armed chooser selection comes from the shared console recipe
+    // (.cap + .cap-select, whose border is var(--armed-edge)), not inline.
+    expect(src).toContain('chooserCapBase');
+    expect(src).toContain("'cap-select'");
+    expect(src).not.toContain('var(--armed-soft)');
     expect(src).toContain('data-hire-manager-select=""');
     expect(src).toContain('hire-name');
     expectNoLegacy(src, 'hire-dialog.tsx');

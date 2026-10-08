@@ -11,7 +11,7 @@
 > 1. **MCP servers**: give agents new tools, resources, and prompts via the [Model Context Protocol](https://modelcontextprotocol.io).
 > 2. **Role packs**: extend the curated catalog with your own role specifications.
 >
-> If you need the in-app command surface (Cmd+K, agentic loop, copilot), see the user-guide. If you need the developer CLI, see `docs/user-guide/cli-reference.md`.
+> If you need the in-app command surface (Cmd+K, agentic loop, copilot), see the user-guide. Team-X ships no command-line tool; `docs/user-guide/cli-reference.md` covers the Command Palette and what that means for automation.
 
 ---
 
@@ -40,18 +40,18 @@ Team-X is an Electron app with three processes and four packages.
 │      │  contextBridge IPC (preload.ts, sandboxed)                  │
 │      ▼                                                              │
 │  Main process                                                       │
-│      ├── Orchestrator  (run-queue, event bus, agent runtime)       │
+│      ├── Orchestrator  (dispatcher, event bus, agent runtime)      │
 │      ├── @team-x/provider-router (Anthropic, OpenAI, Ollama,       │
 │      │     Google, Groq, OpenRouter, Together, Fireworks,          │
 │      │     OpenAI-compatible)                                       │
 │      ├── @team-x/intelligence (RAG, agentic loop, copilot,         │
-│      │     command palette, task planner)                           │
+│      │     command palette, task planner, Enhanced AI)              │
 │      ├── @team-x/shared-types (typed contracts, events)            │
 │      ├── @team-x/role-schema (role-pack loader + validator)        │
 │      ├── @team-x/telemetry-core (cost + usage tracking)            │
 │      ├── @team-x/local-gguf-runtime (local GGUF via llama.cpp:     │
-│      │     GPU probe, server pool, HF hub, folder watch)           │
-│      ├── SQLite (better-sqlite3 / sql.js, FTS5, sqlite-vec)        │
+│      │     GPU probe, server lifecycle, LRU pool, folder watch)    │
+│      ├── SQLite (better-sqlite3 / sql.js, FTS5, BLOB embeddings)   │
 │      ├── File vault (filesystem blobs, SHA256 integrity)           │
 │      └── MCP host (singleton, pooled, tools_allowed/denied)        │
 │           │                                                         │
@@ -65,10 +65,10 @@ Team-X is an Electron app with three processes and four packages.
 |---|---|
 | UI shell | Electron + React 19 + Zustand + React Query |
 | Styling | Tailwind + shadcn/ui + Strategia-X design system |
-| Local storage | SQLite (WAL mode, FTS5 search, sqlite-vec embeddings) |
+| Local storage | SQLite (WAL mode, FTS5 search, embeddings as BLOBs ranked in-process by cosine similarity — exact per company, IVF approximate index at 4,096+ vectors; no SQLite vector extension) |
 | Provider layer | Vercel AI SDK adapters wrapped in privacy-tier filtering |
-| Local model runtime | `@team-x/local-gguf-runtime`: GPU probing (CUDA/ROCm/Vulkan/Metal/CPU), llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, Hugging Face hub client, network-share-resilient folder watching, and benchmark runner (v3.3.0 backend foundation; renderer UI ships in a future release) |
-| Agent runtime | In-house orchestrator with slot semaphore + pause/drain + append-only event bus |
+| Local model runtime | `@team-x/local-gguf-runtime`: GPU probing (CUDA/ROCm/Vulkan/Metal/CPU), llama.cpp server lifecycle, LRU model pool, GGUF metadata parser, and network-share-resilient folder watching. The Hugging Face client and benchmark runner live in `apps/desktop/src/main/services/local-gguf/` (`hf-service.ts`, `benchmark-service.ts`). The renderer's **Models** tab drives it all; a GGUF model is not yet an agent provider |
+| Agent runtime | In-house orchestrator with an in-module FIFO dispatcher (`pending` + `scheduleDispatch`: slot, per-thread / per-provider / per-company caps, budget admission, pause/drain) + append-only event bus |
 | Extension surface | MCP (tools/resources/prompts) and role packs (markdown + YAML frontmatter) |
 
 ---
@@ -264,21 +264,23 @@ with strongly-typed channels declared in `@team-x/shared-types/ipc`. This
 surface is **internal to the app**; it is not exposed over the network and
 should not be treated as a public API.
 
-Channel families (~290 channels across the four `tsconfig` projects):
+Channel families — 236 distinct `ipcMain.handle` registrations in `apps/desktop/src/main`; 229 of them are bridged to the renderer by the preload `CHANNELS` table (the 7 `enhancedAi.*` channels are registered but not bridged), plus the one-way `events.dashboard` push:
 
 | Family | Examples |
 |---|---|
 | `companies.*` | `create` / `list` / `update` / `archive` |
 | `employees.*` | `hire` / `fire` / `promote` / `setManager` |
 | `chat.*` | `send` / `resolveThread` |
-| `agentic.*` / `command.*` | command palette + agentic loop entry points |
+| `command.*` | command palette + agentic loop entry points |
 | `copilot.*` | proactive analyst dispatch + dismissal |
 | `proactive.*` | trigger service controls |
 | `vault.*` / `backup.*` | file vault + backup/restore |
 | `settings.*` / `providers.*` | runtime configuration |
 | `mcp.*` / `extensions.*` | MCP host and pack/skill management |
 | `telemetry.*` | usage analytics |
-| `localGguf.*` | local & networked GGUF backend: 35 channels across `runtime` / `pool` / `library` / `hf` / `endpoint` / `benchmark`; contracts in `packages/shared-types/src/local-gguf.ts`; v3.3.0 backend foundation (renderer UI ships in a future release) |
+| `localGguf.*` | local & networked GGUF: 36 channels across `runtime` / `pool` / `library` / `hf` / `endpoint` / `benchmark`; contracts in `packages/shared-types/src/local-gguf.ts`; driven by the renderer's Models tab |
+| `paperclip.*` | `preview` / `savePackage` — Paperclip export → Team-X package (Portability commits it) |
+| `privateOperator.*` | `plan` / `snapshot` — read-only access decision record; opens no listener |
 
 If you are forking Team-X and need to add an IPC channel, see
 `apps/desktop/src/main/ipc/register.ts` for the registration pattern and

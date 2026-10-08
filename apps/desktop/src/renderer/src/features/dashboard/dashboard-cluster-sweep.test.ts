@@ -90,7 +90,9 @@ describe('dashboard cluster aesthetic sweep (Phase 3)', () => {
     expect(commandsSrc).toContain('aria-busy="true"');
     expect(commandsSrc).toContain('data-testid="commands-empty-state"');
     expect(commandsSrc).toContain('data-testid="commands-error-state"');
-    expect(commandsSrc).toContain('<CommandRow key={entry.id} entry={entry} />');
+    expect(commandsSrc).toContain(
+      '<CommandRow key={entry.id} entry={entry} employees={employees} />',
+    );
     expect(commandsSrc).toContain('type="button"');
     expect(commandsSrc).toContain('{truncated}');
     expect(commandsSrc).toContain('{label}');

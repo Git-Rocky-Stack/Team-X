@@ -6,3 +6,4 @@
  */
 
 export * from './long-term.js';
+export * from './terms.js';

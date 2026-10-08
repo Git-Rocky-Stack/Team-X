@@ -1,11 +1,13 @@
-import type { ProviderConfig } from '@team-x/shared-types';
+import type { PrivacyTier, ProviderConfig } from '@team-x/shared-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EmployeeRow } from '../db/repos/employees.js';
 
 import {
+  PrivacyTierViolationError,
   type ProviderFactoryCompaniesRepo,
   type SecretsReader,
+  buildEmbedAdapter,
   createProviderFactory,
 } from './provider-factory.js';
 import type { ProvidersService } from './providers.js';
@@ -37,12 +39,35 @@ import type { ProvidersService } from './providers.js';
  *      reader; Ollama adapter receives the baseURL from the provider row
  *   7. The `ResolvedProvider` shape matches what the orchestrator's
  *      `ResolveProvider` contract expects (providerName + model + stream)
+ *   8. Privacy-tier enforcement: `create` + `resolveForEmployee` refuse a
+ *      provider above Settings → Privacy's max tier with a typed
+ *      `PrivacyTierViolationError`, read the tier per call, and keep
+ *      today's behaviour when no tier getter is injected
+ *   9. `buildEmbedAdapter` applies the same rule at embed time, before
+ *      any text reaches the provider
  */
 
 const calls = {
   makeAnthropic: [] as Array<{ apiKey: string; model: string; baseURL?: string }>,
   makeOllama: [] as Array<{ model: string; baseURL?: string; headers?: Record<string, string> }>,
+  /** Texts that reached a mocked embed adapter — i.e. content that would
+   * have left the process. Privacy refusals must leave this empty. */
+  embedded: [] as Array<{ adapter: 'ollama' | 'openai'; texts: string[] }>,
 };
+
+function fakeEmbedAdapter(
+  adapter: 'ollama' | 'openai',
+  opts: { model: string; dimension: number },
+) {
+  return {
+    model: opts.model,
+    dimension: opts.dimension,
+    embed: async (texts: string[]) => {
+      calls.embedded.push({ adapter, texts });
+      return texts.map(() => new Array<number>(opts.dimension).fill(0));
+    },
+  };
+}
 
 /** Stream functions returned by the mocked adapter factories. Tests
  * compare against these by reference to assert routing. */
@@ -66,6 +91,10 @@ vi.mock('@team-x/provider-router', () => ({
     calls.makeOllama.push(opts);
     return fakeOllamaStream;
   },
+  makeOllamaEmbedAdapter: (opts: { model: string; dimension: number }) =>
+    fakeEmbedAdapter('ollama', opts),
+  makeOpenAIEmbedAdapter: (opts: { model: string; dimension: number }) =>
+    fakeEmbedAdapter('openai', opts),
 }));
 
 // ---------------------------------------------------------------------------
@@ -175,6 +204,7 @@ describe('createProviderFactory', () => {
   beforeEach(() => {
     calls.makeAnthropic.length = 0;
     calls.makeOllama.length = 0;
+    calls.embedded.length = 0;
     providers = new FakeProvidersService();
     secrets = new FakeSecrets();
     companies = new FakeCompaniesRepo();
@@ -378,6 +408,293 @@ describe('createProviderFactory', () => {
 
       const employee = makeEmployee({ providerPref: 'anthropic' });
       await expect(factory.resolveForEmployee(employee)).rejects.toThrow(/no configured provider/i);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Privacy-tier enforcement
+// ---------------------------------------------------------------------------
+
+describe('privacy-tier enforcement', () => {
+  let providers: FakeProvidersService;
+  let secrets: FakeSecrets;
+  let companies: FakeCompaniesRepo;
+  /** Mutable so a test can flip Settings → Privacy between calls. */
+  let maxTier: PrivacyTier;
+
+  function makeFactory() {
+    return createProviderFactory({
+      providersService: providers,
+      secretsStore: secrets,
+      companiesRepo: companies,
+      getMaxPrivacyTier: () => maxTier,
+    });
+  }
+
+  beforeEach(() => {
+    calls.makeAnthropic.length = 0;
+    calls.makeOllama.length = 0;
+    calls.embedded.length = 0;
+    providers = new FakeProvidersService();
+    secrets = new FakeSecrets();
+    companies = new FakeCompaniesRepo();
+    maxTier = 'local';
+    providers.set(ANTHROPIC_ROW);
+    providers.set(OLLAMA_ROW);
+    secrets.set('anthropic', 'sk-ant');
+  });
+
+  describe('create', () => {
+    it('refuses a proprietary-cloud provider under Local Only with a typed, actionable error', async () => {
+      const attempt = makeFactory().create({ providerId: 'anthropic', model: 'claude-haiku-4-5' });
+
+      await expect(attempt).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      await expect(attempt).rejects.toThrow(
+        'Provider "Anthropic (claude-haiku-4-5)" is Proprietary Cloud-tier, but Settings → Privacy allows Local Only. Choose a local provider (Ollama) or raise the privacy tier.',
+      );
+      // Refused before the adapter is built — no client, no key handed out.
+      expect(calls.makeAnthropic).toEqual([]);
+    });
+
+    it('carries the refused provider + tiers on the error for callers that branch on it', async () => {
+      const err = await makeFactory()
+        .create({ providerId: 'anthropic', model: 'claude-haiku-4-5' })
+        .catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(PrivacyTierViolationError);
+      expect(err).toMatchObject({
+        name: 'PrivacyTierViolationError',
+        providerId: 'anthropic',
+        providerName: 'Anthropic',
+        providerTier: 'proprietary-cloud',
+        maxTier: 'local',
+      });
+    });
+
+    it('allows a local provider under Local Only', async () => {
+      const resolved = await makeFactory().create({
+        providerId: 'ollama-local',
+        model: 'qwen2.5:3b',
+      });
+
+      expect(resolved.providerName).toBe('ollama-local');
+      expect(calls.makeOllama).toHaveLength(1);
+    });
+
+    it('allows a proprietary-cloud provider when the tier allows all providers', async () => {
+      maxTier = 'proprietary-cloud';
+
+      const resolved = await makeFactory().create({
+        providerId: 'anthropic',
+        model: 'claude-haiku-4-5',
+      });
+
+      expect(resolved.providerName).toBe('anthropic');
+      expect(calls.makeAnthropic).toHaveLength(1);
+    });
+
+    it('ranks by the provider row tier: Open-Source Cloud admits an open-source row, refuses proprietary', async () => {
+      maxTier = 'open-source-cloud';
+      providers.set({
+        ...OLLAMA_ROW,
+        id: 'ollama-remote',
+        name: 'Ollama (Remote)',
+        privacyTier: 'open-source-cloud',
+      });
+      const factory = makeFactory();
+
+      await expect(
+        factory.create({ providerId: 'ollama-remote', model: 'llama3.1:8b' }),
+      ).resolves.toMatchObject({
+        providerName: 'ollama-remote',
+      });
+      await expect(
+        factory.create({ providerId: 'anthropic', model: 'claude-haiku-4-5' }),
+      ).rejects.toThrow(/allows Open-Source Cloud\. Choose a local or open-source cloud provider/);
+    });
+
+    it('fails closed on a provider row with an unrecognised privacy tier', async () => {
+      maxTier = 'open-source-cloud';
+      providers.set({
+        ...OLLAMA_ROW,
+        id: 'mystery',
+        name: 'Mystery',
+        privacyTier: 'somewhere' as PrivacyTier,
+      });
+
+      await expect(
+        makeFactory().create({ providerId: 'mystery', model: 'm' }),
+      ).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      expect(calls.makeOllama).toEqual([]);
+    });
+  });
+
+  describe('resolveForEmployee', () => {
+    it('refuses when the resolved provider is cloud under Local Only, pointing at the employee', async () => {
+      const attempt = makeFactory().resolveForEmployee(
+        makeEmployee({ providerPref: 'anthropic', modelPref: 'claude-haiku-4-5' }),
+      );
+
+      await expect(attempt).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      await expect(attempt).rejects.toThrow(
+        'Provider "Anthropic (claude-haiku-4-5)" is Proprietary Cloud-tier, but Settings → Privacy allows Local Only. Choose a local provider (Ollama) for this employee or raise the privacy tier.',
+      );
+      expect(calls.makeAnthropic).toEqual([]);
+    });
+
+    it('allows an employee bound to a local provider under Local Only', async () => {
+      const resolved = await makeFactory().resolveForEmployee(
+        makeEmployee({ providerPref: 'ollama-local', modelPref: 'qwen2.5:3b' }),
+      );
+
+      expect(resolved.providerName).toBe('ollama-local');
+      expect(calls.makeOllama).toHaveLength(1);
+    });
+
+    it('allows the cloud provider when the tier allows it', async () => {
+      maxTier = 'proprietary-cloud';
+
+      const resolved = await makeFactory().resolveForEmployee(
+        makeEmployee({ providerPref: 'anthropic' }),
+      );
+
+      expect(resolved.providerName).toBe('anthropic');
+    });
+
+    // The built-in fallback (no employee or company choice) tried Anthropic
+    // before Ollama and only then checked the tier, so under Local Only every
+    // employee without an explicit provider was refused even with Ollama
+    // configured. The fallback now skips what the tier forbids; an explicit
+    // choice is still refused, never swapped.
+    it('falls back past a forbidden built-in default to an allowed one', async () => {
+      const resolved = await makeFactory().resolveForEmployee(makeEmployee({ providerPref: null }));
+
+      expect(resolved.providerName).toBe('ollama-local');
+      expect(calls.makeAnthropic).toEqual([]);
+    });
+
+    it('still refuses a company default above the tier rather than swapping it', async () => {
+      companies.setSettings('co_test_1', { defaultProviderId: 'anthropic' });
+
+      await expect(
+        makeFactory().resolveForEmployee(makeEmployee({ providerPref: null })),
+      ).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      expect(calls.makeOllama).toEqual([]);
+    });
+
+    it('refuses clearly when the only configured built-in default is above the tier', async () => {
+      providers.set({ ...OLLAMA_ROW, enabled: false });
+
+      await expect(
+        makeFactory().resolveForEmployee(makeEmployee({ providerPref: null })),
+      ).rejects.toThrow(
+        /Provider "Anthropic \(.+\)" is Proprietary Cloud-tier, but Settings → Privacy allows Local Only/,
+      );
+    });
+
+    it('reads the max tier at call time, so a Settings change applies to the next run', async () => {
+      const factory = makeFactory();
+      const employee = makeEmployee({ providerPref: 'anthropic' });
+
+      maxTier = 'proprietary-cloud';
+      await expect(factory.resolveForEmployee(employee)).resolves.toMatchObject({
+        providerName: 'anthropic',
+      });
+
+      maxTier = 'local';
+      await expect(factory.resolveForEmployee(employee)).rejects.toBeInstanceOf(
+        PrivacyTierViolationError,
+      );
+
+      maxTier = 'proprietary-cloud';
+      await expect(factory.resolveForEmployee(employee)).resolves.toMatchObject({
+        providerName: 'anthropic',
+      });
+    });
+
+    it('keeps today’s behaviour when no tier getter is injected', async () => {
+      const factory = createProviderFactory({
+        providersService: providers,
+        secretsStore: secrets,
+        companiesRepo: companies,
+      });
+
+      await expect(
+        factory.resolveForEmployee(makeEmployee({ providerPref: 'anthropic' })),
+      ).resolves.toMatchObject({ providerName: 'anthropic' });
+      await expect(factory.create({ providerId: 'anthropic' })).resolves.toMatchObject({
+        providerName: 'anthropic',
+      });
+    });
+  });
+
+  describe('buildEmbedAdapter', () => {
+    const OPENAI_ROW: ProviderConfig = {
+      id: 'openai',
+      name: 'OpenAI',
+      kind: 'openai',
+      privacyTier: 'proprietary-cloud',
+      enabled: true,
+    };
+
+    beforeEach(() => {
+      providers.set(OPENAI_ROW);
+      secrets.set('openai', 'sk-openai');
+    });
+
+    function build(provider: string, withGetter = true) {
+      return buildEmbedAdapter({
+        provider,
+        model: provider === 'openai' ? 'text-embedding-3-small' : 'nomic-embed-text',
+        dimension: 4,
+        providersService: providers,
+        secretsStore: secrets,
+        ...(withGetter ? { getMaxPrivacyTier: () => maxTier } : {}),
+      });
+    }
+
+    it('refuses to embed through a cloud provider under Local Only — no text leaves the process', async () => {
+      const adapter = await build('openai');
+      expect(adapter).not.toBeNull();
+
+      const attempt = adapter?.embed(['confidential board memo']);
+      await expect(attempt).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      await expect(attempt).rejects.toThrow(
+        'Embedding provider "OpenAI (text-embedding-3-small)" is Proprietary Cloud-tier, but Settings → Privacy allows Local Only. Choose a local provider (Ollama) in Settings → Retrieval or raise the privacy tier.',
+      );
+      expect(calls.embedded).toEqual([]);
+    });
+
+    it('embeds through a local provider under Local Only', async () => {
+      const adapter = await build('ollama-local');
+
+      await expect(adapter?.embed(['hello'])).resolves.toHaveLength(1);
+      expect(calls.embedded).toEqual([{ adapter: 'ollama', texts: ['hello'] }]);
+    });
+
+    it('preserves the inner adapter model + dimension on the guarded adapter', async () => {
+      const adapter = await build('openai');
+
+      expect(adapter?.model).toBe('text-embedding-3-small');
+      expect(adapter?.dimension).toBe(4);
+    });
+
+    it('reads the max tier per embed call, so a long-lived adapter honours a Settings change', async () => {
+      maxTier = 'proprietary-cloud';
+      const adapter = await build('openai');
+
+      await expect(adapter?.embed(['a'])).resolves.toHaveLength(1);
+      maxTier = 'local';
+      await expect(adapter?.embed(['b'])).rejects.toBeInstanceOf(PrivacyTierViolationError);
+      expect(calls.embedded).toEqual([{ adapter: 'openai', texts: ['a'] }]);
+    });
+
+    it('keeps today’s behaviour when no tier getter is passed', async () => {
+      const adapter = await build('openai', false);
+
+      await expect(adapter?.embed(['x'])).resolves.toHaveLength(1);
+      expect(calls.embedded).toEqual([{ adapter: 'openai', texts: ['x'] }]);
     });
   });
 });

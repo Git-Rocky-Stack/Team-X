@@ -186,6 +186,8 @@ export function RagSection() {
           </label>
           <p className="text-caption text-muted-foreground mt-0.5 leading-snug">
             Injects relevant context from past messages, tickets, and meetings into agent prompts.
+            Turning RAG on or off, or changing the embedding provider, applies the next time Team-X
+            starts.
           </p>
         </div>
         <Switch

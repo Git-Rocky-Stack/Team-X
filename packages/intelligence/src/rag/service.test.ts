@@ -159,3 +159,45 @@ describe('RagService.retrieve', () => {
     expect(results).toHaveLength(0);
   });
 });
+
+describe('createRagService — custom chunker', () => {
+  // The desktop app swaps in the semantic chunker when Settings → Enhanced AI
+  // → Semantic Chunking is on; the service must index exactly the chunks the
+  // caller's chunker returns, sync or async.
+  it('indexes the chunks a supplied chunker returns, in order', async () => {
+    const repo = makeFakeRepo();
+    const chunk = vi.fn(async (content: string) => content.split(' | '));
+    const svc = createRagService({ embedText: fakeEmbed, dimension: 4, repo, chunk });
+
+    const count = await svc.indexSource({
+      companyId: 'c1',
+      sourceType: 'message',
+      sourceId: 's1',
+      content: 'first part | second part',
+    });
+
+    expect(chunk).toHaveBeenCalledWith('first part | second part');
+    expect(count).toBe(2);
+    expect(repo.rows.get('c1')?.map((r) => r.contentText)).toEqual(['first part', 'second part']);
+  });
+
+  it('skips empty chunks a supplied chunker returns', async () => {
+    const repo = makeFakeRepo();
+    const svc = createRagService({
+      embedText: fakeEmbed,
+      dimension: 4,
+      repo,
+      chunk: () => ['kept', '   ', ''],
+    });
+
+    const count = await svc.indexSource({
+      companyId: 'c1',
+      sourceType: 'message',
+      sourceId: 's1',
+      content: 'anything',
+    });
+
+    expect(count).toBe(1);
+    expect(repo.rows.get('c1')?.map((r) => r.contentText)).toEqual(['kept']);
+  });
+});

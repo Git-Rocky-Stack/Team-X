@@ -21,17 +21,23 @@
  * surface — this is purely a read-only audit-style card.
  */
 
-import type { IpcCommandHistoryEntry } from '@team-x/shared-types';
+import type { Employee, IpcCommandHistoryEntry } from '@team-x/shared-types';
 import { Check, Copy } from 'lucide-react';
 import { useCallback, useState } from 'react';
 
-import { formatTimeAgo, sortByNewestFirst, truncateText } from './commands-view-helpers.js';
+import {
+  commandActorLabel,
+  formatTimeAgo,
+  sortByNewestFirst,
+  truncateText,
+} from './commands-view-helpers.js';
 
 import { Faceplate, LampTile } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { ScrollArea } from '@/components/ui/scroll-area.js';
 import { intentLabel } from '@/features/command/intent-labels.js';
 import { useCommandHistory } from '@/hooks/use-command.js';
+import { useEmployees } from '@/hooks/use-employees.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -42,9 +48,6 @@ const MAX_ROWS = 10;
 
 /** Skeleton row count during the initial query. */
 const SKELETON_COUNT = 5;
-
-/** Actor label for the user row (Rocky). Matches AuditView convention. */
-const USER_LABEL = 'Rocky';
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -99,7 +102,13 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
+function CommandRow({
+  entry,
+  employees,
+}: {
+  entry: IpcCommandHistoryEntry;
+  employees: ReadonlyArray<Pick<Employee, 'id' | 'name'>>;
+}) {
   const [copied, setCopied] = useState(false);
 
   const onCopy = useCallback(async () => {
@@ -114,7 +123,7 @@ function CommandRow({ entry }: { entry: IpcCommandHistoryEntry }) {
     }
   }, [entry.text]);
 
-  const actorLabel = entry.actorId === 'user' ? USER_LABEL : entry.actorId;
+  const actorLabel = commandActorLabel(entry.actorId, employees);
   const label = intentLabel(entry.intent);
   const outcomeOk = entry.outcome === 'ok';
   const previewText = entry.text?.trim() || `(${label})`;
@@ -166,6 +175,7 @@ interface CommandsViewProps {
 
 export function CommandsView({ companyId }: CommandsViewProps) {
   const { data, isLoading, isError, error, refetch } = useCommandHistory(companyId, MAX_ROWS);
+  const { data: employees = [] } = useEmployees(companyId);
 
   if (!companyId) {
     return (
@@ -207,7 +217,7 @@ export function CommandsView({ companyId }: CommandsViewProps) {
           ) : (
             <div data-testid="commands-list">
               {rows.map((entry) => (
-                <CommandRow key={entry.id} entry={entry} />
+                <CommandRow key={entry.id} entry={entry} employees={employees} />
               ))}
             </div>
           )}

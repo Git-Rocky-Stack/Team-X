@@ -11,6 +11,7 @@ import type {
   ThreadMemberRow,
   ThreadRow,
 } from '../db/repos/threads.js';
+import { markWorkFailureReported } from '../orchestrator/work-failure-reports.js';
 
 import {
   AUTO_THREAD_ID,
@@ -898,6 +899,20 @@ describe('IPC: chat.send orchestrator failure handling', () => {
       expect.stringContaining('orchestrator turn failed'),
       expect.any(Error),
     );
+  });
+
+  it('does not repeat a refusal the orchestrator already reported', async () => {
+    const fx = buildFixture();
+    fx.employees.put(makeEmployeeRow({ id: 'emp-iris', companyId: 'co-1' }));
+    fx.threads.putThread(makeThreadRow({ id: 'thread-1', companyId: 'co-1' }));
+    const refusal = new Error('Provider is Proprietary Cloud-tier');
+    markWorkFailureReported(refusal);
+    fx.orchestrator.nextEnqueueResult = Promise.reject(refusal);
+
+    await fx.handlers.chatSend({ threadId: 'thread-1', employeeId: 'emp-iris', content: 'hi' });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fx.bus.emitted.filter((e) => e.type === 'work.failed')).toEqual([]);
   });
 });
 

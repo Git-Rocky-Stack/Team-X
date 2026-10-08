@@ -43,9 +43,11 @@
 
 import {
   access as fsAccess,
+  mkdir as fsMkdir,
   open as fsOpen,
   readdir as fsReaddir,
   stat as fsStat,
+  writeFile as fsWriteFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -56,13 +58,14 @@ import {
   type LoopProviderToolCall,
   type RagRepo,
   type RagService,
+  chunkTextV1,
   createEntityResolver,
-  createIntentClassifier,
   createMockCrossEncoder,
   createQueryExpansionService,
   createRagService,
   createRerankerService,
   createSlotFiller,
+  chunkText as semanticChunkText,
 } from '@team-x/intelligence';
 import { runProbeCommand, sampleNvidiaVramMb } from '@team-x/local-gguf-runtime';
 import {
@@ -79,6 +82,7 @@ import type {
   Employee,
   LocalModel,
   Meeting,
+  PrivacyTier,
   RuntimeStrategy,
   Ticket,
 } from '@team-x/shared-types';
@@ -106,6 +110,10 @@ import { createCompaniesRepo } from './db/repos/companies.js';
 import { createCopilotInsightsRepo } from './db/repos/copilot-insights.js';
 import { createEmbeddingsRepo } from './db/repos/embeddings.js';
 import { createEmployeesRepo } from './db/repos/employees.js';
+import {
+  createEnhancedAiKnowledgeRepo,
+  createEnhancedAiMemoryRepo,
+} from './db/repos/enhanced-ai-memory.js';
 import { createEventsRepo } from './db/repos/events.js';
 import {
   createAuthorityRepo,
@@ -171,12 +179,14 @@ import {
   type ResolveTools,
   buildOrchestrator,
   createProactiveDispatcher,
+  isWorkFailureReported,
 } from './orchestrator/index.js';
 import { createMeetingService } from './orchestrator/meeting-service.js';
 import type { CostCalculator } from './orchestrator/run-agent.js';
 import { createAgentImprovementService } from './services/agent-improvement-service.js';
 import {
   type AgenticLoopService,
+  budgetsFromAgenticSettings,
   createAgenticLoopService,
 } from './services/agentic-loop-service.js';
 import { buildCopilotToolRegistry } from './services/agentic-tools-copilot.js';
@@ -213,10 +223,12 @@ import {
 import { createCopilotEventWindow } from './services/copilot-event-window.js';
 import type { CopilotEventWindow } from './services/copilot-event-window.js';
 import { createCopilotService } from './services/copilot-service.js';
+import { createEmbeddingRefusalReporter } from './services/embedding-refusal-reporter.js';
 import { type EnhancedAiService, createEnhancedAiService } from './services/enhanced-ai.js';
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
+import { runGovernedCompletion } from './services/governed-completion.js';
 import {
   type BenchmarkService,
   createBenchmarkService,
@@ -243,6 +255,10 @@ import {
 } from './services/mcp-security.js';
 import { createOperatorAccessService } from './services/operator-access-service.js';
 import {
+  createClassifierCompleteFor,
+  createPaletteIntentClassifier,
+} from './services/palette-classifier.js';
+import {
   loadPaperclipExportFolder,
   previewPaperclipImportBridge,
 } from './services/paperclip-import-bridge.js';
@@ -253,6 +269,7 @@ import {
 } from './services/proactive-trigger-service.js';
 import { detectHardware } from './services/profiler.js';
 import {
+  type ProviderFactory,
   buildEmbedAdapter,
   createProviderFactory,
   createTestModeResolveProvider,
@@ -408,7 +425,8 @@ function recoverUnansweredDirectMessages(args: {
                 row.authorKind === 'employee' &&
                 row.authorId === employee.id,
             );
-          if (!alreadyStarted) {
+          // The orchestrator already reported a turn it refused before start.
+          if (!alreadyStarted && !isWorkFailureReported(err)) {
             args.bus.emit({
               type: 'work.failed',
               companyId: company.id,
@@ -746,6 +764,13 @@ app
     const vaultRepo = createVaultRepo(db);
     const ticketAttachmentsRepo = createTicketAttachmentsRepo(db);
     const settingsRepo = createSettingsRepo(db);
+    // Settings → Privacy, read on every provider resolution and embedding
+    // call so a change applies to the next call. Every provider factory and
+    // embedding adapter below must receive it — one that does not fails open
+    // and can reach a cloud provider under "Local Only"
+    // (composition-root-wiring.test.ts pins each site).
+    const getMaxPrivacyTier = (): PrivacyTier =>
+      settingsRepo.get<PrivacyTier>('max_privacy_tier', 'proprietary-cloud');
     const threadDigestsRepo = createThreadDigestsRepo(db);
     const runCheckpointsRepo = createRunCheckpointsRepo(db);
     const embeddingsRepo = createEmbeddingsRepo(db);
@@ -1229,20 +1254,25 @@ app
       appVersion: app.getVersion(),
     });
     let resolveProvider: ResolveProvider;
+    // Hoisted so Enhanced AI can honour an explicit provider / model choice
+    // (Settings → Enhanced AI); null in test mode, where every call is canned.
+    let providerFactory: ProviderFactory | null = null;
 
     if (testMode) {
       resolveProvider = createTestModeResolveProvider();
       console.log('[main] test-mode provider active — canned responses, no LLM calls');
     } else {
-      const providerFactory = createProviderFactory({
+      providerFactory = createProviderFactory({
         providersService,
         secretsStore,
         companiesRepo,
+        getMaxPrivacyTier,
       });
       const runtimeProfileProviderService = createRuntimeProfileProviderService({
         runtimeProfilesService,
         providerFactory,
         externalRuntimeAdapters,
+        getMaxPrivacyTier,
       });
       resolveProvider = (employee) => runtimeProfileProviderService.resolveForEmployee(employee);
     }
@@ -1317,6 +1347,7 @@ app
         dimension,
         providersService,
         secretsStore,
+        getMaxPrivacyTier,
       });
       if (!adapter) return null;
 
@@ -1336,10 +1367,26 @@ app
             .listByCompany(cid)
             .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
       };
-      return createRagService({ embedText, dimension, repo: ragRepo });
+      return createRagService({
+        embedText,
+        dimension,
+        repo: ragRepo,
+        // Settings → Enhanced AI → Semantic Chunking, read per indexing call:
+        // on, documents split on headings, paragraphs and code fences; off,
+        // the built-in fixed window. It applies to content indexed from then
+        // on (Rebuild re-chunks the rest). This switch used to reach only
+        // Enhanced AI's own indexer, which nothing in the app calls.
+        chunk: (content) =>
+          settingsRepo.get<boolean>('semantic_chunking_enabled', true)
+            ? semanticChunkText(content)
+            : chunkTextV1(content, { maxTokens: 512, overlapTokens: 64 }),
+      });
     }
 
     const ragService: RagService | null = await buildRagService();
+    // A Settings → Privacy refusal of the embedding provider degrades RAG
+    // (no semantic search, indexing paused) instead of failing chat turns.
+    const reportEmbeddingRefusal = createEmbeddingRefusalReporter();
     if (ragService !== null) {
       console.log('[rag] service ready — RAG-enhanced prompts active');
     } else {
@@ -1366,6 +1413,8 @@ app
         ? null
         : createRetrievalOrchestrator({
             vectorRetrieve: (input) => ragService.retrieve(input),
+            onVectorRetrievalError: (companyId, err) =>
+              reportEmbeddingRefusal(`retrieval for company ${companyId}`, err),
             listTickets: (companyId) => ticketsRepo.listByCompany(companyId),
             listGoals: (companyId) => goalsRepo.listByCompany(companyId),
             listProjects: (companyId) => projectsRepo.listByCompany(companyId),
@@ -1571,6 +1620,15 @@ app
       contextPackerService,
       threadDigestService,
       runCheckpointService,
+      // Settings → Memory, read per turn so a change applies to the next
+      // turn. These rows used to feed only the renderer's pack preview.
+      getContextMemorySettings: () => {
+        const memory = settingsRepo.getMemory();
+        return {
+          targetTokenBudget: memory.defaultTargetTokenBudget,
+          recentTurnLimit: memory.recentTurnLimit,
+        };
+      },
       slots: initialSlots,
       providerCaps: initialProviderCaps,
       userDataDir: userDataDir(),
@@ -1620,6 +1678,12 @@ app
       getProject: (id) => projectsRepo.getById(id),
       getVaultFile: (id) => vaultRepo.getById(id),
       isEnabled: () => ragService !== null,
+      logger: {
+        error: (msg, err) => {
+          if (reportEmbeddingRefusal('indexing', err)) return;
+          console.error('[rag-indexer]', msg, err);
+        },
+      },
     });
     ragIndexer.start();
     ragIndexerInstance = ragIndexer;
@@ -1628,13 +1692,17 @@ app
     //
     // Integrates semantic chunking, query expansion, long-term memory,
     // knowledge graph, multi-turn planning, streaming, and tracing with
-    // the desktop app. Requires an LLM provider to function fully.
-    // (Phase 5 — M32)
-    const llmProvider = settingsRepo.get<string>('llm_provider', 'auto');
-    const llmEnabled = llmProvider !== 'auto' && llmProvider !== null;
+    // the desktop app. It grounds `copilot.ask` (the `search_company_knowledge`
+    // tool) and remembers completed Copilot exchanges. (Phase 5 — M32)
+    //
+    // It needs retrieval (an embedding provider) and nothing else. It used to
+    // be created only when `llm_provider` was not 'auto' — but 'auto' is the
+    // default, and the Settings panel describes it as a routing preference,
+    // not an on/off switch. So with default settings the whole subsystem was
+    // off and every Enhanced AI toggle gated nothing.
     let enhancedAiService: EnhancedAiService | null = null;
 
-    if (llmEnabled && ragService !== null) {
+    if (ragService !== null) {
       // Create an LLM complete function based on the provider
       // This will be wired up once the LLM settings are fully configured
       const embedText = async (texts: string[]) => {
@@ -1645,6 +1713,7 @@ app
           dimension: settingsRepo.get<number>('embedding_dimension', 768),
           providersService,
           secretsStore,
+          getMaxPrivacyTier,
         });
         if (!adapter) throw new Error('Embedding adapter not available');
         const embedFn = createEmbedText(adapter);
@@ -1675,20 +1744,26 @@ app
       // This replaces the M32 placeholder that returned `(LLM response not
       // configured)` regardless of input — that stub silently degraded all 7
       // `enhancedAi.*` IPC channels.
-      const llmComplete = async (prompt: string): Promise<string> => {
-        const liveCompany = companiesRepo.list().find((c) => c.status !== 'archived');
-        if (!liveCompany) {
+      const llmComplete = async (
+        prompt: string,
+        context: { companyId: string | null },
+      ): Promise<string> => {
+        // The company of the Enhanced AI call that needs the model; only a
+        // company-less call (createPlan) falls back to the first live one.
+        // Every call used to take the first live company, so company B's
+        // Copilot exchanges ran on company A's provider and budget.
+        const company =
+          (context.companyId ? companiesRepo.getById(context.companyId) : null) ??
+          companiesRepo.list().find((c) => c.status !== 'archived');
+        if (!company) {
           throw new Error(
             '[enhanced-ai] llmComplete: no live company exists — cannot resolve provider',
           );
         }
-        const systemAgentRow = employeesRepo.findSystemByRoleId(
-          liveCompany.id,
-          SYSTEM_AGENT_ROLE_ID,
-        );
+        const systemAgentRow = employeesRepo.findSystemByRoleId(company.id, SYSTEM_AGENT_ROLE_ID);
         if (!systemAgentRow) {
           throw new Error(
-            `[enhanced-ai] llmComplete: no system-agent for company "${liveCompany.id}" — boot top-up should have created one`,
+            `[enhanced-ai] llmComplete: no system-agent for company "${company.id}" — boot top-up should have created one`,
           );
         }
         const actorRow = employeesRepo.getById(systemAgentRow.id);
@@ -1697,18 +1772,53 @@ app
             `[enhanced-ai] llmComplete: system-agent row "${systemAgentRow.id}" vanished mid-resolution`,
           );
         }
-        const resolved = await resolveProvider(actorRow);
-        let text = '';
-        for await (const chunk of streamAgent({
-          providerFactory: resolved.stream,
-          system: '',
-          messages: [{ role: 'user', content: prompt }],
-        })) {
-          if (chunk.kind === 'delta') {
-            text += chunk.delta;
-          }
+        // Settings → Enhanced AI → Provider / Model, read per call so a change
+        // applies immediately. 'auto' defers to the system agent's own
+        // resolution.
+        const llmProviderPref = settingsRepo.get<string>('llm_provider', 'auto');
+        const llmModelPref = settingsRepo.get<string>('llm_model', 'auto');
+        let resolved: Awaited<ReturnType<ResolveProvider>>;
+        if (providerFactory === null || (llmProviderPref === 'auto' && llmModelPref === 'auto')) {
+          resolved = await resolveProvider(actorRow);
+        } else if (llmProviderPref !== 'auto') {
+          resolved = await providerFactory.create({
+            providerId: llmProviderPref,
+            ...(llmModelPref !== 'auto' ? { model: llmModelPref } : {}),
+          });
+        } else {
+          // Model chosen, provider on auto: apply the model to the provider
+          // the system agent resolves to — unless that is an external
+          // runtime (`runtime:<kind>`), which is not in the provider registry
+          // and picks its own model. Passing that name to the factory threw
+          // "provider not found" and failed every Enhanced AI call.
+          const own = await resolveProvider(actorRow);
+          resolved =
+            providersService.get(own.providerName) !== null
+              ? await providerFactory.create({ providerId: own.providerName, model: llmModelPref })
+              : own;
         }
-        return text;
+        // Held to the company's budget and recorded as a run, like an agent
+        // turn: these calls used to spend tokens no budget or report saw.
+        const budget = budgetGovernanceServiceInstance;
+        return runGovernedCompletion(
+          {
+            accounting: {
+              runsRepo,
+              calcCost,
+              ...(budget
+                ? { recordRunSpend: (runId: string) => budget.recordRunSpend(runId) }
+                : {}),
+            },
+            isBudgetBlocked: (companyId) => (budget?.getOverview(companyId).exceededCount ?? 0) > 0,
+          },
+          {
+            companyId: company.id,
+            employeeId: actorRow.id,
+            resolved,
+            system: '',
+            prompt,
+          },
+        );
       };
 
       try {
@@ -1725,6 +1835,10 @@ app
                 .map((r) => ({ ...r, sourceType: r.sourceType as EmbeddingSourceType })),
           },
           llmComplete,
+          // Long-term memory and the knowledge graph persist (migration 0037);
+          // the package defaults would forget both at exit.
+          memoryRepo: createEnhancedAiMemoryRepo(db),
+          knowledgeRepo: createEnhancedAiKnowledgeRepo(db),
           // Audit F5 — the seven Settings → Enhanced AI switches used to be
           // write-only: `settings.getEnhancedAiConfig` / `setEnhancedAiConfig`
           // were the only readers of these rows, so every toggle persisted a
@@ -1738,9 +1852,6 @@ app
             semanticChunkingEnabled: settingsRepo.get<boolean>('semantic_chunking_enabled', true),
             longTermMemoryEnabled: settingsRepo.get<boolean>('long_term_memory_enabled', true),
             knowledgeGraphEnabled: settingsRepo.get<boolean>('knowledge_graph_enabled', true),
-            planningEnabled: settingsRepo.get<boolean>('planning_enabled', false),
-            planningThreshold: settingsRepo.get<number>('planning_threshold', 200),
-            streamingEnabled: settingsRepo.get<boolean>('streaming_enabled', true),
             tracingEnabled: settingsRepo.get<boolean>('tracing_enabled', false),
             tracingSampleRate: settingsRepo.get<number>('tracing_sample_rate', 0.1),
           }),
@@ -1751,7 +1862,7 @@ app
         enhancedAiService = null;
       }
     } else {
-      console.log('[enhanced-ai] disabled — configure LLM provider to enable');
+      console.log('[enhanced-ai] disabled — enable RAG and choose an embedding provider to enable');
     }
 
     // ---- Copilot event window: bounded per-company rolling buffer ---------
@@ -1759,11 +1870,10 @@ app
     // M33 T3. Subscribes to the same event bus the RAG indexer uses;
     // feeds the T4 CopilotAnalyzerService. Bounded at 100 events per
     // company, FIFO eviction, warm-start hydration from the events
-    // table on first snapshot per company. `clear(companyId)` is
-    // shipped as a public method but not yet wired — the
-    // `companies.archive` IPC referenced in the M33 plan does not
-    // exist today, so the archive-clear hookup is deferred to the
-    // milestone that adds it (tracked as an M33 T3 follow-up).
+    // table on first snapshot per company. `clear(companyId)` is wired
+    // into the IPC handlers below (`copilotEventWindow.clear`), so
+    // `companies.archive` drops the archived company's buffer and
+    // hydrated flag after its analyzer is stopped (M33 F3).
     const copilotEventWindow = createCopilotEventWindow({
       bus,
       eventsRepo,
@@ -1831,6 +1941,16 @@ app
       messagesRepo,
       employeesRepo,
       ticketsRepo,
+      // End-of-meeting minutes: the chair's provider (same `resolveProvider`
+      // the orchestrator uses) writes a summary + action items, admitted and
+      // recorded through the same budget governance as an agent turn. Any
+      // failure falls back to transcript-only minutes.
+      minutes: {
+        resolveProvider,
+        runsRepo,
+        calcCost,
+        budgetGovernance: budgetGovernanceServiceInstance ?? undefined,
+      },
     });
 
     const ipcHandlers = createIpcHandlers({
@@ -1909,7 +2029,8 @@ app
         },
       },
       // Direct handle — already live at this point in the bootstrap
-      // (created on line ~638 and started before handlers build). Used
+      // (created and started in the "Copilot event window" block above,
+      // before handlers build). Used
       // by `companies.archive` (M33 F3) to drop the per-company rolling
       // buffer + hydrated flag after the analyzer is stopped.
       copilotEventWindow: {
@@ -2047,40 +2168,37 @@ app
     // T5's `command.*` IPC layer can register its handlers on top of
     // this service without a second orchestration pass.
     //
-    // The NLU classifier uses the provider router through the provider
-    // factory — in test mode it runs against a stub complete() closure
-    // that echoes a canned complex_request back, which keeps all three
-    // existing E2E specs semantics-identical. The real completion path
-    // (M30 T1) is wired via `resolveProvider`.
-    const classifierComplete = async ({
-      system,
-      user,
-    }: {
-      system: string;
-      user: string;
-    }): Promise<string> => {
-      // Hook: wire into provider-router.streamCompletion once M30 T1 is
-      // fully integrated with the main-process provider factory. For now
-      // return a deterministic complex_request JSON so the classifier
-      // never crashes a palette invocation when no provider is configured.
-      void system;
-      void user;
-      return JSON.stringify({
-        intent: 'complex_request',
-        entities: {},
-        confidence: 0,
-        missingSlots: [],
-      });
-    };
+    // The NLU classifier calls the palette company's system-agent model
+    // through the same `resolveProvider` closure the orchestrator uses
+    // (see `palette-classifier.ts`). When no provider can be resolved the
+    // completer answers the canned `complex_request` reply and logs once,
+    // so the palette still routes the command to the agentic loop.
+    //
     // Test-mode swap: when `NODE_ENV === 'test'` we bypass the LLM
     // completion seam entirely and use `createTestClassifier()` — a
     // deterministic canned table + sentinel override that lets the
     // Playwright command-palette spec exercise the full parse → fill
-    // → execute → history loop without a live provider. Production
-    // and dev still use the real `createIntentClassifier`.
+    // → execute → history loop without a live provider.
     const commandClassifier = testMode
       ? createTestClassifier()
-      : createIntentClassifier({ complete: classifierComplete });
+      : createPaletteIntentClassifier({
+          completeFor: createClassifierCompleteFor({
+            findSystemAgent: (companyId) =>
+              employeesRepo.findSystemByRoleId(companyId, SYSTEM_AGENT_ROLE_ID),
+            resolveProvider,
+            // Read-only: getOverview neither pauses nor files approvals.
+            isBudgetBlocked: (companyId) =>
+              (budgetGovernanceServiceInstance?.getOverview(companyId).exceededCount ?? 0) > 0,
+            // Each classification is a model call: record it and its spend.
+            accounting: {
+              runsRepo,
+              calcCost,
+              recordRunSpend: async (runId) => {
+                await budgetGovernanceServiceInstance?.recordRunSpend(runId);
+              },
+            },
+          }),
+        });
     // DB rows type `status` as `string`; shared-types narrows to the
     // `EmployeeStatus` / `TicketStatus` unions. The casts below are
     // safe — the DB schema's CHECK constraints and repo write paths
@@ -2144,9 +2262,8 @@ app
     // `LoopCompleteFn` mirroring the M30 `createTestClassifier` seam.
     // The production branch wraps `streamAgent` from the provider
     // router into the loop's non-streaming request/response shape by
-    // accumulating delta chunks + end-of-stream usage. T6 will thread
-    // live step deltas to the palette; T7 will plug the settings-
-    // driven budget overrides; T8 is the full E2E round-trip.
+    // accumulating delta chunks + end-of-stream usage. Budgets come from
+    // Settings → Agentic Loop via `getBudgets` below.
     //
     // `humanUserId: 'user'` matches CommandService's default actorId —
     // keeps audit events and thread memberships consistent with the
@@ -2264,6 +2381,9 @@ app
               copilotInsightsRepo: {
                 listActive: (filter) => copilotInsightsRepo.listActive(filter),
               },
+              // Enhanced AI grounding for copilot.ask; the tool is simply not
+              // offered when retrieval is not configured.
+              ...(enhancedAiService ? { knowledge: enhancedAiService } : {}),
             },
           );
           return [...readSide, ...copilotTools];
@@ -2451,7 +2571,12 @@ app
               `[agentic-loop] Write-side actor "${employee.id}" not found in employees repo.`,
             );
           }
-          const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+          const factory = createProviderFactory({
+            providersService,
+            secretsStore,
+            companiesRepo,
+            getMaxPrivacyTier,
+          });
           const resolved = await factory.resolveForEmployee(actorRow);
           let text = '';
           for await (const chunk of streamAgent({
@@ -2543,7 +2668,12 @@ app
         if (!emp) {
           throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
         }
-        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+        const factory = createProviderFactory({
+          providersService,
+          secretsStore,
+          companiesRepo,
+          getMaxPrivacyTier,
+        });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: LoopCompleteFn = async ({ system, messages, tools, signal }) => {
@@ -2652,6 +2782,11 @@ app
         };
         return { complete, provider: providerName, model };
       },
+      // Settings → Agentic Loop (Max Steps / Max Tokens / Timeout), read at
+      // each run start so a change applies to the next run. The UI's "Max
+      // Steps" is a tool-turn count and maps to the loop's `maxIterations`;
+      // see `budgetsFromAgenticSettings` for why it is not `maxSteps`.
+      getBudgets: () => budgetsFromAgenticSettings(settingsRepo.getAgentic()),
       humanUserId: 'user',
     });
 
@@ -2765,6 +2900,11 @@ app
       },
       settingsRepo: {
         getProactive: () => settingsRepo.getProactive(),
+      },
+      // Per-company proactive opt-out lives in companies.settings JSON.
+      companiesRepo: {
+        getById: (id) => companiesRepo.getById(id),
+        update: (id, patch) => companiesRepo.update(id, patch),
       },
       // ---- Governed proactive dispatch (audit F3) ----------------------
       //
@@ -2913,7 +3053,12 @@ app
             `[copilot-analyzer] system-copilot employee ${systemCopilotId} not found for company ${companyId}`,
           );
         }
-        const factory = createProviderFactory({ providersService, secretsStore, companiesRepo });
+        const factory = createProviderFactory({
+          providersService,
+          secretsStore,
+          companiesRepo,
+          getMaxPrivacyTier,
+        });
         const resolved = await factory.resolveForEmployee(emp);
         const { providerName, model, stream } = resolved;
         const complete: CopilotAnalyzerCompleteFn = async ({ system, user, signal }) => {
@@ -3140,13 +3285,27 @@ app
     // `companyPortability.importPackage`, which owns secret binding and the
     // per-entity plan. Two write paths that can create a workspace would be one
     // too many.
+    const paperclipPackageDir = join(userDataDir(), 'portability');
     const paperclipHandlers = buildPaperclipHandlers({
       loadExportFolder: loadPaperclipExportFolder,
       previewBridge: previewPaperclipImportBridge,
       appVersion: app.getVersion(),
+      // `paperclip.savePackage` writes the converted package where the
+      // operator chooses, opening in Portability's own export folder; the
+      // Portability panel then imports that file.
+      showSaveDialog: async (options) => {
+        await fsMkdir(paperclipPackageDir, { recursive: true });
+        const owner = BrowserWindow.getFocusedWindow() ?? undefined;
+        return owner ? dialog.showSaveDialog(owner, options) : dialog.showSaveDialog(options);
+      },
+      writeFile: (path, contents) => fsWriteFile(path, contents, 'utf8'),
+      defaultSaveDir: paperclipPackageDir,
     });
     ipcMain.handle('paperclip.preview', async (_evt, request) =>
       paperclipHandlers.preview(request),
+    );
+    ipcMain.handle('paperclip.savePackage', async (_evt, request) =>
+      paperclipHandlers.savePackage(request),
     );
 
     // ---- Private operator access IPC handlers ----------------------------
@@ -3278,11 +3437,25 @@ app
     if (copilotAnalyzerServiceInstance === null) {
       throw new Error('copilotAnalyzerServiceInstance must be initialized before copilot handlers');
     }
+    // Narrowed once: the `let` above is fixed by this point, and a const lets
+    // the closure below use it without a cast.
+    const copilotEnhancedAi = enhancedAiService;
     const copilotServiceInstance = createCopilotService({
       agenticLoopService: agenticLoopSvc,
       employeesRepo: {
         findSystemByRoleId: (cid, rid) => employeesRepo.findSystemByRoleId(cid, rid),
       },
+      // Completed Copilot exchanges feed long-term memory (gated inside the
+      // service by Settings → Enhanced AI → Long-Term Memory).
+      ...(copilotEnhancedAi
+        ? {
+            bus,
+            memory: {
+              remember: (companyId: string, sourceId: string, conversation: string) =>
+                copilotEnhancedAi.extractAndStoreFacts(conversation, { sourceId, companyId }),
+            },
+          }
+        : {}),
     });
     const copilotHandlers = buildCopilotHandlers({
       copilotInsightsRepo,

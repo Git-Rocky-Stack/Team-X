@@ -260,6 +260,13 @@
       "when": 1779081600000,
       "tag": "0036_local_gguf",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1779168000000,
+      "tag": "0037_enhanced_ai_memory",
+      "breakpoints": true
     }
   ]
 }

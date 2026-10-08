@@ -217,12 +217,12 @@ describe('RagService ANN wiring', () => {
   });
 
   it('rebuilds when a re-index changes vectors without changing the row count', async () => {
-    // The sharp case for explicit invalidation. `indexSource` deletes a
-    // source and re-adds it, so re-indexing a one-chunk source leaves the
-    // corpus exactly the same size — the cheap `rowCount` staleness guard
-    // sees nothing, and only the explicit `annIndexes.delete` forces a
-    // rebuild. Without it the stale layout still holds the deleted row's old
-    // id, which no longer resolves, and the re-indexed content is
+    // The sharp case for invalidation. `indexSource` deletes a source and
+    // re-adds it, so re-indexing a one-chunk source leaves the corpus
+    // exactly the same size — a count-based staleness guard sees nothing.
+    // The explicit `annIndexes.delete` and the exact row-id check must force
+    // a rebuild. Without them the stale layout still holds the deleted row's
+    // old id, which no longer resolves, and the re-indexed content is
     // unreachable: wrong answers, no error.
     const rows = separatedCorpus('c1');
     rows.push(makeRow('mut-old', 'c1', 'mut', axisVector(1, 0.02)));
@@ -259,6 +259,86 @@ describe('RagService ANN wiring', () => {
       threshold: 0.9,
     });
     expect(after.some((h) => h.sourceId === 'mut')).toBe(true);
+  });
+
+  it('rebuilds when another instance re-indexes with the same row count', async () => {
+    // Two services share one embeddings table (the desktop main process
+    // builds more than one). Instance B re-indexes a one-chunk source: one
+    // row out, one row in, new id, same count. Instance A's explicit
+    // invalidation never runs — it did not do the write — so only a check
+    // against the actual row ids can tell its cached layout is stale. A
+    // count comparison reuses the old layout, whose ids no longer resolve,
+    // and the re-indexed content is unreachable from A: no error, no hit.
+    const rows = separatedCorpus('c1');
+    rows.push(makeRow('shared-old', 'c1', 'shared', axisVector(1, 0.02)));
+    const repo = fakeRepo(rows);
+
+    const target = axisVector(5, 0.42);
+    const ann = { enabled: true, minVectors: 10, clusters: 8, nProbe: 8, seed: 1 };
+    const reader = createRagService({
+      embedText: async () => [target],
+      dimension: DIM,
+      repo,
+      ann,
+    });
+    const writer = createRagService({
+      embedText: async () => [target],
+      dimension: DIM,
+      repo,
+      idGen: () => 'shared-new',
+      ann,
+    });
+
+    // Reader builds and caches its layout while `shared` points along axis 1.
+    await reader.retrieve({ companyId: 'c1', query: 'q', topK: 5, threshold: 0 });
+    const countBefore = repo.rows.length;
+
+    await writer.indexSource({
+      companyId: 'c1',
+      sourceType: 'ticket',
+      sourceId: 'shared',
+      content: 'one chunk of replacement content',
+    });
+    expect(repo.rows.length).toBe(countBefore);
+
+    const after = await reader.retrieve({
+      companyId: 'c1',
+      query: 'q',
+      topK: 5,
+      threshold: 0.9,
+    });
+    expect(after.some((h) => h.sourceId === 'shared')).toBe(true);
+  });
+
+  it('ignores rows whose embedding dimension does not match', async () => {
+    // A row left over from a different embedding model has a different
+    // length. Scoring it on the shared prefix, or packing it into the index
+    // at the configured stride, produced garbage scores — here a perfect 1.0
+    // for both strays. Both paths must leave such rows out, and the expected
+    // dimension is the configured one, not whatever row happens to be first.
+    const strays = [
+      makeRow('narrow', 'c1', 'stray-narrow', [1, 0]),
+      makeRow('wide', 'c1', 'stray-wide', [...axisVector(0, 0), 9, 9]),
+    ];
+    const rows = [...strays, ...separatedCorpus('c1')];
+    const query = axisVector(0, 0);
+    const ask = { companyId: 'c1', query: 'q', topK: 300, threshold: -1 };
+
+    for (const ann of [
+      { enabled: false },
+      { enabled: true, minVectors: 10, clusters: 8, nProbe: 8, seed: 1 },
+    ]) {
+      const hits = await createRagService({
+        embedText: queryFor(query),
+        dimension: DIM,
+        repo: fakeRepo(rows),
+        ann,
+      }).retrieve(ask);
+
+      expect(hits).toHaveLength(240);
+      expect(hits.some((h) => h.sourceId.startsWith('stray'))).toBe(false);
+      expect(hits[0]?.similarity).toBeCloseTo(1, 5);
+    }
   });
 
   it('stops returning content that was deleted after the index was built', async () => {

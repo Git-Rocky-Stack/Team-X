@@ -56,6 +56,30 @@ export const PRIVACY_TIER_RANK: Record<PrivacyTier, number> = {
   'proprietary-cloud': 2,
 };
 
+/** Provider-side tier names, as the Privacy panel and refusal messages phrase them. */
+export const PRIVACY_TIER_PROVIDER_LABEL: Record<PrivacyTier, string> = {
+  local: 'Local',
+  'open-source-cloud': 'Open-Source Cloud',
+  'proprietary-cloud': 'Proprietary Cloud',
+};
+
+/**
+ * True when a provider at `providerTier` sits above Settings → Privacy's
+ * `maxTier`. The one copy of the rule: the provider factory enforces it and
+ * the Privacy panel reports it, so the two cannot disagree. Fails closed in
+ * both directions — an unrecognised provider tier ranks least private, and an
+ * unrecognised max tier (a corrupted settings row) ranks as Local Only.
+ */
+export function exceedsPrivacyTier(providerTier: string, maxTier: string): boolean {
+  const providerRank = Object.hasOwn(PRIVACY_TIER_RANK, providerTier)
+    ? PRIVACY_TIER_RANK[providerTier as PrivacyTier]
+    : Number.POSITIVE_INFINITY;
+  const maxRank = Object.hasOwn(PRIVACY_TIER_RANK, maxTier)
+    ? PRIVACY_TIER_RANK[maxTier as PrivacyTier]
+    : PRIVACY_TIER_RANK.local;
+  return providerRank > maxRank;
+}
+
 /** Default per-provider concurrency caps from design doc. */
 export const DEFAULT_CONCURRENCY_CAPS: Record<ProviderKind, number> = {
   ollama: 1,
