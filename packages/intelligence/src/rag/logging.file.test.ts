@@ -161,8 +161,13 @@ describe('StructuredLogger file sink', () => {
   it('never throws when the log file cannot be written', () => {
     // `dir` itself is a directory — opening it for append always fails.
     const logger = new StructuredLogger({ console: false, file: { path: dir } });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     expect(() => logger.logRetrieval({ event: 'retrieval', data: {} })).not.toThrow();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('[rag-logging] file sink disabled'),
+      expect.any(String),
+    );
   });
 
   it('does not create a file when no file sink is configured', () => {

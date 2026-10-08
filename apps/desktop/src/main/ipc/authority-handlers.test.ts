@@ -181,6 +181,9 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     auditRepo: noop,
     updaterService: noop,
     getHardwareProfile: () => ({}) as never,
+    // A bus, so audited mutations exercise the audit path instead of warning
+    // that it is unwired (and failing the console guard).
+    bus: { emit: vi.fn() },
     ...overrides,
   } as unknown as IpcHandlerDeps;
 }
@@ -209,6 +212,10 @@ describe('authority IPC handlers', () => {
       metadataJson: null,
     });
     expect(result).toEqual({ grantId: 'grant-1' });
+    // The grant is audited: the mutation reaches the bus the audit log reads.
+    expect(deps.bus?.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'authority.grant.created', companyId: 'company-1' }),
+    );
   });
 
   it('creates an employee capability override through authority.create', async () => {

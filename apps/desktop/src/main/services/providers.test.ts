@@ -327,9 +327,15 @@ describe('createProvidersService', () => {
       const throwingService = createProvidersService(ctx.db, throwingSecrets);
 
       throwingService.seedIfEmpty();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       await expect(throwingService.remove(DEFAULT_ANTHROPIC_ID)).resolves.toBeUndefined();
       expect(throwingService.get(DEFAULT_ANTHROPIC_ID)).toBeNull();
+      // The orphaned keychain entry is reported rather than ignored.
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('failed to delete keychain entry for anthropic'),
+        expect.objectContaining({ message: 'keychain unavailable' }),
+      );
     });
   });
 });

@@ -97,6 +97,8 @@ describe('backup IPC handlers', () => {
 
   describe('backupRestore', () => {
     it('restores from a backup path and returns manifest', async () => {
+      // Legacy composition (no post-restore bootstrap): the handler warns.
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const result = await handlers.backupRestore({ backupPath: '/tmp/backups/backup-2026-04-13' });
       expect(result.manifest.version).toBe('1');
       expect(backupService.restore).toHaveBeenCalledWith('/tmp/backups/backup-2026-04-13');
@@ -109,7 +111,13 @@ describe('backup IPC handlers', () => {
     });
 
     it('omits post-restore counts when bootstrap dep is unwired (legacy composition)', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
       const result = await handlers.backupRestore({ backupPath: '/tmp/backups/b' });
+      // The missing dependency is reported, not silent: pre-M33 backups would
+      // otherwise come back without a system copilot and nobody would know.
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('ensurePostRestoreBootstrap dep unwired'),
+      );
       // buildTestHandlers does NOT pass ensurePostRestoreBootstrap, so
       // the response should be manifest-only and the post-restore
       // counts are `undefined`. Forward-compatible renderer tolerance

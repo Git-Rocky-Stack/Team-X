@@ -106,6 +106,9 @@ function makeDeps(overrides: Partial<IpcHandlerDeps> = {}): IpcHandlerDeps {
     approvalInboxService,
     operatorAccessService,
     getHardwareProfile: () => ({}) as never,
+    // A bus, so audited mutations exercise the audit path instead of warning
+    // that it is unwired (and failing the console guard).
+    bus: { emit: vi.fn() },
     ...overrides,
   } as unknown as IpcHandlerDeps;
 }

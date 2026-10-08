@@ -359,7 +359,13 @@ describe('BenchmarkService — VRAM sampling', () => {
       vramSampleIntervalMs: 0,
     });
 
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await expect(throwing.run('model-1')).resolves.toMatchObject({ vramPeakMb: null });
+    // Each failed sample is reported; the run itself is not failed by it.
+    expect(warn).toHaveBeenCalledWith(
+      '[benchmark-service] VRAM sampling failed',
+      expect.objectContaining({ message: 'nvidia-smi not found' }),
+    );
     void rows;
     void service;
   });

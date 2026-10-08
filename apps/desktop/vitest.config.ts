@@ -38,6 +38,8 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Fail any test that writes an unexpected console.error / console.warn.
+    setupFiles: ['../../test/console-guard.ts'],
     exclude: ['node_modules', 'dist', 'out', 'e2e/**'],
     /**
      * Raised from the 5,000ms default on measured evidence, not on a hunch.

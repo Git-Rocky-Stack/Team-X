@@ -198,17 +198,25 @@ describe('operators IPC handlers', () => {
       agentCreated: true,
       copilotCreated: true,
     }));
+    // The full set of per-company services a new company starts, so the
+    // test sees the real bootstrap rather than "dep unwired" warnings.
+    const routineService = { start: vi.fn() };
+    const copilotAnalyzerService = { start: vi.fn() };
     const handlers = createIpcHandlers(
       makeDeps({
         operatorAccessService,
         ensureSystemForCompany,
+        routineService,
+        copilotAnalyzerService,
         bus: {
           emit: vi.fn(),
         },
-      }),
+      } as never),
     );
 
     const result = await handlers.companiesCreate({ name: 'Acme', slug: 'acme' });
+    expect(routineService.start).toHaveBeenCalledWith(result.companyId);
+    expect(copilotAnalyzerService.start).toHaveBeenCalledWith(result.companyId);
 
     expect(operatorAccessService.ensureLocalOwnerForCompany).toHaveBeenCalledWith('company-1');
     expect(ensureSystemForCompany).toHaveBeenCalledWith('company-1');

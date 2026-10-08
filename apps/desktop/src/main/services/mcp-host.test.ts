@@ -627,11 +627,17 @@ describe('McpHost', () => {
         userDataDir,
         executableAllowlist: makeAllowlist(),
       });
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       await host.initialize();
 
       // Only the first server should be connected
       expect(host.listServers()).toHaveLength(1);
       expect(host.listServers()[0]?.name).toBe('mcp-ok');
+      // The failed server is named in the log, so an operator can find it.
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining('[mcp] failed to connect to mcp-fail'),
+        expect.objectContaining({ message: 'connection refused' }),
+      );
     });
   });
 

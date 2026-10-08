@@ -300,6 +300,7 @@ describe('HeartbeatService', () => {
         throw new Error('Database connection failed');
       });
       vi.mocked(mockAgentWakeupRequestsRepo.markAsFailedWithRetry).mockReturnValue(120000); // 2 minutes
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
       await heartbeatService.processWakeupQueue('company-456');
 
@@ -307,6 +308,11 @@ describe('HeartbeatService', () => {
         'wakeup-fail',
         expect.any(String),
         4,
+      );
+      // The failure is logged with the wakeup id, not swallowed.
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining('[heartbeat] Error processing wakeup wakeup-fail'),
+        expect.objectContaining({ message: 'Database connection failed' }),
       );
     });
   });
