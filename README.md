@@ -238,7 +238,7 @@ Team-X/
 
 ## Documentation
 
-Team-X includes comprehensive documentation across 139 files:
+Team-X includes comprehensive documentation across 140 files:
 
 ### Getting Started
 - **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users
@@ -269,6 +269,7 @@ Team-X includes comprehensive documentation across 139 files:
 - **[Developer Reference](docs/developer-guide/api-reference.md)** — architecture, MCP server development, role pack format, internal IPC surface
 - **[Integration Guide](docs/developer-guide/integration-guide.md)** — providers, MCP servers, and extension points
 - **[Dependency Upgrade Program](docs/developer-guide/dependency-upgrade-program.md)** — the audit gate, accepted exceptions, and the order of the remaining major upgrades
+- **[Release Signing](docs/developer-guide/release-signing.md)** — signing credentials, the signature gate, install smoke tests, provenance, and dry runs
 - **[Architecture](ARCHITECTURE.md)** · **[API Endpoints](API_ENDPOINTS.md)** · **[Database Schema](DATABASE_SCHEMA.md)** · **[Design System](DESIGN.md)**
 
 ### Advanced

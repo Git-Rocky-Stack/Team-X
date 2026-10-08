@@ -7,6 +7,10 @@ on:
   push:
     tags:
       - 'v*'
+  # Dry run from any branch: build, verify signatures, install-smoke every
+  # platform, and upload the artifacts, without creating a release. Run it
+  # before pushing a tag.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -100,27 +104,219 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build + Package (${{ matrix.platform }})
+      # Code signing (audit 2026-10-07 P0-4). Export only the credentials that
+      # exist: an EMPTY CSC_LINK makes electron-builder read the project dir
+      # as a certificate and fail. With nothing configured the build runs
+      # unsigned, and "Verify code signatures" below fails the release unless
+      # the TEAMX_ALLOW_UNSIGNED_RELEASE repository variable says otherwise.
+      # Setup: docs/developer-guide/release-signing.md.
+      - name: Configure code signing
+        id: signing
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Mac signing + notarization — only effective on the macos-latest
-          # leg (electron-builder ignores these on win/linux). All five are
-          # optional: when any one is empty (secrets not yet configured),
-          # electron-builder skips signing entirely and produces an unsigned
-          # .dmg — matching the pre-2026-05 launch-readiness baseline. See
-          # docs/handoffs/2026-05-10-mac-codesigning-plan.md for the four-
-          # phase setup (Apple Developer enrollment → cert → secrets → this).
+          PLATFORM: ${{ matrix.platform }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm -F @team-x/desktop dist:${{ matrix.platform }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+        run: |
+          set -euo pipefail
+          export_if_set() { for name in "$@"; do if [ -n "${!name:-}" ]; then echo "${name}=${!name}" >> "$GITHUB_ENV"; fi; done; }
+          mode=unsigned
+          case "$PLATFORM" in
+            mac)
+              if [ -n "$CSC_LINK" ] && [ -n "$CSC_KEY_PASSWORD" ]; then
+                export_if_set CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+                mode=developer-id
+                if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+                  echo "::error::Developer ID certificate present but notarization credentials are incomplete (APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID)."
+                  exit 1
+                fi
+              else
+                # No certificate: say so explicitly instead of letting
+                # electron-builder probe the runner keychain.
+                echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+              fi
+              ;;
+            win)
+              if [ -n "$AZURE_SIGNING_ENDPOINT" ]; then
+                for v in AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_SIGNING_ACCOUNT AZURE_SIGNING_PROFILE AZURE_SIGNING_PUBLISHER; do
+                  if [ -z "${!v}" ]; then echo "::error::Azure Trusted Signing is configured but ${v} is empty."; exit 1; fi
+                done
+                export_if_set AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_SIGNING_ENDPOINT AZURE_SIGNING_ACCOUNT AZURE_SIGNING_PROFILE AZURE_SIGNING_PUBLISHER
+                mode=azure-trusted-signing
+              elif [ -n "$WIN_CSC_LINK" ]; then
+                export_if_set WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+                mode=authenticode-pfx
+              fi
+              ;;
+            linux)
+              # AppImage/deb carry no platform signature; integrity comes from
+              # SHA256SUMS.txt and the build-provenance attestation.
+              mode=not-applicable
+              ;;
+          esac
+          echo "mode=${mode}" >> "$GITHUB_OUTPUT"
+          echo "Code signing for ${PLATFORM}: ${mode}"
+
+      - name: Build + Package (${{ matrix.platform }})
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          args=(--"${PLATFORM}" --publish never)
+          if [ "${PLATFORM}" = win ] && [ -n "${AZURE_SIGNING_ENDPOINT:-}" ]; then
+            args+=(
+              "-c.win.azureSignOptions.endpoint=${AZURE_SIGNING_ENDPOINT}"
+              "-c.win.azureSignOptions.codeSigningAccountName=${AZURE_SIGNING_ACCOUNT}"
+              "-c.win.azureSignOptions.certificateProfileName=${AZURE_SIGNING_PROFILE}"
+              "-c.win.azureSignOptions.publisherName=${AZURE_SIGNING_PUBLISHER}"
+            )
+          fi
+          pnpm -F @team-x/desktop build
+          pnpm -F @team-x/desktop exec electron-builder "${args[@]}"
 
       # The renderer packed into this platform's installer must carry the
       # strict production CSP (audit 2026-10-07 P0-3).
       - name: Verify packaged renderer CSP
         run: node scripts/check-packaged-csp.mjs
+
+      # Signature gate. A signed build must verify; an unsigned one fails the
+      # release unless the TEAMX_ALLOW_UNSIGNED_RELEASE repository variable is
+      # "true", in which case the release notes say so in bold (publish job).
+      - name: Verify code signatures (Windows)
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
+          ALLOW_UNSIGNED: ${{ vars.TEAMX_ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-ChildItem release -Recurse -File -Include 'Team-X-*-Setup-*.exe', 'Team-X.exe' |
+            Where-Object { $_.FullName -notmatch '\\(__uninstaller|resources)\\' })
+          if ($files.Count -lt 2) { throw "Expected installers and unpacked Team-X.exe under release/, found $($files.Count) file(s)." }
+          $bad = @()
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature -FilePath $f.FullName
+            Write-Host ("{0,-12} {1}" -f $sig.Status, $f.FullName)
+            if ($sig.Status -ne 'Valid') { $bad += $f.FullName }
+          }
+          if ($bad.Count -eq 0) { Write-Host "All $($files.Count) Windows executables carry a valid Authenticode signature."; exit 0 }
+          if ($env:SIGNING_MODE -ne 'unsigned') { throw "Signing was configured ($env:SIGNING_MODE) but $($bad.Count) file(s) are not validly signed." }
+          if ($env:ALLOW_UNSIGNED -eq 'true') {
+            Write-Host "::warning::Shipping UNSIGNED Windows installers (TEAMX_ALLOW_UNSIGNED_RELEASE=true)."
+            New-Item -ItemType Directory -Force -Path release/unsigned | Out-Null
+            Set-Content -Path release/unsigned/win.txt -Value 'Windows installers are not Authenticode-signed.'
+            exit 0
+          }
+          throw "Windows artifacts are unsigned. Configure signing (docs/developer-guide/release-signing.md) or set TEAMX_ALLOW_UNSIGNED_RELEASE=true to ship unsigned on purpose."
+
+      - name: Verify code signatures (macOS)
+        if: matrix.platform == 'mac'
+        shell: bash
+        env:
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
+          ALLOW_UNSIGNED: ${{ vars.TEAMX_ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          set -uo pipefail
+          apps="$(find release -maxdepth 3 -type d -name 'Team-X.app')"
+          if [ -z "${apps}" ]; then echo "::error::No Team-X.app under release/."; exit 1; fi
+          ok=true
+          while IFS= read -r app; do
+            echo "== ${app}"
+            codesign --verify --deep --strict --verbose=2 "${app}" || ok=false
+            spctl --assess --type execute --verbose=4 "${app}" || ok=false
+            xcrun stapler validate "${app}" || ok=false
+          done <<< "${apps}"
+          if [ "${ok}" = true ]; then echo "Every Team-X.app is signed, notarized, stapled and Gatekeeper-accepted."; exit 0; fi
+          if [ "${SIGNING_MODE}" != unsigned ]; then
+            echo "::error::Signing was configured (${SIGNING_MODE}) but verification failed."
+            exit 1
+          fi
+          if [ "${ALLOW_UNSIGNED}" = true ]; then
+            echo "::warning::Shipping UNSIGNED macOS disk images (TEAMX_ALLOW_UNSIGNED_RELEASE=true)."
+            mkdir -p release/unsigned && echo 'macOS disk images are not signed or notarized.' > release/unsigned/mac.txt
+            exit 0
+          fi
+          echo "::error::macOS artifacts are unsigned. Configure signing (docs/developer-guide/release-signing.md) or set TEAMX_ALLOW_UNSIGNED_RELEASE=true to ship unsigned on purpose."
+          exit 1
+
+      # Clean-host install smoke: install the real installer the way a user
+      # would, launch the installed app, then uninstall and prove it is gone.
+      - name: Install, launch, uninstall (Windows)
+        if: matrix.platform == 'win'
+        shell: pwsh
+        env:
+          SIGNING_MODE: ${{ steps.signing.outputs.mode }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem release -Recurse -File -Filter 'Team-X-*-Setup-x64.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'No x64 installer under release/.' }
+          Write-Host "Installing $($installer.FullName)"
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -File -Filter 'Team-X.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { throw 'Installer finished but Team-X.exe is not under %LOCALAPPDATA%\Programs.' }
+          $dir = $exe.DirectoryName
+          $uninstaller = Get-ChildItem $dir -File -Filter 'Uninstall*.exe' | Select-Object -First 1
+          if (-not $uninstaller) { throw "No uninstaller next to $($exe.FullName)." }
+          if ($env:SIGNING_MODE -ne 'unsigned') {
+            foreach ($f in @($exe.FullName, $uninstaller.FullName)) {
+              $st = (Get-AuthenticodeSignature -FilePath $f).Status
+              if ($st -ne 'Valid') { throw "Installed $f is not validly signed ($st)." }
+            }
+          }
+          $data = Join-Path $env:RUNNER_TEMP 'teamx-smoke-profile'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList "--user-data-dir=$data" -PassThru
+          Start-Sleep -Seconds 25
+          if ($p.HasExited) { throw "Installed Team-X exited during startup (code $($p.ExitCode))." }
+          Write-Host 'Installed app stayed up 25s.'
+          Stop-Process -Id $p.Id -Force
+          Get-Process -Name 'Team-X' -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait
+          for ($i = 0; $i -lt 30 -and (Test-Path $exe.FullName); $i++) { Start-Sleep -Seconds 2 }
+          if (Test-Path $exe.FullName) { throw "Uninstall left $($exe.FullName) behind." }
+          Write-Host 'Install, launch and uninstall all succeeded.'
+
+      - name: Install, launch, uninstall (macOS)
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"; [ "${arch}" = x86_64 ] && arch=x64
+          dmg="$(find release -maxdepth 2 -type f -name "Team-X-*-${arch}.dmg" | head -n1)"
+          if [ -z "${dmg}" ]; then echo "::error::No ${arch} DMG under release/."; exit 1; fi
+          mnt="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "${mnt}" "${dmg}"
+          dest="${RUNNER_TEMP}/Applications"
+          mkdir -p "${dest}"
+          cp -R "${mnt}/Team-X.app" "${dest}/"
+          hdiutil detach "${mnt}"
+          app="${dest}/Team-X.app"
+          "${app}/Contents/MacOS/Team-X" --user-data-dir="${RUNNER_TEMP}/teamx-smoke-profile" &
+          pid=$!
+          sleep 25
+          if ! kill -0 "${pid}" 2>/dev/null; then
+            code=0; wait "${pid}" || code=$?
+            echo "::error::Installed Team-X exited during startup (code ${code})."; exit 1
+          fi
+          echo "Installed app stayed up 25s."
+          kill "${pid}"; wait "${pid}" 2>/dev/null || true
+          rm -rf "${app}"
+          if [ -e "${app}" ]; then echo "::error::Uninstall (removing the bundle) failed."; exit 1; fi
+          echo "Install, launch and uninstall all succeeded."
 
       # Smoke-test the Linux AppImage before it can ship. The image embeds the
       # static type2-runtime (electron-builder.yml `toolsets.appimage`), so it
@@ -187,7 +383,7 @@ jobs:
           #    user namespaces); it affects only this boot check, not artifacts.
           xvfb-run -a "${APPIMAGE}" --no-sandbox >/tmp/aiboot.log 2>&1 &
           APP_PID=$!
-          for i in $(seq 1 25); do
+          for _ in $(seq 1 25); do
             if ! kill -0 "${APP_PID}" 2>/dev/null; then
               wait "${APP_PID}"; code=$?
               echo "::error::AppImage exited early (code ${code}) — failed to start."
@@ -223,12 +419,21 @@ jobs:
             release/**/Team-X-*-Setup-*.exe.blockmap
             release/**/Team-X-*.dmg.blockmap
             release/**/latest*.yml
+            release/unsigned/*.txt
           retention-days: 7
 
   publish:
     name: Create GitHub Release
     needs: build
+    # Only a version tag publishes; a workflow_dispatch dry run stops at build.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    # Build-provenance attestations (Sigstore-backed, verifiable with
+    # `gh attestation verify`) need an OIDC token and attestation write.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
 
@@ -256,7 +461,8 @@ jobs:
           # from every uploaded path. After merge-multiple, files land at
           # artifacts/<version>/, NOT artifacts/release/<version>/. Glob the
           # version dir so the version itself isn't hardcoded.
-          dirs=(artifacts/*/)
+          # `unsigned/` (signature-gate markers) sits beside the version dir.
+          dirs=(artifacts/[0-9]*/)
           if [ ${#dirs[@]} -ne 1 ]; then
             echo "Expected exactly one version dir under artifacts/, found: ${dirs[*]}"
             ls -la artifacts/ || true
@@ -278,15 +484,51 @@ jobs:
           echo "--- SHA256SUMS.txt ---"
           cat SHA256SUMS.txt
 
+      # Provenance for every installer, plus an SBOM of the shipped dependency
+      # graph attached to the release (audit 2026-10-07 exit criteria).
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            artifacts/**/Team-X-*-Setup-*.exe
+            artifacts/**/Team-X-*.dmg
+            artifacts/**/Team-X-*.AppImage
+            artifacts/**/Team-X-*.deb
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: artifacts/Team-X-${{ github.ref_name }}-sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
       # Hand-written notes for this tag, when they exist, lead the release
       # body; GitHub's generated PR list is appended below them. A tag with
-      # no notes file keeps the generated list alone.
+      # no notes file keeps the generated list alone. If the signature gate
+      # let an unsigned platform through (TEAMX_ALLOW_UNSIGNED_RELEASE), the
+      # body opens with a warning naming it.
       - name: Pick release notes
         id: notes
         shell: bash
         run: |
+          set -euo pipefail
           f=".github/release-notes/${GITHUB_REF_NAME}.md"
-          if [ -f "$f" ]; then echo "path=$f" >> "$GITHUB_OUTPUT"; else echo "No $f — using generated notes only."; fi
+          body="${RUNNER_TEMP}/release-body.md"
+          : > "${body}"
+          if compgen -G 'artifacts/unsigned/*.txt' > /dev/null; then
+            {
+              echo '> [!WARNING]'
+              echo '> **Unsigned build.** This release was published without code signing on:'
+              for m in artifacts/unsigned/*.txt; do echo "> - $(cat "$m")"; done
+              # shellcheck disable=SC2016 # literal Markdown backticks
+              echo '> Your operating system will warn before running it. Verify the download against `SHA256SUMS.txt` and the build-provenance attestation (`gh attestation verify <file> --repo '"${GITHUB_REPOSITORY}"'`).'
+              echo
+            } >> "${body}"
+          fi
+          if [ -f "$f" ]; then cat "$f" >> "${body}"; else echo "No $f — using generated notes only."; fi
+          if [ -s "${body}" ]; then echo "path=${body}" >> "$GITHUB_OUTPUT"; fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -305,5 +547,6 @@ jobs:
             artifacts/**/*.blockmap
             artifacts/**/latest*.yml
             artifacts/**/SHA256SUMS.txt
+            artifacts/Team-X-*-sbom.spdx.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
