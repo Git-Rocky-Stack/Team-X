@@ -40,7 +40,7 @@ function callArguments(name: string): string[] {
 describe('main/index.ts — privacy tier reaches every provider path', () => {
   it('passes getMaxPrivacyTier to every provider factory', () => {
     const calls = callArguments('createProviderFactory');
-    expect(calls.length).toBeGreaterThanOrEqual(4);
+    expect(calls.length).toBeGreaterThanOrEqual(1);
     for (const call of calls) expect(call).toContain('getMaxPrivacyTier');
   });
 
@@ -138,5 +138,32 @@ describe('main/index.ts — the renderer trust boundary covers everything (audit
     expect(src).toContain('await win.loadURL(DEV_SERVER_URL)');
     expect(src).toContain('indexHtmlPath: RENDERER_INDEX_HTML');
     expect(src).toContain('devServerUrl: DEV_SERVER_URL');
+  });
+});
+
+describe('main/index.ts — one execution policy for every model call (audit P1-8)', () => {
+  // Chat, the agentic loop (read and write side), Copilot analysis, meeting
+  // minutes, Enhanced AI, the palette and delegation all resolve an
+  // employee's model through `resolveProvider`, the runtime-profile-aware
+  // closure. A path that builds its own factory skips the employee's runtime
+  // profile, so a system agent bound to a local runtime would quietly run
+  // on the factory default instead.
+  it('builds exactly one provider factory, behind the runtime-profile service', () => {
+    expect(callArguments('createProviderFactory')).toHaveLength(1);
+    expect(callArguments('createRuntimeProfileProviderService')).toHaveLength(1);
+  });
+
+  it('never resolves an employee straight from a provider factory', () => {
+    expect(src).not.toMatch(/factory\.resolveForEmployee\(/);
+    expect(src).not.toMatch(/providerFactory\.resolveForEmployee\(/);
+  });
+
+  it('resolves the agentic loop and the Copilot analyzer through resolveProvider', () => {
+    const loop = src.slice(src.indexOf('system-agent employee ${systemAgentId} not found'));
+    expect(loop.slice(0, 400)).toContain('await resolveProvider(emp)');
+    const analyzer = src.slice(src.indexOf('system-copilot employee ${systemCopilotId} not found'));
+    expect(analyzer.slice(0, 400)).toContain('await resolveProvider(emp)');
+    const writeSide = src.slice(src.indexOf('const writeProviderComplete: WriteSideCompleteFn'));
+    expect(writeSide.slice(0, 800)).toContain('await resolveProvider(actorRow)');
   });
 });

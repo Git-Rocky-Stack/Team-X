@@ -2596,13 +2596,10 @@ app
               `[agentic-loop] Write-side actor "${employee.id}" not found in employees repo.`,
             );
           }
-          const factory = createProviderFactory({
-            providersService,
-            secretsStore,
-            companiesRepo,
-            getMaxPrivacyTier,
-          });
-          const resolved = await factory.resolveForEmployee(actorRow);
+          // The same runtime-profile-aware resolution every other model call uses
+          // (one execution policy, audit P1-8): a runtime profile bound to this
+          // employee applies here too, and Settings → Privacy is enforced once.
+          const resolved = await resolveProvider(actorRow);
           let text = '';
           for await (const chunk of streamAgent({
             providerFactory: resolved.stream,
@@ -2693,13 +2690,10 @@ app
         if (!emp) {
           throw new Error(`[agentic-loop] system-agent employee ${systemAgentId} not found`);
         }
-        const factory = createProviderFactory({
-          providersService,
-          secretsStore,
-          companiesRepo,
-          getMaxPrivacyTier,
-        });
-        const resolved = await factory.resolveForEmployee(emp);
+        // The same runtime-profile-aware resolution every other model call uses
+        // (one execution policy, audit P1-8): a runtime profile bound to this
+        // employee applies here too, and Settings → Privacy is enforced once.
+        const resolved = await resolveProvider(emp);
         const { providerName, model, stream } = resolved;
         const complete: LoopCompleteFn = async ({ system, messages, tools, signal }) => {
           let text = '';
@@ -3078,13 +3072,10 @@ app
             `[copilot-analyzer] system-copilot employee ${systemCopilotId} not found for company ${companyId}`,
           );
         }
-        const factory = createProviderFactory({
-          providersService,
-          secretsStore,
-          companiesRepo,
-          getMaxPrivacyTier,
-        });
-        const resolved = await factory.resolveForEmployee(emp);
+        // The same runtime-profile-aware resolution every other model call uses
+        // (one execution policy, audit P1-8): a runtime profile bound to this
+        // employee applies here too, and Settings → Privacy is enforced once.
+        const resolved = await resolveProvider(emp);
         const { providerName, model, stream } = resolved;
         const complete: CopilotAnalyzerCompleteFn = async ({ system, user, signal }) => {
           let text = '';
