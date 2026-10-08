@@ -1,0 +1,11 @@
+{
+  "$comment": "Critical/high advisories accepted on purpose. Every entry needs a reason and an expiry; scripts/check-dependency-audit.mjs fails on expired or stale entries. See docs/developer-guide/dependency-upgrade-program.md.",
+  "exceptions": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "module": "braces",
+      "expires": "2027-01-31",
+      "reason": "No patched braces release exists. Reachable only through Tailwind CSS 3's build-time content scanning (tailwindcss > micromatch/chokidar > braces), whose glob inputs are authored in this repository; nothing user-supplied reaches it and it does not ship in the app. Removed by the Tailwind 4 cohort in the upgrade program."
+    }
+  ]
+}

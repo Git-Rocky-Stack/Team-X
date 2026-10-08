@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.renderer.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["vite/client", "node"],
+    "tsBuildInfoFile": "./out/tsconfig.renderer-test.tsbuildinfo"
+  },
+  "include": ["src/renderer/src/**/*"],
+  "exclude": []
+}

@@ -38,7 +38,7 @@ Team-X/
 ├── pnpm-workspace.yaml
 ├── package.json
 ├── tsconfig.json
-└── vitest.workspace.ts
+└── vitest.config.ts          # Root Vitest config; `projects` lists each package
 ```
 
 ## Technology Stack

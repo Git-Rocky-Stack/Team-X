@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit && tsc -p tsconfig.renderer-test.json && tsc -p tsconfig.e2e.json --noEmit",
     "test": "vitest run",
     "test:e2e": "electron-vite build && playwright test",
     "test:e2e:run": "playwright test",
@@ -82,8 +82,8 @@
     "autoprefixer": "^10.4.27",
     "drizzle-kit": "^0.31.11",
     "electron": "^44.7.0",
-    "electron-builder": "^26.8.1",
-    "electron-vite": "^2.3.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^4.0.1",
     "jsdom": "^25.0.1",
     "postcss": "^8.5.9",
     "react": "^19.0.0",
@@ -92,7 +92,7 @@
     "tailwindcss": "^3.4.19",
     "tsx": "^4.21.0",
     "typescript": "5.5.4",
-    "vite": "^5.4.0",
-    "vitest": "^2"
+    "vite": "^6.4.4",
+    "vitest": "^4.1.11"
   }
 }

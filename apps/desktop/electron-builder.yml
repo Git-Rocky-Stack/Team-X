@@ -156,6 +156,9 @@ linux:
         - x64
   icon: build/icon-512.png
   category: Utility
+  # electron-builder 26.15+ refuses the name it would derive from the
+  # package name (`@team-x/desktop`); match the WM class below instead.
+  executableName: team-x
   executableArgs:
     - --class=team-x
   artifactName: Team-X-${version}-${arch}.${ext}

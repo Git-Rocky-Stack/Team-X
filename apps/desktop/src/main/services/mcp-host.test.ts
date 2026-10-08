@@ -26,13 +26,17 @@ const mockListTools = vi.fn().mockResolvedValue({ tools: [] });
 const mockCallTool = vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
 const mockClose = vi.fn().mockResolvedValue(undefined);
 
+// A class: the host calls `new Client(...)`, and Vitest 4 refuses to construct
+// an arrow-function mock.
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    connect: mockConnect,
-    listTools: mockListTools,
-    callTool: mockCallTool,
-    close: mockClose,
-  })),
+  Client: vi.fn(
+    class {
+      connect = mockConnect;
+      listTools = mockListTools;
+      callTool = mockCallTool;
+      close = mockClose;
+    },
+  ),
 }));
 
 // Capture stdio transport constructor args so the C5 gates' end-state

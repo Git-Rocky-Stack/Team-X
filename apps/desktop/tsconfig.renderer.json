@@ -15,5 +15,6 @@
     "paths": { "@/*": ["src/renderer/src/*"] }
   },
   "include": ["src/renderer/src/**/*"],
+  "exclude": ["src/renderer/src/**/*.test.ts", "src/renderer/src/**/*.test.tsx"],
   "references": [{ "path": "../../packages/shared-types" }]
 }

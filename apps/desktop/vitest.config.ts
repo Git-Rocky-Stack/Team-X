@@ -1,7 +1,7 @@
 /**
  * Per-workspace Vitest config for `apps/desktop`.
  *
- * Why this exists: the root `vitest.workspace.ts` resolves each
+ * Why this exists: the root `vitest.config.ts` `projects` list resolves each
  * `apps/*` and `packages/*` directory as an independent Vitest
  * project, and a project's include/exclude globs are evaluated
  * against the project root — NOT the repo root. The root
@@ -30,6 +30,10 @@ export default defineConfig({
       '@': resolve(import.meta.dirname, 'src/renderer/src'),
     },
   },
+  // Renderer tests are type-checked by tsconfig.renderer-test.json, which
+  // Vite's per-file tsconfig lookup does not find, so state the automatic
+  // JSX runtime here rather than inherit it.
+  esbuild: { jsx: 'automatic' },
   test: {
     globals: false,
     environment: 'node',

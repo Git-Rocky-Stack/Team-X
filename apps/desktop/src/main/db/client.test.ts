@@ -19,11 +19,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { pragmaMock, closeMock, DatabaseMock, drizzleMock } = vi.hoisted(() => {
   const pragma = vi.fn();
   const close = vi.fn();
-  // `new DatabaseMock(path)` returns the object literal, so the function
-  // acts as a constructor whose returned object overrides the `this` binding
-  // per the standard JS `new` semantics. This keeps `Database` trackable as
-  // a vi.fn() spy while still satisfying `new Database(':memory:')`.
-  const dbCtor = vi.fn((path: string) => ({ path, pragma, close }));
+  // A class, so `new Database(':memory:')` constructs it: Vitest 4 refuses to
+  // `new` an arrow mock, and Biome rewrites a plain `function` into an arrow.
+  // Wrapped in vi.fn() so the constructor calls stay assertable.
+  const dbCtor = vi.fn(
+    class {
+      readonly pragma = pragma;
+      readonly close = close;
+      constructor(readonly path: string) {}
+    },
+  );
   const drz = vi.fn((raw: unknown, opts: unknown) => ({
     __mockDrizzle: true,
     raw,

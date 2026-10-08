@@ -2,8 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Vitest 2 exits non-zero on empty test suites by default; remove this flag
-    // once test files exist in every workspace package.
+    // Each workspace package is its own project, resolved against its own root.
+    projects: ['packages/*', 'apps/*'],
+    // shared-types has no test files; without this the run exits non-zero.
     passWithNoTests: true,
     globals: false,
     environment: 'node',
