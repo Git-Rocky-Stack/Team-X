@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@team-x/shared-types": "workspace:*",
-    "chokidar": "^3"
+    "chokidar": "^4.0.3"
   },
   "devDependencies": {
     "memfs": "^4",

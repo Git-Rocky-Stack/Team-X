@@ -90,7 +90,10 @@ export function createFolderWatcher(folder: string, opts: FolderWatcherOptions):
 
   w.on('add', (p: string) => enqueue('add', p));
   w.on('unlink', (p: string) => enqueue('unlink', p));
-  w.on('error', (e: Error) => emitter.emit('error', e));
+  // chokidar 4 types the payload as unknown; consumers are promised an Error.
+  w.on('error', (e: unknown) =>
+    emitter.emit('error', e instanceof Error ? e : new Error(String(e))),
+  );
 
   emitter.close = async (): Promise<void> => {
     if (flushTimer) {

@@ -361,6 +361,26 @@ describe('createFolderWatcher', () => {
     await w.close();
   });
 
+  it('wraps a non-Error payload so listeners always receive an Error', async () => {
+    const { factory, getWatcher } = makeFakeFactory();
+    const w = createFolderWatcher('/m', {
+      recursive: false,
+      chokidarFactory: factory,
+      debounceMs: DEBOUNCE,
+    });
+
+    const errors: Error[] = [];
+    w.on('error', (e: Error) => errors.push(e));
+
+    getWatcher().emit('error', 'EPERM: watch denied');
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(Error);
+    expect(errors[0]?.message).toBe('EPERM: watch denied');
+
+    await w.close();
+  });
+
   // -----------------------------------------------------------------------
   // close() behaviour
   // -----------------------------------------------------------------------

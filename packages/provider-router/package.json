@@ -5,19 +5,21 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@team-x/shared-types": "workspace:*",
-    "ai": "^3.4.0",
     "@ai-sdk/anthropic": "^0.0.50",
-    "@ai-sdk/openai": "0.0.72",
     "@ai-sdk/google": "0.0.55",
     "@ai-sdk/groq": "0.0.3",
+    "@ai-sdk/openai": "0.0.72",
     "@openrouter/ai-sdk-provider": "0.0.6",
+    "@team-x/shared-types": "workspace:*",
+    "ai": "^3.4.33",
     "ollama-ai-provider": "^0.15.0"
   },
   "devDependencies": {
