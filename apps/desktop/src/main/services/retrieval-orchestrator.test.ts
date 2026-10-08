@@ -1,7 +1,7 @@
 import {
   type CrossEncoderScoreFn,
   type EntityContext,
-  createMockCrossEncoder,
+  createLexicalCrossEncoder,
   createQueryExpansionService,
   createRerankerService,
 } from '@team-x/intelligence';
@@ -458,7 +458,7 @@ describe('createRetrievalOrchestrator — H10 audit (2026-05-07): wired query ex
                   updatedAt: Date.UTC(2026, 3, 21, 10, 0, 0),
                 }
               : null,
-          reranker: createRerankerService(createMockCrossEncoder()),
+          reranker: createRerankerService(createLexicalCrossEncoder()),
         }),
       );
 
@@ -645,7 +645,7 @@ describe('createRetrievalOrchestrator — H10 audit (2026-05-07): wired query ex
               : null,
           queryExpansion: createQueryExpansionService({ hydeEnabled: false }),
           entityContextProvider: () => buildEntityContext(),
-          reranker: createRerankerService(createMockCrossEncoder()),
+          reranker: createRerankerService(createLexicalCrossEncoder()),
         }),
       );
 

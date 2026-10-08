@@ -92,7 +92,9 @@ describe('cloud-link-service', () => {
     expect(linked.cloudWorkspaceId).toBe(`workspace_${companyId}`);
     expect(linked.cloudTenantId).toBe(`tenant_${companyId}`);
     expect(linked.linkedDeviceId).toBe(linked.deviceId);
-    expect(linked.lastSyncAt).toBeTypeOf('number');
+    // Linking reserves ids on this device; nothing syncs (hosted sync does not
+    // exist yet), so a sync time would be a fabricated success (audit P2-3).
+    expect(linked.lastSyncAt).toBeNull();
 
     const degraded = service.failLink(companyId, 'stale cursor replay');
     expect(degraded.state).toBe('sync-degraded');
@@ -103,7 +105,7 @@ describe('cloud-link-service', () => {
     expect(reconnected.cloudWorkspaceId).toBe(`workspace_${companyId}`);
     expect(reconnected.cloudTenantId).toBe(`tenant_${companyId}`);
     expect(reconnected.lastSyncError).toBeNull();
-    expect(reconnected.lastSyncAt).toBeTypeOf('number');
+    expect(reconnected.lastSyncAt).toBeNull();
   });
 
   it('clears a linked workspace back to unlinked posture', () => {

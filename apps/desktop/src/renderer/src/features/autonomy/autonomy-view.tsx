@@ -1,10 +1,11 @@
-import type {
-  Company,
-  CompanyCloudLinkStatus,
-  OperatorAccessEntry,
-  OperatorInvite,
-  OperatorMembershipRole,
-  SharedOperatorAuthMode,
+import {
+  type Company,
+  type CompanyCloudLinkStatus,
+  FEATURE_MATURITY,
+  type OperatorAccessEntry,
+  type OperatorInvite,
+  type OperatorMembershipRole,
+  type SharedOperatorAuthMode,
 } from '@team-x/shared-types';
 import {
   BadgeDollarSign,
@@ -35,6 +36,7 @@ import {
   Faceplate,
   LampTile,
   type LampTone,
+  MaturityBadge,
   MetricTile,
   RecessedWell,
   SubviewState,
@@ -222,7 +224,7 @@ function postureLabel(summary: ReturnType<typeof summarizeAccess>): string {
 
 function postureDescription(summary: ReturnType<typeof summarizeAccess>): string {
   if (summary.cloudOperators > 0) {
-    return 'Cloud-backed operators are modeled in this workspace. Team-X still runs local-first, but the identity model is ready for hosted supervision.';
+    return `Cloud operators are recorded in this workspace. ${FEATURE_MATURITY.sharedCloudIdentity.summary}`;
   }
   if (summary.invitedOperators > 0) {
     return 'This workspace already has non-owner memberships, so the control plane is operating beyond the single-local-owner assumption.';
@@ -267,8 +269,10 @@ function inviteStatusTone(status: OperatorInvite['status']): LampTone {
 
 function cloudLinkTone(state: CompanyCloudLinkStatus['state']): LampTone {
   switch (state) {
+    // Reserved ids are not a working link: no hosted service exists yet, so
+    // "linked" must not light GO (audit 2026-10-07 P2-3).
     case 'linked':
-      return 'go';
+      return 'off';
     case 'sync-paused':
       return 'hold';
     case 'sync-degraded':
@@ -284,6 +288,8 @@ function cloudLinkStateLabel(state: CompanyCloudLinkStatus['state']): string {
       return 'sync paused';
     case 'sync-degraded':
       return 'sync degraded';
+    case 'linked':
+      return 'ids reserved';
     default:
       return state;
   }
@@ -295,7 +301,7 @@ function cloudLinkDescription(link: CompanyCloudLinkStatus | null): string {
   }
   switch (link.state) {
     case 'linked':
-      return 'This workspace is locally linked and ready for hosted identity and event mirror follow-through.';
+      return `Workspace ids are reserved on this device. ${FEATURE_MATURITY.cloudWorkspaceLink.summary}`;
     case 'linking':
       return 'Team-X is reserving local linkage metadata for this workspace.';
     case 'unlinking':
@@ -322,7 +328,7 @@ function capabilityBadges(entry: OperatorAccessEntry): string[] {
 
 function authModeDescription(entry: OperatorAccessEntry): string {
   if (entry.operator.authMode === 'cloud') {
-    return 'Cloud-backed operator identity placeholder for future hosted collaboration.';
+    return FEATURE_MATURITY.sharedCloudIdentity.summary;
   }
   if (entry.operator.authMode === 'invited') {
     return 'Invited operator identity modeled locally so shared access can land without changing the workspace contract.';
@@ -340,9 +346,9 @@ function membershipSourceLabel(entry: OperatorAccessEntry): string {
 function membershipSourceDescription(entry: OperatorAccessEntry): string | null {
   if (entry.membership.sourceKind !== 'hosted') return null;
   if (entry.membership.cloudWorkspaceId?.trim()) {
-    return `Hosted membership mirrored from ${entry.membership.cloudWorkspaceId}.`;
+    return `Recorded locally as a hosted membership of ${entry.membership.cloudWorkspaceId}; nothing is mirrored from a service yet.`;
   }
-  return 'Hosted membership mirrored from the linked workspace.';
+  return 'Recorded locally as a hosted membership; nothing is mirrored from a service yet.';
 }
 
 function inviteSourceLabel(invite: OperatorInvite): string {
@@ -586,11 +592,12 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
               <div className="space-y-4">
                 <RecessedWell className="space-y-4 p-4" data-cloud-link-card="">
                   <div className="space-y-1">
-                    <div className="text-body-strong text-foreground">Linked Workspace</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-body-strong text-foreground">Linked Workspace</div>
+                      <MaturityBadge feature="cloudWorkspaceLink" />
+                    </div>
                     <p className="text-caption text-muted-foreground">
-                      Explicitly link or unlink this workspace before the hosted identity and sync
-                      layers land. This slice is local-only but durable, so the operator posture is
-                      honest now instead of placeholder copy.
+                      {FEATURE_MATURITY.cloudWorkspaceLink.summary}
                     </p>
                   </div>
                   {cloudLinkQuery.isLoading ? (
@@ -610,7 +617,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                           small
                           interactive={false}
                         />
-                        <Tag>{cloudLink.isLinked ? 'linked' : 'unlinked'}</Tag>
+                        <Tag>{cloudLink.isLinked ? 'ids reserved' : 'unlinked'}</Tag>
                         <Tag mono>{cloudLink.deviceId}</Tag>
                       </div>
                       <p className="text-caption text-muted-foreground">
@@ -628,7 +635,7 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                           <div className="mt-2 text-caption text-foreground">
                             {cloudLink.lastSyncAt
                               ? new Date(cloudLink.lastSyncAt).toLocaleString()
-                              : 'No successful sync recorded yet'}
+                              : 'Never: hosted sync is not available yet'}
                           </div>
                         </RecessedWell>
                       </div>
@@ -658,8 +665,8 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                       ) : null}
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-caption text-muted-foreground">
-                          Link reserves stable local cloud ids now. Hosted auth and event sync land
-                          in the next shared/cloud slices.
+                          Linking reserves stable ids on this device only. Hosted sign-in and sync
+                          are not available yet.
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
@@ -702,10 +709,12 @@ export function AutonomyView({ company, companyId }: AutonomyViewProps) {
                 </RecessedWell>
                 <RecessedWell className="space-y-4 p-4" data-operator-invites="">
                   <div className="space-y-1">
-                    <div className="text-body-strong text-foreground">Queue Operator Invite</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-body-strong text-foreground">Queue Operator Invite</div>
+                      <MaturityBadge feature="operatorInvites" />
+                    </div>
                     <p className="text-caption text-muted-foreground">
-                      Linked workspaces queue hosted invites automatically. Unlinked workspaces keep
-                      local placeholders until shared/cloud auth is fully active.
+                      {FEATURE_MATURITY.operatorInvites.summary}
                     </p>
                   </div>
                   <form

@@ -4,6 +4,7 @@ export * from './roles.js';
 export * from './providers.js';
 export * from './entities.js';
 export * from './events.js';
+export * from './feature-maturity.js';
 export * from './ipc.js';
 export * from './rag.js';
 export * from './command.js';

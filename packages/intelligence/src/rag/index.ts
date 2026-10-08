@@ -70,7 +70,7 @@ export {
 export {
   rerank,
   createRerankerService,
-  createMockCrossEncoder,
+  createLexicalCrossEncoder,
   createApiCrossEncoder,
   retrieveWithRerank,
   extractContentFromHits,

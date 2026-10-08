@@ -9,4 +9,5 @@ export { ShiftToggle, type Shift } from './shift-toggle';
 export { StripeHeader } from './stripe-header';
 export { SubviewState } from './subview-state';
 export { Tag } from './tag';
+export { MaturityBadge } from './maturity-badge';
 export { ballisticsStep, segmentStates, VuMeter, type VuSegment, type VuZone } from './vu-meter';

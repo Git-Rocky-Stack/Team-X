@@ -74,10 +74,13 @@ export type CrossEncoderScoreFn = (
 ) => Promise<Array<{ id: string; score: number }>>;
 
 /**
- * Create a mock cross-encoder for testing.
- * Uses lexical overlap as a proxy for semantic relevance.
+ * A lexical-overlap scorer in the cross-encoder slot: it ranks a document by
+ * how many of the query's terms it shares, not with a learned model. It is
+ * what retrieval uses today (no network, no model cost) and is labelled
+ * preview in FEATURE_MATURITY.retrievalReranker; swap in an API or local
+ * cross-encoder through the same `CrossEncoderScoreFn` seam.
  */
-export function createMockCrossEncoder(): CrossEncoderScoreFn {
+export function createLexicalCrossEncoder(): CrossEncoderScoreFn {
   return async (query, documents) => {
     const queryTerms = new Set(query.toLowerCase().match(/[a-z0-9]+/g) || []);
 

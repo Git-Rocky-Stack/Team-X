@@ -145,7 +145,8 @@ export function createCloudLinkService({ companiesRepo, settingsRepo }: CloudLin
       cloudWorkspaceId: company.cloudWorkspaceId ?? reserveCloudWorkspaceId(company),
       cloudTenantId: company.cloudTenantId ?? reserveCloudTenantId(company),
       linkedDeviceId: deviceId,
-      lastSyncAt: Date.now(),
+      // No sync happens (there is no hosted service yet); leave the sync time
+      // as it was rather than claim one. See FEATURE_MATURITY.cloudWorkspaceLink.
       lastSyncError: null,
     });
   }
@@ -204,7 +205,6 @@ export function createCloudLinkService({ companiesRepo, settingsRepo }: CloudLin
       linkedDeviceId: current.linkedDeviceId ?? current.deviceId,
       lastSyncedCursor: current.lastSyncedCursor,
       lastSnapshotId: current.lastSnapshotId,
-      lastSyncAt: Date.now(),
       lastSyncError: null,
     });
   }

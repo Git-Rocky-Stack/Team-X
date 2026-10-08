@@ -60,7 +60,7 @@ import {
   type RagService,
   chunkTextV1,
   createEntityResolver,
-  createMockCrossEncoder,
+  createLexicalCrossEncoder,
   createQueryExpansionService,
   createRagService,
   createRerankerService,
@@ -1424,14 +1424,14 @@ app
     // composite-scored candidates with a cross-encoder before the
     // dedupe-by-source + token-budget pass.
     //
-    // The mock cross-encoder uses lexical overlap as its score (no
-    // network, no LLM cost). When a real Cohere/OpenAI rerank API is
-    // configured later, swap in `createApiCrossEncoder({ baseURL,
-    // apiKey, model })` here without touching the orchestrator. Same
-    // story for HyDE: the QE service is created without an LLM today
-    // (HyDE off); plug an LLM in to enable HyDE without diff churn.
+    // The reranker scores by lexical overlap (no network, no model cost),
+    // not a learned cross-encoder; it is labelled preview in
+    // FEATURE_MATURITY.retrievalReranker. A real Cohere/OpenAI rerank API
+    // drops in as `createApiCrossEncoder({ baseURL, apiKey, model })` here
+    // without touching the orchestrator. Same story for HyDE: the QE
+    // service is created without an LLM today (HyDE off).
     const queryExpansionService = createQueryExpansionService({ hydeEnabled: false });
-    const rerankerService = createRerankerService(createMockCrossEncoder());
+    const rerankerService = createRerankerService(createLexicalCrossEncoder());
 
     const retrievalOrchestrator =
       ragService === null

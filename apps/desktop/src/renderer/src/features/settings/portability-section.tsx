@@ -8,11 +8,11 @@ import type {
   CompanyPackageSecretBinding,
   OperatorAuthMode,
 } from '@team-x/shared-types';
-import { OPERATOR_AUTH_MODES } from '@team-x/shared-types';
+import { FEATURE_MATURITY, OPERATOR_AUTH_MODES } from '@team-x/shared-types';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Faceplate, LampTile, Tag } from '@/components/console/index.js';
+import { Faceplate, LampTile, MaturityBadge, Tag } from '@/components/console/index.js';
 import { Button } from '@/components/ui/button.js';
 import { Input } from '@/components/ui/input.js';
 import { Skeleton } from '@/components/ui/skeleton.js';
@@ -149,6 +149,8 @@ function cloudLinkStateLabel(
       return 'Sync paused';
     case 'sync-degraded':
       return 'Sync degraded';
+    case 'linked':
+      return 'Ids reserved';
     default:
       return state.charAt(0).toUpperCase() + state.slice(1);
   }
@@ -158,8 +160,8 @@ function cloudLinkTone(
   state: 'unlinked' | 'linking' | 'linked' | 'sync-paused' | 'sync-degraded' | 'unlinking',
 ): string {
   switch (state) {
-    case 'linked':
-      return 'border-[var(--led-go-edge)] bg-[var(--go-soft)] text-[var(--led-go)]';
+    // 'linked' stays neutral: reserved ids are not a working cloud link
+    // (audit 2026-10-07 P2-3), so it must not read as GO.
     case 'sync-paused':
       return 'border-[var(--led-hold-edge)] bg-[var(--hold-soft)] text-[var(--led-hold)]';
     case 'sync-degraded':
@@ -433,10 +435,12 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-body-strong text-foreground">Linked workspace shell</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-body-strong text-foreground">Linked workspace shell</div>
+                      <MaturityBadge feature="cloudWorkspaceLink" />
+                    </div>
                     <p className="mt-1 text-caption text-muted-foreground">
-                      This local shell reserves durable link metadata now so hosted auth and sync
-                      can land without reframing the product later.
+                      {FEATURE_MATURITY.cloudWorkspaceLink.summary}
                     </p>
                   </div>
                   {cloudLinkQuery.isLoading || cloudLinkBusy ? (
@@ -469,7 +473,7 @@ export function PortabilitySection() {
 
                     <p className="mt-3 text-caption text-muted-foreground">
                       {cloudLink.state === 'linked'
-                        ? 'Workspace is linked locally and ready for the first hosted auth/sync follow-through.'
+                        ? 'Ids are reserved on this device. Nothing has synced: hosted sync is not available yet.'
                         : cloudLink.state === 'sync-degraded'
                           ? (cloudLink.lastSyncError ??
                             'Workspace is linked but currently degraded.')
@@ -530,10 +534,14 @@ export function PortabilitySection() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-body-strong text-foreground">Shared operator invites</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-body-strong text-foreground">
+                        Shared operator invites
+                      </div>
+                      <MaturityBadge feature="operatorInvites" />
+                    </div>
                     <p className="mt-1 text-caption text-muted-foreground">
-                      Queue invited or cloud operators in Autonomy &gt; Access before expecting
-                      shared posture to become actionable.
+                      {FEATURE_MATURITY.operatorInvites.summary}
                     </p>
                   </div>
                   <Button
