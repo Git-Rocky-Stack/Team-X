@@ -507,16 +507,32 @@ export function createKnowledgeGraphService(options: {
    * same entity mentioned after a restart would get a second node. A miss
    * falls back to the repo, matching labels case-insensitively.
    */
+  /**
+   * Companies whose stored labels are already in `labelToNodeId`. A miss used
+   * to rescan the whole company, so ingesting N new entities read every node
+   * N+1 times. The first lookup for a company loads all its labels once;
+   * nodes created later go through `rememberNodeId`, and a cached id whose
+   * node was deleted is re-checked below.
+   */
+  const warmedCompanies = new Set<string>();
+
+  function warmLabels(companyId: string): void {
+    if (warmedCompanies.has(companyId)) return;
+    for (const node of repo.getNodesByCompany(companyId)) {
+      const key = `${companyId}:${node.label.toLowerCase()}`;
+      if (!labelToNodeId.has(key)) labelToNodeId.set(key, node.id);
+    }
+    warmedCompanies.add(companyId);
+  }
+
   function resolveNodeId(companyId: string, label: string): string | undefined {
     const key = `${companyId}:${label.toLowerCase()}`;
+    warmLabels(companyId);
     const cached = labelToNodeId.get(key);
-    if (cached && repo.getNode(cached)) return cached;
-    const existing = repo
-      .getNodesByCompany(companyId)
-      .find((n) => n.label.toLowerCase() === label.toLowerCase());
-    if (!existing) return undefined;
-    labelToNodeId.set(key, existing.id);
-    return existing.id;
+    if (cached === undefined) return undefined;
+    if (repo.getNode(cached)) return cached;
+    labelToNodeId.delete(key);
+    return undefined;
   }
 
   function rememberNodeId(companyId: string, label: string, nodeId: string): void {

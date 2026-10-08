@@ -7,7 +7,7 @@
  * used to be the only lookup starts empty in every process.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ExtractedFact } from '../memory/long-term.js';
 import { createInMemoryGraphRepo, createKnowledgeGraphService } from './graph.js';
@@ -95,5 +95,27 @@ describe('createInMemoryGraphRepo — findNodesByLabel', () => {
 
     expect(() => repo.findNodesByLabel('co-1', 'C++ (')).not.toThrow();
     expect(repo.findNodesByLabel('co-1', 'c++ build').map((n) => n.label)).toContain('C++ build');
+  });
+});
+
+describe('knowledge graph — label lookups do not rescan per entity', () => {
+  // Each label miss scanned the whole company (`getNodesByCompany`), so
+  // ingesting N new entities cost N+1 full reads — growing with the graph,
+  // on every Copilot exchange once memory persists in SQL.
+  it('reads the company once per process however many new entities arrive', () => {
+    const repo = createInMemoryGraphRepo();
+    createKnowledgeGraphService({ repo }).ingestFacts([fact()]);
+    const scan = vi.spyOn(repo, 'getNodesByCompany');
+    const graph = createKnowledgeGraphService({ repo });
+
+    graph.ingestFacts(
+      Array.from({ length: 10 }, (_, i) =>
+        fact({ id: `f-${i}`, fact: `Fact number ${i}`, entities: [`entity ${i}`, 'Dana'] }),
+      ),
+    );
+
+    expect(scan.mock.calls.length).toBeLessThanOrEqual(1);
+    // …and still reuses the node stored by the earlier process.
+    expect(repo.getNodesByCompany('co-1').filter((n) => n.label === 'Dana')).toHaveLength(1);
   });
 });
