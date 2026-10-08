@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [3.5.0] - 2026-10-08
+
+**Trust release.** Every setting now does what its label says, refusals explain themselves, and every model call counts against your budget. Customer-facing summary: [What's New](docs/user-guide/whats-new.md#v350-2026-10-08).
+
 ### Added
 
 - **Settings → Privacy is enforced.** "Local Only" promised "No data leaves

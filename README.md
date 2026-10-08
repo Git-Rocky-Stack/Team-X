@@ -23,7 +23,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 ## What's new
 
-The next release (in review in [#39](https://github.com/Git-Rocky-Stack/Team-X/pull/39)) is about trust: every setting now does what its label says.
+**v3.5.0** is about trust: every setting now does what its label says.
 
 - **Enforced privacy tiers.** Every model call, embedding and external runtime is checked against Settings → Privacy. A provider above the tier is refused with a reason and is never silently swapped.
 - **Copilot grounded in your company's knowledge**, with long-term memory and a knowledge graph that survive restarts.
@@ -31,7 +31,7 @@ The next release (in review in [#39](https://github.com/Git-Rocky-Stack/Team-X/p
 - **A palette that understands commands**, plus meeting minutes that file action items, a Hire dialog with all 55 roles, and a per-company Proactive Mode that works.
 - **A Linux AppImage with no FUSE 2 requirement.**
 
-Full release notes: **[What's New](docs/user-guide/whats-new.md)**.
+Full release notes: **[What's New](docs/user-guide/whats-new.md)** · installers: **[v3.5.0 release](https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v3.5.0)**.
 
 ---
 
@@ -126,7 +126,7 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 | macOS | `Team-X-x.x.x-x64.dmg` / `Team-X-x.x.x-arm64.dmg` | x64 (Intel), arm64 (Apple Silicon) |
 | Linux | `Team-X-x.x.x-x86_64.AppImage` / `Team-X-x.x.x-amd64.deb` | x64 |
 
-> **Linux AppImage note:** releases after v3.4.0 embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
+> **Linux AppImage note:** v3.5.0 and later embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
 
 ### From Source
 
@@ -238,7 +238,7 @@ Team-X/
 
 ## Documentation
 
-Team-X includes comprehensive documentation across 137 files:
+Team-X includes comprehensive documentation across 138 files:
 
 ### Getting Started
 - **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users

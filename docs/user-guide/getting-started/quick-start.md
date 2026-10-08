@@ -51,7 +51,7 @@ chmod +x Team-X-<version>-x86_64.AppImage
 ./Team-X-<version>-x86_64.AppImage
 ```
 
-> **No extra packages needed.** From the release after v3.4.0, the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop as is.
+> **No extra packages needed.** From v3.5.0, the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop as is.
 >
 > **On v3.4.0 or earlier**, the AppImage needs **FUSE 2**, which modern Ubuntu no longer installs by default (24.04 renamed the package to `libfuse2t64`). Pick either path:
 >

@@ -8,7 +8,7 @@
 
 **Name:** Team-X
 **Type:** AI-powered workforce desktop application
-**Version:** 3.4.0 (released 2026-07-11; unreleased work on `main` since)
+**Version:** 3.5.0 (released 2026-10-08)
 **Status:** Production
 **Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **Documentation Root:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
@@ -703,14 +703,14 @@ Team-X is open-source and community-supported. There is no hosted support email,
 
 **Cite Team-X as:**
 ```
-Team-X. (2026). AI-Powered Workforce Desktop Application (Version 3.4.0).
+Team-X. (2026). AI-Powered Workforce Desktop Application (Version 3.5.0).
 Retrieved from https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **APA Citation:**
 ```
 Team-X. (2026). Team-X: AI-powered workforce desktop application
-(Version 3.4.0) [Computer software]. https://github.com/Git-Rocky-Stack/Team-X
+(Version 3.5.0) [Computer software]. https://github.com/Git-Rocky-Stack/Team-X
 ```
 
 **BibTeX:**
@@ -718,7 +718,7 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 @software{teamx_2026,
   author = {Team-X},
   title = {Team-X: AI-Powered Workforce Desktop Application},
-  version = {3.4.0},
+  version = {3.5.0},
   year = {2026},
   url = {https://github.com/Git-Rocky-Stack/Team-X}
 }
@@ -728,7 +728,7 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 
 ## Version History
 
-**Unreleased on main** (since v3.4.0)
+**v3.5.0** (2026-10-08) — current release
 - Models tab: native GGUF Library / Discover (Hugging Face) / Endpoints (LAN) / Runtime panels plus per-model benchmarks over 36 `localGguf.*` channels. A GGUF model is not yet an agent provider; Ollama remains the local agent-provider path
 - Enhanced AI: active whenever RAG is enabled with an embedding provider; grounds Copilot answers (`search_company_knowledge`); long-term memory and knowledge graph persist in SQLite (migration 0037)
 - RAG ranks in-process by cosine similarity: exact per company, IVF approximate index at 4,096+ vectors (no sqlite-vec)
@@ -739,7 +739,7 @@ Team-X. (2026). Team-X: AI-powered workforce desktop application
 - Removed: the `team-x-ai` CLI (fabricated output) and the Streaming / Planning / Max Tokens / Temperature Enhanced AI settings
 - Release notes: docs/user-guide/whats-new.md
 
-**v3.4.0** (2026-07-11) — current release
+**v3.4.0** (2026-07-11)
 - Command Console / Carbon Pro design system across every renderer surface — dual-shift Night Ops + Day Shift
 - Local GGUF groundwork (the v3.3.0 scope) shipped inside this release as backend-only infrastructure
 
@@ -773,5 +773,5 @@ For complete documentation, see: https://github.com/Git-Rocky-Stack/Team-X/tree/
 ---
 
 *Generated: 2026-10-07*
-*Version: 3.4.0 (plus unreleased work on `main`)*
+*Version: 3.5.0*
 *Platform: Team-X Desktop Application*

@@ -435,7 +435,7 @@ The defaults are produced by `membershipCapabilitiesForRole()` in `operator-acce
 
 ### My Linux AppImage won't start. What do I do?
 
-**First, check your version.** From the release after v3.4.0, the AppImage
+**First, check your version.** From v3.5.0, the AppImage
 embeds AppImage's static runtime and starts on a stock Ubuntu 22.04 / 24.04
 desktop with no extra packages. If a current AppImage will not start, run it
 from a terminal and open a ticket with the output and your `lsb_release -a`.

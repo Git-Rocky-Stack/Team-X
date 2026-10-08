@@ -8,7 +8,7 @@
 
 **Project:** Team-X
 **Description:** AI-powered workforce desktop application
-**Version:** 3.4.0 (released 2026-07-11; unreleased work on `main` since)
+**Version:** 3.5.0 (released 2026-10-08)
 **Repository:** https://github.com/Git-Rocky-Stack/Team-X
 **Documentation:** https://github.com/Git-Rocky-Stack/Team-X/tree/main/docs
 
@@ -196,5 +196,5 @@ MIT License — See LICENSE file for details
 
 ## Version
 
-Documentation Version: 3.4.0 (plus unreleased work on `main`)
+Documentation Version: 3.5.0
 Last Updated: 2026-10-07

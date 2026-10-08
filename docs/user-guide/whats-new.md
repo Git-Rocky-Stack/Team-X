@@ -2,14 +2,14 @@
 
 Release notes for Team-X, newest first. The full technical record, including every internal fix, is in the [Changelog](../../CHANGELOG.md).
 
-- [Next release (in review)](#next-release-in-review)
+- [v3.5.0 (2026-10-08)](#v350-2026-10-08)
 - [v3.4.0 (2026-07-11)](#v340-2026-07-11)
 
 ---
 
-## Next release (in review)
+## v3.5.0 (2026-10-08)
 
-> These changes are merged for review in [pull request #39](https://github.com/Git-Rocky-Stack/Team-X/pull/39) and ship in the next tagged release after v3.4.0. They are not in the v3.4.0 installers.
+> Download the installers from the [v3.5.0 release](https://github.com/Git-Rocky-Stack/Team-X/releases/tag/v3.5.0). The work landed in [pull request #39](https://github.com/Git-Rocky-Stack/Team-X/pull/39).
 
 This release is about **trust**. Many settings and features in v3.4.0 looked live but did nothing. In this release every switch does what its label says, every refusal tells you why, and every model call counts against your budget.
 
@@ -75,7 +75,7 @@ The local GGUF engine was finished and given a home:
 
 ### Linux AppImage
 
-- **No more FUSE 2 requirement.** The AppImage now embeds AppImage's static runtime, so it starts on a stock Ubuntu 22.04 or 24.04 desktop without installing `libfuse2` or `libfuse2t64`. The release pipeline proves this before publishing by booting the AppImage on a machine with FUSE 2 removed. The `--appimage-extract-and-run` flag remains as a fallback ([#16](https://github.com/Git-Rocky-Stack/Team-X/issues/16), following [#4](https://github.com/Git-Rocky-Stack/Team-X/issues/4)).
+- **No more FUSE 2 requirement.** The AppImage now embeds AppImage's static runtime, so from v3.5.0 it starts on a stock Ubuntu 22.04 or 24.04 desktop without installing `libfuse2` or `libfuse2t64`. The release pipeline proves this before publishing by booting the AppImage on a machine with FUSE 2 removed. The `--appimage-extract-and-run` flag remains as a fallback ([#16](https://github.com/Git-Rocky-Stack/Team-X/issues/16), following [#4](https://github.com/Git-Rocky-Stack/Team-X/issues/4)).
 
 ### Removed
 

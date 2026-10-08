@@ -273,10 +273,21 @@ jobs:
           echo "--- SHA256SUMS.txt ---"
           cat SHA256SUMS.txt
 
+      # Hand-written notes for this tag, when they exist, lead the release
+      # body; GitHub's generated PR list is appended below them. A tag with
+      # no notes file keeps the generated list alone.
+      - name: Pick release notes
+        id: notes
+        shell: bash
+        run: |
+          f=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then echo "path=$f" >> "$GITHUB_OUTPUT"; else echo "No $f — using generated notes only."; fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
           draft: true
+          body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
           # Whitelist installer names — prevents stray `win-unpacked/Team-X.exe`
           # from appearing as an asset. `latest*.yml` + `*.blockmap` are now
