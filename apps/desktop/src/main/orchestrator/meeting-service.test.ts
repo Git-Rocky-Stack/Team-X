@@ -497,6 +497,36 @@ describe('meeting service — model-generated minutes', () => {
     h = null;
   });
 
+  // endMeeting checks `status === 'active'` and then awaits the chair's
+  // minutes call (up to 60 s) before marking the meeting ended. A second end
+  // in that window passed the same check, paid for a second minutes call,
+  // filed the action items twice and emitted meeting.ended twice.
+  it('ends a meeting once when two ends race the minutes call', async () => {
+    h = await buildHarness({ reply: 'not minutes json' });
+    const { meetingId } = await holdMeeting(h.f);
+
+    const results = await Promise.allSettled([
+      h.f.meetingService.endMeeting(meetingId),
+      h.f.meetingService.endMeeting(meetingId),
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    expect(
+      String((results.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason),
+    ).toMatch(/already end/);
+    expect(h.providerCalls).toHaveLength(1);
+    expect(h.f.events.filter((e) => e.type === 'meeting.ended')).toHaveLength(1);
+  });
+
+  it('refuses an interjection while the meeting is ending', async () => {
+    h = await buildHarness({ reply: 'not minutes json' });
+    const { meetingId } = await holdMeeting(h.f);
+
+    const ending = h.f.meetingService.endMeeting(meetingId);
+    expect(() => h?.f.meetingService.interject(meetingId, 'One more thing')).toThrow(/ending/);
+    await ending;
+  });
+
   it('stores the chair-model summary + action items and creates tickets from them', async () => {
     const harness = await buildHarness({
       reply: (fx) =>

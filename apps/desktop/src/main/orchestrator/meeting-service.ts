@@ -77,6 +77,13 @@ interface TurnState {
 
 const activeTurnState = new Map<string, TurnState>();
 
+/**
+ * Meetings whose end is in progress. `endMeeting` awaits the chair's minutes
+ * call (up to 60 s) before the row is marked ended; the claim stops a second
+ * end, or an interjection, from slipping into that window.
+ */
+const endingMeetings = new Set<string>();
+
 // ---------------------------------------------------------------------------
 // Service options
 // ---------------------------------------------------------------------------
@@ -357,6 +364,9 @@ export function createMeetingService(opts: MeetingServiceOptions) {
       if (!meeting || meeting.status !== 'active') {
         throw new Error(`meeting-service: meeting not active: ${meetingId}`);
       }
+      if (endingMeetings.has(meetingId)) {
+        throw new Error(`meeting-service: meeting is ending: ${meetingId}`);
+      }
 
       const messageId = messagesRepo.append({
         threadId: meeting.threadId,
@@ -396,98 +406,102 @@ export function createMeetingService(opts: MeetingServiceOptions) {
       if (!meeting) {
         throw new Error(`meeting-service: meeting not found: ${meetingId}`);
       }
-      if (meeting.status !== 'active') {
+      if (meeting.status !== 'active' || endingMeetings.has(meetingId)) {
         throw new Error(`meeting-service: meeting already ended: ${meetingId}`);
       }
+      endingMeetings.add(meetingId);
+      try {
+        // 1. Transcript of all non-system messages — the minutes' Discussion
+        // section and the input to the chair's summary.
+        const messages = (messagesRepo as unknown as OrchestratorMessagesRepo).listByThread(
+          meeting.threadId,
+        );
+        const transcript = messages
+          .filter((m) => m.authorKind !== 'system')
+          .map((m) => {
+            const emp = employeesRepo.getById(m.authorId);
+            // The human operator reads the minutes, so they are "You" (no
+            // user-editable operator display name exists to use instead).
+            const speaker = emp ? emp.name : m.authorKind === 'user' ? 'You' : m.authorId;
+            return `**${speaker}:** ${m.content}`;
+          })
+          .join('\n\n');
 
-      // 1. Transcript of all non-system messages — the minutes' Discussion
-      // section and the input to the chair's summary.
-      const messages = (messagesRepo as unknown as OrchestratorMessagesRepo).listByThread(
-        meeting.threadId,
-      );
-      const transcript = messages
-        .filter((m) => m.authorKind !== 'system')
-        .map((m) => {
-          const emp = employeesRepo.getById(m.authorId);
-          // The human operator reads the minutes, so they are "You" (no
-          // user-editable operator display name exists to use instead).
-          const speaker = emp ? emp.name : m.authorKind === 'user' ? 'You' : m.authorId;
-          return `**${speaker}:** ${m.content}`;
-        })
-        .join('\n\n');
+        // 2. Chair summary + action items. Skipped for an empty meeting
+        // (nothing to summarize) or when no model deps are wired.
+        const attendeeIds = parseAttendeeIds(meeting.attendeesJson);
+        const generated =
+          transcript.length > 0 && minutes
+            ? await generateMinutesOrNull(meeting, attendeeIds, transcript)
+            : null;
+        const actionItems: MeetingActionItem[] = generated?.actionItems ?? [];
 
-      // 2. Chair summary + action items. Skipped for an empty meeting
-      // (nothing to summarize) or when no model deps are wired.
-      const attendeeIds = parseAttendeeIds(meeting.attendeesJson);
-      const generated =
-        transcript.length > 0 && minutes
-          ? await generateMinutesOrNull(meeting, attendeeIds, transcript)
-          : null;
-      const actionItems: MeetingActionItem[] = generated?.actionItems ?? [];
+        const header = `# Meeting Minutes\n\n**Agenda:** ${meeting.agenda || '(none)'}`;
+        const discussion = `## Discussion\n\n${transcript}`;
+        const minutesMd =
+          transcript.length === 0
+            ? null
+            : generated
+              ? [
+                  header,
+                  `## Summary\n\n${generated.summary}`,
+                  `## Action Items\n\n${formatActionItems(actionItems)}`,
+                  discussion,
+                ].join('\n\n')
+              : `${header}\n\n${discussion}`;
 
-      const header = `# Meeting Minutes\n\n**Agenda:** ${meeting.agenda || '(none)'}`;
-      const discussion = `## Discussion\n\n${transcript}`;
-      const minutesMd =
-        transcript.length === 0
-          ? null
-          : generated
-            ? [
-                header,
-                `## Summary\n\n${generated.summary}`,
-                `## Action Items\n\n${formatActionItems(actionItems)}`,
-                discussion,
-              ].join('\n\n')
-            : `${header}\n\n${discussion}`;
-
-      // 3. Create tickets for any action items. One bad row must not fail
-      // the meeting end (the company is still paused until step 6), so each
-      // insert is isolated and a failure is logged and skipped.
-      const ticketIds: string[] = [];
-      for (const item of actionItems) {
-        try {
-          const ticketId = ticketsRepo.create({
-            companyId: meeting.companyId,
-            title: item.title,
-            description: `Action item from the meeting "${meeting.agenda || 'Meeting'}".`,
-            priority: item.priority ?? 'medium',
-            reporterId: humanUserId,
-            reporterKind: 'system',
-            assigneeId: item.assigneeId ?? null,
-          });
-          ticketIds.push(ticketId);
-        } catch (err) {
-          logger.warn(`could not create a ticket for action item "${item.title}"`, err);
+        // 3. Create tickets for any action items. One bad row must not fail
+        // the meeting end (the company is still paused until step 6), so each
+        // insert is isolated and a failure is logged and skipped.
+        const ticketIds: string[] = [];
+        for (const item of actionItems) {
+          try {
+            const ticketId = ticketsRepo.create({
+              companyId: meeting.companyId,
+              title: item.title,
+              description: `Action item from the meeting "${meeting.agenda || 'Meeting'}".`,
+              priority: item.priority ?? 'medium',
+              reporterId: humanUserId,
+              reporterKind: 'system',
+              assigneeId: item.assigneeId ?? null,
+            });
+            ticketIds.push(ticketId);
+          } catch (err) {
+            logger.warn(`could not create a ticket for action item "${item.title}"`, err);
+          }
         }
+
+        // 4. Update meeting row.
+        meetingsRepo.end(meetingId, {
+          minutesMd: minutesMd ?? undefined,
+          actionItemsJson: JSON.stringify(actionItems),
+        });
+
+        // 5. Emit event.
+        bus.emit({
+          type: 'meeting.ended',
+          companyId: meeting.companyId,
+          actorId: humanUserId,
+          actorKind: 'user',
+          payload: {
+            meetingId,
+            threadId: meeting.threadId,
+            minutesMd,
+            actionItemCount: actionItems.length,
+            ticketIds,
+          },
+        });
+
+        // 6. Resume the company.
+        orchestrator.resumeCompany(meeting.companyId);
+
+        // 7. Clean up turn state.
+        activeTurnState.delete(meetingId);
+
+        return { minutesMd, actionItems, ticketIds };
+      } finally {
+        endingMeetings.delete(meetingId);
       }
-
-      // 4. Update meeting row.
-      meetingsRepo.end(meetingId, {
-        minutesMd: minutesMd ?? undefined,
-        actionItemsJson: JSON.stringify(actionItems),
-      });
-
-      // 5. Emit event.
-      bus.emit({
-        type: 'meeting.ended',
-        companyId: meeting.companyId,
-        actorId: humanUserId,
-        actorKind: 'user',
-        payload: {
-          meetingId,
-          threadId: meeting.threadId,
-          minutesMd,
-          actionItemCount: actionItems.length,
-          ticketIds,
-        },
-      });
-
-      // 6. Resume the company.
-      orchestrator.resumeCompany(meeting.companyId);
-
-      // 7. Clean up turn state.
-      activeTurnState.delete(meetingId);
-
-      return { minutesMd, actionItems, ticketIds };
     },
 
     /** Get the active meeting for a company (convenience accessor). */
