@@ -86,10 +86,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+      # No `cache: 'pnpm'`: nothing here installs node_modules (pnpm audit reads
+      # the lockfile), and an absent store fails setup-node's cache post-step.
       - uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
       # Whole graph, build tooling included: no critical/high advisory unless
       # scripts/dependency-audit-exceptions.json accepts it with an expiry.
       - name: Dependency audit
