@@ -83,6 +83,20 @@ describe('checkFileSizes', () => {
     expect(problems).toEqual([expect.stringContaining('reason')]);
   });
 
+  it('rejects an exception whose cap is missing or not a whole number', () => {
+    write('apps/desktop/src/big.ts', 5000);
+    for (const maxLines of [undefined, 'lots', 150.5]) {
+      const { problems } = checkFileSizes(root, {
+        maxLines: 100,
+        ratchetSlack: 10,
+        exceptions: { 'apps/desktop/src/big.ts': { maxLines, reason: 'declarative' } },
+      });
+      expect(problems, `maxLines: ${String(maxLines)}`).toEqual([
+        expect.stringContaining('numeric maxLines'),
+      ]);
+    }
+  });
+
   it('ratchets: a cap well above the file must be lowered', () => {
     write('apps/desktop/src/big.ts', 120);
     const { problems } = run({ 'apps/desktop/src/big.ts': { maxLines: 150, reason: 'decl' } });

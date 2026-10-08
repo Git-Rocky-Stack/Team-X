@@ -72,7 +72,7 @@ export function checkFileSizes(
       problems.push(
         `${path}: ${lines} lines exceeds the ${maxLines}-line budget; split it by responsibility or add a justified exception`,
       );
-    } else if (lines > exception.maxLines) {
+    } else if (Number.isInteger(exception.maxLines) && lines > exception.maxLines) {
       problems.push(
         `${path}: ${lines} lines exceeds its ${exception.maxLines}-line exception cap; the cap may not be raised to absorb new code`,
       );
@@ -83,6 +83,9 @@ export function checkFileSizes(
     const lines = byPath.get(path);
     if (typeof exception.reason !== 'string' || exception.reason.trim() === '') {
       problems.push(`${path}: exception has no reason`);
+    } else if (!Number.isInteger(exception.maxLines)) {
+      // A missing or non-numeric cap compares false everywhere: the file is uncapped.
+      problems.push(`${path}: exception has no numeric maxLines cap`);
     } else if (lines === undefined) {
       problems.push(`${path}: exception names a file that no longer exists; delete it`);
     } else if (lines <= maxLines) {
