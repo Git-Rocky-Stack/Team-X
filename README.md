@@ -128,6 +128,8 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 > **Linux AppImage note:** v3.5.0 and later embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
 
+> **Unsigned builds:** the installers are not code-signed yet, so Windows and macOS warn before the first run. Check a download against the release's `SHA256SUMS.txt`; from v3.5.0 you can also verify its build provenance with `gh attestation verify <file> --repo Git-Rocky-Stack/Team-X`.
+
 ### From Source
 
 ```bash
