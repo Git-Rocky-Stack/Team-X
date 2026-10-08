@@ -69,7 +69,7 @@ The local GGUF engine was finished and given a home:
 
 - **Per-company switch fixed.** Turning Proactive Mode off for one company no longer turns it off for all of them, and the choice survives a restart. The master switch lives in Settings → Extensions.
 - **Autonomy mode.** Choose conservative, balanced or autonomous from the dashboard. The control states what each mode currently changes.
-- **Installed Extensions panel.** MCP servers and skills can now be disabled and removed. Before, an added MCP server could not be stopped from the app. Re-enabling a server makes its tools available again immediately.
+- **Installed Extensions panel.** MCP servers can now be disabled and removed, and skills can be removed. Before, an added MCP server could not be stopped from the app. Re-enabling a server makes its tools available again immediately.
 
 ### Paperclip Import and portability
 
