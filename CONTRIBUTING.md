@@ -142,6 +142,7 @@ pnpm lint:fix                   # Biome auto-fix
 pnpm format                     # Biome format
 pnpm -F @team-x/desktop test:e2e  # Playwright E2E (builds first)
 pnpm audit:bundle               # Bundle size budgets (after a build)
+pnpm audit:filesize             # Source file-size budget
 ```
 
 **Bundle budgets.** CI fails a build whose renderer entry, any lazily loaded view, the stylesheet, a font, the main process or the preload outgrows its raw or gzip cap ([`scripts/check-bundle-budget.mjs`](scripts/check-bundle-budget.mjs)). Every top-level view is loaded on first visit through `lazy()` in `App.tsx`; import a new view the same way, not statically. If a change legitimately needs more room, raise the cap in the same commit and say why. The vendored Iosevka font is a subset; regenerate it with `python3 scripts/subset-iosevka.py`.
@@ -175,6 +176,7 @@ These are non-negotiable. Violating them requires a design-doc amendment:
 ### File Organization
 
 - **Main process services**: one file per service in `src/main/services/`, factory pattern with dependency injection
+- **File size**: production source stays at or under 800 lines (`pnpm audit:filesize`, enforced in CI). Split a growing module by responsibility. A file that must be longer (a schema, a type union, static content) goes in [`scripts/file-size-exceptions.json`](scripts/file-size-exceptions.json) with a reason; its cap is a ratchet and may only come down.
 - **IPC handlers**: contract in `src/main/ipc/handlers/contract.ts`, one implementation module per bounded context in `src/main/ipc/handlers/`, composed by `src/main/ipc/handlers.ts`, registered in `src/main/ipc/register.ts`
 - **Renderer features**: one directory per feature in `src/renderer/src/features/`, co-located components
 - **Hooks**: one file per IPC domain in `src/renderer/src/hooks/`

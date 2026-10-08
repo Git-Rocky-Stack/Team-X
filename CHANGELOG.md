@@ -15,6 +15,125 @@ _Nothing yet._
 
 **Trust release.** Every setting now does what its label says, refusals explain themselves, and every model call counts against your budget. Customer-facing summary: [What's New](docs/user-guide/whats-new.md#v350-2026-10-08).
 
+This release also addresses every finding of the [2026-10-07 engineering audit](docs/CODEBASE_AUDIT_2026-10-07.md): P0-1 and P1-1 were fixed in #39, the rest below. Two are programs rather than single fixes. The largest modules are split, and the remaining long files are capped and listed for decomposition (P1-7). The dependency upgrades that need code migration, starting with the AI SDK, are ordered in the [upgrade program](docs/developer-guide/dependency-upgrade-program.md) (P3-2). What still needs the maintainer, such as signing certificates and applying the branch rulesets, is listed in [Release Signing](docs/developer-guide/release-signing.md) and [Branch Governance](docs/developer-guide/governance.md).
+
+### Security
+
+- **Electron 31 → 44.7** (Node 24.21, Chromium 152). Electron 31 was out of
+  support and carried high advisories (context-isolation bypass, sandbox and
+  popup escapes, use-after-frees). better-sqlite3 13 and @electron/rebuild 4
+  build against the new ABI. (P0-2)
+- **Zero critical or high production advisories.** `pnpm audit --prod` went
+  from 86 findings (1 critical, 33 high) to 4 lows, all in AI SDK v3 and
+  fixed only by its major migration. Across the whole build graph, 201
+  findings (6 critical, 90 high) became 1 high with no patched release,
+  accepted as an expiring exception. Upgrades include the MCP SDK 1.32,
+  drizzle 0.45, electron-updater 6.8.9, Vitest 4.1, Vite 6.4,
+  electron-vite 4 and electron-builder 26.15; AI SDK v3's unused Vue,
+  Svelte and Solid bindings are removed. `pnpm audit:deps` now fails CI on
+  any unaccepted critical or high advisory, or an expired exception.
+  (P0-2, P3-2)
+- **Strict Content-Security-Policy in every build.** The packaged renderer
+  shipped the development policy (`'unsafe-eval'`, inline script, localhost
+  origins); the hook meant to replace it never existed. Builds now carry
+  `script-src 'self'`, `connect-src 'self'` and `'none'` for objects, base
+  URIs, forms and frames, and CI and the release workflow check the built
+  page. (P0-3)
+- **A central renderer trust boundary** (`main/security/renderer-boundary.ts`).
+  Every IPC handler refuses any sender but the app's own top-level frame.
+  Off-app navigation and redirects are blocked, `window.open` is denied
+  (https and mailto open in the browser), webviews are refused, and every
+  permission is denied except the sanitized clipboard write. An E2E spec
+  proves each against the built app. (P0-3)
+- **Local-only endpoints stay local at the socket.** The local-address check
+  now runs inside the connection's own DNS lookup, so DNS rebinding cannot
+  swap in a public address after the check. Public IP literals, redirects,
+  proxies and pooled sockets are refused. HTTP runtime profiles use the same
+  fetch whenever Settings → Privacy forbids cloud. (P1-3)
+- **Hardened Hugging Face downloads.** Windows device names, characters
+  Windows forbids (including NTFS stream separators) and trailing dots or
+  spaces are refused in every path segment. Redirects are followed only to
+  Hub hosts over https. A file must announce its size and may not exceed
+  it, free space is checked first, and running out of space mid-transfer
+  keeps the partial file for resuming. (P1-3)
+
+### Changed
+
+- **Signed, verified and attested releases.** macOS signs and notarizes
+  whenever the Developer ID credentials exist; Windows signs with Azure
+  Trusted Signing or a PFX. The release fails on an invalid Authenticode or
+  codesign/notarization check unless an explicit unsigned override is set,
+  and then the release notes say so. Windows NSIS and macOS DMG builds are
+  installed, launched and uninstalled in CI, every installer gets a
+  build-provenance attestation, and an SPDX SBOM is attached. A manual dry
+  run publishes nothing; only a `v*` tag does. (P0-4)
+- **Every model call honours runtime profiles.** The agentic loop, its
+  write-side tools and the Copilot analyzer built their own provider factory,
+  so a runtime profile bound to those agents was ignored. They now resolve
+  through the same execution policy as chat, meetings, delegation, Enhanced
+  AI and the palette. (P1-8)
+- **Faster start-up.** The renderer is now minified, and every view except
+  the default dashboard loads on first visit. The entry script fell from
+  3.5 MB to 620 KB (180 KB compressed). The Iosevka font is subset to the
+  characters the app uses, from 984 KB to 59 KB. CI fails a build that
+  outgrows its bundle budget. (P2-2)
+- **Preview features say so.** Cloud workspace linking, operator invites
+  and cloud identity carry a "Preview · local only" label. A reserved link
+  no longer lights a green "Linked" lamp or invents a last-sync time, and
+  copy no longer claims invites are sent or memberships mirrored. The
+  lexical reranker is named for what it is. (P2-3)
+- **Smaller source modules.** The 8,000-line IPC handler file is split into
+  one module per bounded context under `main/ipc/handlers/`, and the
+  3,700-line shared IPC contract into request shapes, channel map and bridge
+  modules under `shared-types/src/ipc/`; every export stays where it was.
+  Production source is capped at 800 lines (`pnpm audit:filesize`); longer
+  files are listed with a reason and a cap that can only come down. A parity
+  test now also holds the shared-types contract to the preload. (P1-7)
+- **`@team-x/intelligence` API.** The root export carries the stable modules
+  only. Retrieval evaluation, prompt versioning and the metrics dashboard
+  moved to `@team-x/intelligence/experimental`, and a snapshot test fails on
+  any unintended change to either surface. (P2-4)
+
+### Fixed
+
+- **Local models start on Linux and macOS.** The llama.cpp fetcher dropped
+  the library symlinks when it flattened the archive, so the bundled
+  `llama-server` could not load its libraries. The release now refuses an
+  installer whose bundled server does not start. (P1-6)
+- **Chunking keeps every word, and code blocks whole.** Property tests over
+  both RAG chunkers found and fixed: minified JSON and other unbroken text
+  cut mid-token, emoji and astral characters split in half, code fences
+  stripped of their language tag, and chunk positions that did not match
+  the source. Every chunk is now the exact source span it reports. (P1-2)
+- **Tracing headers follow W3C Trace Context.** `traceparent` omitted the
+  version field and rejected the standard form; both directions now work,
+  and old headers still parse. (P1-6)
+- **The model detail drawer is named in every state.** Its loading and error
+  states opened as an unnamed dialog. (P2-1)
+
+### Internal
+
+- **Tests tell the truth.** Coverage counts production files only, loaded or
+  not: the honest baseline is 59% of lines and 48% of branches, with ratchet
+  floors per module (98/95 for the security boundary). E2E fails a test that
+  passes only on retry. A nightly lane runs the real `llama-server` and
+  Ollama. Any test that writes an unexpected `console.error` or `warn`, or
+  trips a Radix accessibility warning, fails. (P1-6, P2-1, P2-7)
+- **CI policy gates:** dependency audit, whitespace and conflict markers,
+  documentation links (`pnpm audit:links`), source file size and workflow
+  lint (actionlint), plus the packaged-CSP and bundle-budget checks after the
+  E2E build. The claim-evidence audit runs strict and fails below 200 parsed
+  claims. (P1-4, P2-5, P2-6)
+- **Branch governance.** Checked-in rulesets for `main` (pull requests only,
+  a code-owner review, strict required checks) and for signed release tags,
+  CODEOWNERS for the trust-boundary and release paths, a PR template that
+  mirrors the review wall, and a break-glass procedure. A test keeps the
+  required checks and CODEOWNERS paths real. (P1-5)
+- **ESLint's import-cycle check works, in 47 s instead of 2 min.** Without a
+  TypeScript resolver it could not read any import and never found a cycle.
+  `pnpm clean:diagnose` lists local build residue and removes a class only
+  when asked. (P3-1, P3-3)
+
 ### Added
 
 - **Settings → Privacy is enforced.** "Local Only" promised "No data leaves

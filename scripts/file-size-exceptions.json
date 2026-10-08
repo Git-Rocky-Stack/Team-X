@@ -1,0 +1,149 @@
+{
+  "$comment": "Source file-size exceptions for scripts/check-file-size.mjs (audit 2026-10-07 P1-7). Production source is capped at 800 lines. Each file here names why it is longer and is capped at its size when listed: it may shrink, never grow, and a cap more than 25 lines above the file must be lowered. Delete an entry once the file is under 800 lines.",
+  "files": {
+    "apps/desktop/src/main/db/schema.ts": {
+      "maxLines": 1964,
+      "reason": "Declarative: one Drizzle table definition per entity. Splitting by table would scatter the relations drizzle-kit reads from one schema module."
+    },
+    "apps/desktop/src/main/index.ts": {
+      "maxLines": 3773,
+      "reason": "Pending decomposition (in progress): the composition root moves its boot phases into main/boot/ so index.ts only sequences them."
+    },
+    "apps/desktop/src/main/ipc/register.ts": {
+      "maxLines": 1534,
+      "reason": "Declarative: one ipcMain.handle binding per channel, held in parity with the preload, REQUEST_CHANNELS and the shared-types IpcContract by channel-parity.test.ts. Split candidate by the same bounded contexts as ipc/handlers/."
+    },
+    "apps/desktop/src/main/orchestrator/execution-tools.ts": {
+      "maxLines": 1303,
+      "reason": "Pending decomposition: split the workspace path sandbox from the individual execution tools."
+    },
+    "apps/desktop/src/main/orchestrator/index.ts": {
+      "maxLines": 2063,
+      "reason": "Pending decomposition: the dispatcher (pending queue, concurrency caps, scheduleDispatch) is the first seam to move out of the facade."
+    },
+    "apps/desktop/src/main/orchestrator/run-agent.ts": {
+      "maxLines": 946,
+      "reason": "Pending decomposition: separate tool-call handling from the streaming turn loop."
+    },
+    "apps/desktop/src/main/services/agentic-loop-service.ts": {
+      "maxLines": 1031,
+      "reason": "Pending decomposition: separate run bookkeeping (threads, runs, audit) from provider adaptation."
+    },
+    "apps/desktop/src/main/services/agentic-tools-write.ts": {
+      "maxLines": 1401,
+      "reason": "Pending decomposition: one module per write-side tool (decompose_project, create_tickets, assign_work) with shared validation."
+    },
+    "apps/desktop/src/main/services/autonomy-benchmark-service.ts": {
+      "maxLines": 965,
+      "reason": "Pending decomposition: separate the benchmark scenarios from the runner and scoring."
+    },
+    "apps/desktop/src/main/services/autonomy-doctor-service.ts": {
+      "maxLines": 940,
+      "reason": "Pending decomposition: one module per doctor check family behind the report builder."
+    },
+    "apps/desktop/src/main/services/budget-governance-service.ts": {
+      "maxLines": 813,
+      "reason": "Pending decomposition: separate budget policy evaluation from persistence and notifications."
+    },
+    "apps/desktop/src/main/services/command-service.ts": {
+      "maxLines": 1275,
+      "reason": "Pending decomposition: separate the parse pipeline (classifier, resolver, slot filler) from execute dispatch."
+    },
+    "apps/desktop/src/main/services/company-portability-service.ts": {
+      "maxLines": 2049,
+      "reason": "Pending decomposition: split export, import preview, import apply and template library into separate modules behind the service facade."
+    },
+    "apps/desktop/src/main/services/context-assembler-service.ts": {
+      "maxLines": 881,
+      "reason": "Pending decomposition: one module per context source (thread, tickets, memory, vault) behind the assembler."
+    },
+    "apps/desktop/src/main/services/copilot-analyzer-service.ts": {
+      "maxLines": 1164,
+      "reason": "Pending decomposition: separate scheduling (periodic and event-triggered ticks) from insight generation and dedup."
+    },
+    "apps/desktop/src/main/services/external-runtime-adapters.ts": {
+      "maxLines": 936,
+      "reason": "Pending decomposition: one module per external runtime adapter."
+    },
+    "apps/desktop/src/main/services/local-gguf/hf-service.ts": {
+      "maxLines": 900,
+      "reason": "Pending decomposition: separate the resumable download manager from Hub search and model cards."
+    },
+    "apps/desktop/src/main/services/paperclip-import-bridge.ts": {
+      "maxLines": 842,
+      "reason": "Pending decomposition: separate reading the external export folder from mapping it to a Team-X preview."
+    },
+    "apps/desktop/src/main/services/provider-factory.ts": {
+      "maxLines": 891,
+      "reason": "Pending decomposition: separate per-provider stream adapters from the employee-to-provider resolution."
+    },
+    "apps/desktop/src/main/services/skills-service.ts": {
+      "maxLines": 900,
+      "reason": "Pending decomposition: separate skill installation (fetch, verify) from the registry."
+    },
+    "apps/desktop/src/preload/api.ts": {
+      "maxLines": 1327,
+      "reason": "Declarative: the CHANNELS table and one window.teamx binding per channel, held in parity by channel-parity.test.ts. Split candidate by the same bounded contexts as shared-types ipc/bridge-*.ts."
+    },
+    "apps/desktop/src/renderer/src/features/autonomy/autonomy-view.tsx": {
+      "maxLines": 1103,
+      "reason": "Pending decomposition: each autonomy tab body becomes its own component."
+    },
+    "apps/desktop/src/renderer/src/features/autonomy/runtime-profiles-panel.tsx": {
+      "maxLines": 1056,
+      "reason": "Pending decomposition: split the profile editor form from the profile list and bindings."
+    },
+    "apps/desktop/src/renderer/src/features/command/command-palette.tsx": {
+      "maxLines": 1145,
+      "reason": "Pending decomposition: split the parse/clarify/confirm state machine into a hook and the result panes into components."
+    },
+    "apps/desktop/src/renderer/src/features/dashboard/mission-control-dashboard.tsx": {
+      "maxLines": 1764,
+      "reason": "Pending decomposition: each dashboard panel becomes its own component file under features/dashboard/."
+    },
+    "apps/desktop/src/renderer/src/features/projects/schedule-view.tsx": {
+      "maxLines": 817,
+      "reason": "Pending decomposition: split the calendar grid from the item editor."
+    },
+    "apps/desktop/src/renderer/src/features/settings/extensions-section.tsx": {
+      "maxLines": 846,
+      "reason": "Pending decomposition: split the MCP server list from the extension install flow."
+    },
+    "apps/desktop/src/renderer/src/features/settings/portability-section.tsx": {
+      "maxLines": 1066,
+      "reason": "Pending decomposition: export, import and templates panels become separate components."
+    },
+    "apps/desktop/src/renderer/src/features/user-guide/guide-content.ts": {
+      "maxLines": 1598,
+      "reason": "Static content: the User Guide copy (sections, tasks, actions). Data, not logic; the checklist tasks already live apart in guide-tasks.ts."
+    },
+    "packages/intelligence/src/knowledge/graph.ts": {
+      "maxLines": 907,
+      "reason": "Experimental API (P2-4): split entity extraction from graph storage and query when it graduates to stable."
+    },
+    "packages/intelligence/src/metrics/dashboard.ts": {
+      "maxLines": 898,
+      "reason": "Experimental API (P2-4): split collection from aggregation and trend analysis when it graduates to stable."
+    },
+    "packages/intelligence/src/observability/tracing.ts": {
+      "maxLines": 865,
+      "reason": "Experimental API (P2-4): split span storage from W3C propagation when it graduates to stable."
+    },
+    "packages/intelligence/src/rag/chunker-v2.ts": {
+      "maxLines": 896,
+      "reason": "Pending decomposition: separate Markdown structure parsing from chunk assembly. Behaviour is pinned by chunker.property.test.ts (P1-2)."
+    },
+    "packages/intelligence/src/service/unified.ts": {
+      "maxLines": 1180,
+      "reason": "Pending decomposition: the unified service wires RAG, memory, knowledge graph, planning and tracing; each integration becomes its own adapter."
+    },
+    "packages/shared-types/src/entities.ts": {
+      "maxLines": 1703,
+      "reason": "Declarative: the shared entity type vocabulary, no logic. Split candidate by domain (people, work, extensions, local runtime) like ipc/ when it next grows."
+    },
+    "packages/shared-types/src/events.ts": {
+      "maxLines": 1568,
+      "reason": "Declarative: the closed EventType list plus one payload interface per event, kept together so the runtime list and the union cannot drift."
+    }
+  }
+}

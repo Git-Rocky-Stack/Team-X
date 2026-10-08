@@ -21,6 +21,7 @@ This release is about **trust**. Many settings and features in v3.4.0 looked liv
 - **The command palette understands what you type.**
 - **Meetings produce real minutes and file the action items as tickets.**
 - **The Linux AppImage starts on a stock Ubuntu desktop with no extra packages.**
+- **A more secure, faster app: Electron 44, a locked-down window, and a start-up script one-sixth the size.**
 
 ### Privacy you can rely on
 
@@ -54,6 +55,7 @@ The local GGUF engine was finished and given a home:
 - **Endpoints:** connect an LM Studio, Ollama, llama-server, KoboldCPP or vLLM server on your network. Public addresses are refused, and the refusal explains why.
 - **Runtime:** see your GPUs, the active backend and the model pool.
 - **Benchmarks:** measured prompt and generation throughput, time to first token, and peak VRAM where your hardware reports it. A figure that cannot be measured says so; it is never shown as zero.
+- **The bundled llama.cpp server starts on Linux and macOS.** The packaged server was missing links to its own libraries and could not start any model. A release is now refused if its bundled server does not start.
 
 ### Work and collaboration
 
@@ -72,6 +74,19 @@ The local GGUF engine was finished and given a home:
 ### Paperclip Import and portability
 
 - **Paperclip Import** previews what a Paperclip export folder would become before anything is created. It can save the result as a `.teamx-package.json` and hand it to Portability to import. Folders that are not Paperclip exports are refused.
+
+### Security and speed
+
+- **Electron 44.** Team-X moves from Electron 31, which no longer receives security fixes, to the current Electron 44 (Chromium 152). Every known critical and high vulnerability in the app's dependencies is fixed.
+- **The app window is locked down.** It runs only Team-X's own code: no inline or remote scripts, no navigation to other sites, and no pop-up windows (links open in your browser). The window gets no device permissions except copying to the clipboard, and the app answers requests only from its own window.
+- **Local model servers stay local.** A server you mark as local is checked at the moment Team-X connects, so a network name that changes its address after the check cannot redirect your data to the internet.
+- **Safer Hugging Face downloads.** File names that Windows treats as devices, redirects away from Hugging Face, files larger than announced, and too little disk space are all refused before anything is written. If the disk fills mid-download, the partial file is kept so you can resume.
+- **Faster start-up.** The app's start-up script is about a sixth of its old size, each screen loads the first time you open it, and the monospace font is 59 KB instead of 984 KB.
+- **Checked installers.** Before a release publishes, each Windows and macOS installer is installed, launched and uninstalled automatically, and its signature is verified. Each download comes with a provenance attestation and a software bill of materials (SBOM).
+
+### Preview features are labelled
+
+Linking a workspace to a hosted service, operator invites and cloud identity are previews: today they only reserve identifiers on your computer. They now carry a **Preview · local only** label. A reserved link no longer shows a green "Linked" lamp or a made-up last-sync time, and no text claims that invites are sent.
 
 ### Linux AppImage
 
