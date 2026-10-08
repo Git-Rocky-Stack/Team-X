@@ -111,7 +111,6 @@ test.describe('Team-X smoke', () => {
       // Skip noisy framework warnings that don't affect the test.
       const text = msg.text();
       if (text.includes('Electron Security Warning')) return;
-      if (text.includes('aria-describedby={undefined}')) return;
       console.log(`[renderer ${msg.type()}] ${text}`);
     });
     window.on('pageerror', (err) => {

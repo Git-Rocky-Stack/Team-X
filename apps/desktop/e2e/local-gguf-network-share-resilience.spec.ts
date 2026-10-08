@@ -145,7 +145,6 @@ test.describe('Team-X localGguf network-share disconnect/reconnect resilience (P
     window.on('console', (msg) => {
       const text = msg.text();
       if (text.includes('Electron Security Warning')) return;
-      if (text.includes('aria-describedby={undefined}')) return;
       console.log(`[renderer ${msg.type()}] ${text}`);
     });
     window.on('pageerror', (err) => {

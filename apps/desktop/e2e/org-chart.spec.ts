@@ -54,7 +54,6 @@ test.describe('Team-X Phase 5.6 M-D org chart read-side', () => {
     window.on('console', (msg) => {
       const text = msg.text();
       if (text.includes('Electron Security Warning')) return;
-      if (text.includes('aria-describedby={undefined}')) return;
       console.log(`[renderer ${msg.type()}] ${text}`);
     });
     window.on('pageerror', (err) => {

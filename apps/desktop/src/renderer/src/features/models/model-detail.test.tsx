@@ -18,6 +18,8 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { axeViolations } from '@/test-utils/axe';
+
 import { ModelDetail } from './model-detail.js';
 
 const MODEL = {
@@ -142,6 +144,45 @@ describe('ModelDetail — identity', () => {
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
+describe('ModelDetail — accessible in every state (audit P2-1)', () => {
+  it('names and describes the dialog while the model is loading', async () => {
+    setBridge({
+      ...makeBridge(),
+      localGguf: {
+        ...makeBridge().localGguf,
+        library: { ...makeBridge().localGguf.library, get: vi.fn(() => new Promise(() => {})) },
+      },
+    } as ReturnType<typeof makeBridge>);
+    mount();
+    const dialog = await screen.findByRole('dialog', { name: 'Loading model…' });
+    expect(dialog).toHaveAccessibleDescription(/loading this model/i);
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('names and describes the dialog when the model fails to load', async () => {
+    setBridge({
+      ...makeBridge(),
+      localGguf: {
+        ...makeBridge().localGguf,
+        library: {
+          ...makeBridge().localGguf.library,
+          get: vi.fn().mockRejectedValue(new Error('disk unplugged')),
+        },
+      },
+    } as ReturnType<typeof makeBridge>);
+    mount();
+    const dialog = await screen.findByRole('dialog', { name: 'Could not load this model' });
+    expect(dialog).toHaveAccessibleDescription(/disk unplugged/);
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('names the loaded dialog after the model, with no axe violations', async () => {
+    await open();
+    expect(screen.getByRole('dialog', { name: 'Qwen3 8B Q4_K_M' })).toBeInTheDocument();
+    expect(await axeViolations()).toEqual([]);
   });
 });
 

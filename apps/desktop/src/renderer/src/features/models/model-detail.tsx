@@ -177,21 +177,37 @@ export function ModelDetail({ modelId, onClose }: ModelDetailProps) {
   return (
     <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto scrollbar-thin">
+        {/*
+          The dialog is named and described in every state, not only once the
+          row has loaded: a screen reader announces the title and description
+          on open, and without them the loading and error states were an
+          unnamed dialog (and a Radix warning).
+        */}
         {model.isError ? (
-          <SubviewState
-            lampLabel="NO-GO"
-            lampTone="nogo"
-            title="Could not load this model"
-            description={errorText(model.error)}
-            className="min-h-0 p-6"
-          />
+          <>
+            <DialogTitle className="sr-only">Could not load this model</DialogTitle>
+            <DialogDescription className="sr-only">{errorText(model.error)}</DialogDescription>
+            <SubviewState
+              lampLabel="NO-GO"
+              lampTone="nogo"
+              title="Could not load this model"
+              description={errorText(model.error)}
+              className="min-h-0 p-6"
+            />
+          </>
         ) : !row ? (
-          <SubviewState
-            lampLabel="SYNC"
-            lampTone="hold"
-            title="Loading model…"
-            className="min-h-0 p-6"
-          />
+          <>
+            <DialogTitle className="sr-only">Loading model…</DialogTitle>
+            <DialogDescription className="sr-only">
+              Loading this model's details, prompt overrides and benchmark history.
+            </DialogDescription>
+            <SubviewState
+              lampLabel="SYNC"
+              lampTone="hold"
+              title="Loading model…"
+              className="min-h-0 p-6"
+            />
+          </>
         ) : (
           <div className="space-y-[var(--sp-4)]">
             <header className="space-y-2">

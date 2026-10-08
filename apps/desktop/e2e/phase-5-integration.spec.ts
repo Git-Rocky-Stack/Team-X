@@ -147,7 +147,6 @@ test.describe('Team-X Phase 5 — M35 T2 cross-milestone integration', () => {
     window.on('console', (msg) => {
       const text = msg.text();
       if (text.includes('Electron Security Warning')) return;
-      if (text.includes('aria-describedby={undefined}')) return;
       console.log(`[renderer ${msg.type()}] ${text}`);
     });
     window.on('pageerror', (err) => {
