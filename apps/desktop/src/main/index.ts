@@ -228,6 +228,7 @@ import { type EnhancedAiService, createEnhancedAiService } from './services/enha
 import { bootstrapEnvKeys } from './services/env-key-bootstrap.js';
 import { createExtensionsRegistryService } from './services/extensions-registry-service.js';
 import { createExternalRuntimeAdapters } from './services/external-runtime-adapters.js';
+import { runGovernedCompletion } from './services/governed-completion.js';
 import {
   type BenchmarkService,
   createBenchmarkService,
@@ -1743,20 +1744,26 @@ app
       // This replaces the M32 placeholder that returned `(LLM response not
       // configured)` regardless of input — that stub silently degraded all 7
       // `enhancedAi.*` IPC channels.
-      const llmComplete = async (prompt: string): Promise<string> => {
-        const liveCompany = companiesRepo.list().find((c) => c.status !== 'archived');
-        if (!liveCompany) {
+      const llmComplete = async (
+        prompt: string,
+        context: { companyId: string | null },
+      ): Promise<string> => {
+        // The company of the Enhanced AI call that needs the model; only a
+        // company-less call (createPlan) falls back to the first live one.
+        // Every call used to take the first live company, so company B's
+        // Copilot exchanges ran on company A's provider and budget.
+        const company =
+          (context.companyId ? companiesRepo.getById(context.companyId) : null) ??
+          companiesRepo.list().find((c) => c.status !== 'archived');
+        if (!company) {
           throw new Error(
             '[enhanced-ai] llmComplete: no live company exists — cannot resolve provider',
           );
         }
-        const systemAgentRow = employeesRepo.findSystemByRoleId(
-          liveCompany.id,
-          SYSTEM_AGENT_ROLE_ID,
-        );
+        const systemAgentRow = employeesRepo.findSystemByRoleId(company.id, SYSTEM_AGENT_ROLE_ID);
         if (!systemAgentRow) {
           throw new Error(
-            `[enhanced-ai] llmComplete: no system-agent for company "${liveCompany.id}" — boot top-up should have created one`,
+            `[enhanced-ai] llmComplete: no system-agent for company "${company.id}" — boot top-up should have created one`,
           );
         }
         const actorRow = employeesRepo.getById(systemAgentRow.id);
@@ -1767,30 +1774,51 @@ app
         }
         // Settings → Enhanced AI → Provider / Model, read per call so a change
         // applies immediately. 'auto' defers to the system agent's own
-        // resolution. These rows used to be written and never read.
+        // resolution.
         const llmProviderPref = settingsRepo.get<string>('llm_provider', 'auto');
         const llmModelPref = settingsRepo.get<string>('llm_model', 'auto');
-        const resolved =
-          providerFactory === null || (llmProviderPref === 'auto' && llmModelPref === 'auto')
-            ? await resolveProvider(actorRow)
-            : await providerFactory.create({
-                providerId:
-                  llmProviderPref !== 'auto'
-                    ? llmProviderPref
-                    : (await resolveProvider(actorRow)).providerName,
-                ...(llmModelPref !== 'auto' ? { model: llmModelPref } : {}),
-              });
-        let text = '';
-        for await (const chunk of streamAgent({
-          providerFactory: resolved.stream,
-          system: '',
-          messages: [{ role: 'user', content: prompt }],
-        })) {
-          if (chunk.kind === 'delta') {
-            text += chunk.delta;
-          }
+        let resolved: Awaited<ReturnType<ResolveProvider>>;
+        if (providerFactory === null || (llmProviderPref === 'auto' && llmModelPref === 'auto')) {
+          resolved = await resolveProvider(actorRow);
+        } else if (llmProviderPref !== 'auto') {
+          resolved = await providerFactory.create({
+            providerId: llmProviderPref,
+            ...(llmModelPref !== 'auto' ? { model: llmModelPref } : {}),
+          });
+        } else {
+          // Model chosen, provider on auto: apply the model to the provider
+          // the system agent resolves to — unless that is an external
+          // runtime (`runtime:<kind>`), which is not in the provider registry
+          // and picks its own model. Passing that name to the factory threw
+          // "provider not found" and failed every Enhanced AI call.
+          const own = await resolveProvider(actorRow);
+          resolved =
+            providersService.get(own.providerName) !== null
+              ? await providerFactory.create({ providerId: own.providerName, model: llmModelPref })
+              : own;
         }
-        return text;
+        // Held to the company's budget and recorded as a run, like an agent
+        // turn: these calls used to spend tokens no budget or report saw.
+        const budget = budgetGovernanceServiceInstance;
+        return runGovernedCompletion(
+          {
+            accounting: {
+              runsRepo,
+              calcCost,
+              ...(budget
+                ? { recordRunSpend: (runId: string) => budget.recordRunSpend(runId) }
+                : {}),
+            },
+            isBudgetBlocked: (companyId) => (budget?.getOverview(companyId).exceededCount ?? 0) > 0,
+          },
+          {
+            companyId: company.id,
+            employeeId: actorRow.id,
+            resolved,
+            system: '',
+            prompt,
+          },
+        );
       };
 
       try {
@@ -2161,6 +2189,14 @@ app
             // Read-only: getOverview neither pauses nor files approvals.
             isBudgetBlocked: (companyId) =>
               (budgetGovernanceServiceInstance?.getOverview(companyId).exceededCount ?? 0) > 0,
+            // Each classification is a model call: record it and its spend.
+            accounting: {
+              runsRepo,
+              calcCost,
+              recordRunSpend: async (runId) => {
+                await budgetGovernanceServiceInstance?.recordRunSpend(runId);
+              },
+            },
           }),
         });
     // DB rows type `status` as `string`; shared-types narrows to the

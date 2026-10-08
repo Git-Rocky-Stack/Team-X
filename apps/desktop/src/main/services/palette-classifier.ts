@@ -30,7 +30,9 @@ import {
   type IntentClassifier,
   createIntentClassifier,
 } from '@team-x/intelligence';
-import { type ProviderStreamFn, streamAgent } from '@team-x/provider-router';
+import type { ProviderStreamFn } from '@team-x/provider-router';
+
+import { type GovernedCompletionAccounting, runGovernedCompletion } from './governed-completion.js';
 
 /**
  * Canned reply used when no model can answer. Byte-identical to the
@@ -44,11 +46,19 @@ export const CLASSIFIER_FALLBACK_REPLY = JSON.stringify({
   missingSlots: [],
 });
 
-export interface ClassifierCompleteDeps<TEmployee> {
+export interface ClassifierCompleteDeps<TEmployee extends { id: string }> {
   /** The company's `system-agent` row, or null when the company has none. */
   findSystemAgent: (companyId: string) => TEmployee | null;
   /** Same resolver the orchestrator uses; throws when no provider is usable. */
-  resolveProvider: (employee: TEmployee) => Promise<{ stream: ProviderStreamFn }>;
+  resolveProvider: (
+    employee: TEmployee,
+  ) => Promise<{ stream: ProviderStreamFn; providerName?: string; model?: string }>;
+  /**
+   * Records each classification as a run against the system agent and posts
+   * its spend, as an agent turn would. Absent (unit suites), the call is made
+   * but not recorded.
+   */
+  accounting?: GovernedCompletionAccounting;
   /**
    * True when the company is over a budget hard cap. Read-only (it must not
    * pause the company or file an approval): the classifier then skips the
@@ -70,7 +80,7 @@ export const CLASSIFIER_TIMEOUT_MS = 15_000;
  * resolution needs an actor — the palette's company is known only at
  * `classify(text, { companyId })` time (see `createPaletteIntentClassifier`).
  */
-export function createClassifierCompleteFor<TEmployee>(
+export function createClassifierCompleteFor<TEmployee extends { id: string }>(
   deps: ClassifierCompleteDeps<TEmployee>,
 ): (companyId: string) => ClassifyCompleteFn {
   const logger = deps.logger ?? {
@@ -78,26 +88,6 @@ export function createClassifierCompleteFor<TEmployee>(
   };
   const timeoutMs = deps.timeoutMs ?? CLASSIFIER_TIMEOUT_MS;
   let warned = false;
-
-  async function streamReply(
-    stream: ProviderStreamFn,
-    system: string,
-    user: string,
-    signal: AbortSignal,
-  ): Promise<string> {
-    let text = '';
-    for await (const chunk of streamAgent({
-      providerFactory: stream,
-      system,
-      messages: [{ role: 'user', content: user }],
-      signal,
-    })) {
-      if (chunk.kind === 'delta') {
-        text += chunk.delta;
-      }
-    }
-    return text;
-  }
 
   return (companyId) =>
     async ({ system, user }) => {
@@ -113,7 +103,18 @@ export function createClassifierCompleteFor<TEmployee>(
         // Abort the stream on timeout, and race it too: a provider that
         // ignores the signal must not hold the palette.
         const text = await Promise.race([
-          streamReply(resolved.stream, system, user, controller.signal),
+          runGovernedCompletion(deps.accounting ? { accounting: deps.accounting } : {}, {
+            companyId,
+            employeeId: systemAgent.id,
+            resolved: {
+              providerName: resolved.providerName ?? 'unknown',
+              model: resolved.model ?? 'unknown',
+              stream: resolved.stream,
+            },
+            system,
+            prompt: user,
+            signal: controller.signal,
+          }),
           new Promise<never>((_resolve, reject) => {
             timer = setTimeout(() => {
               controller.abort();

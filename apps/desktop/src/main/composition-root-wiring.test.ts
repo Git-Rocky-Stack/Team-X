@@ -78,3 +78,38 @@ describe('main/index.ts — an embedding refusal degrades RAG instead of failing
     expect(indexer.some((c) => c.includes("reportEmbeddingRefusal('indexing'"))).toBe(true);
   });
 });
+
+describe('main/index.ts — auxiliary model calls are scoped and governed', () => {
+  const llm = src.slice(src.indexOf('const llmComplete = async ('), src.indexOf('llmComplete,'));
+
+  it("resolves Enhanced AI's model through the calling company, not the first live one", () => {
+    expect(llm).toContain('context.companyId');
+  });
+
+  it('holds Enhanced AI calls to the budget and records them as runs', () => {
+    expect(llm).toContain('runGovernedCompletion(');
+    expect(llm).toContain('recordRunSpend');
+  });
+
+  it('never hands an external runtime name to the provider factory', () => {
+    expect(llm).not.toContain('(await resolveProvider(actorRow)).providerName');
+  });
+
+  it('records palette classification spend', () => {
+    const palette = callArguments('createClassifierCompleteFor');
+    expect(palette.some((c) => c.includes('accounting'))).toBe(true);
+  });
+});
+
+describe('services/provider-factory.ts — the default singleton enforces the tier', () => {
+  it('builds getProviderFactory() with the Settings → Privacy getter', () => {
+    const factorySrc = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'services', 'provider-factory.ts'),
+      'utf8',
+    );
+    const singleton = factorySrc.slice(factorySrc.indexOf('export function getProviderFactory'));
+    expect(singleton.slice(0, singleton.indexOf('return _factory;'))).toContain(
+      "getMaxPrivacyTier: () =>\n        settingsRepo.get<PrivacyTier>('max_privacy_tier'",
+    );
+  });
+});

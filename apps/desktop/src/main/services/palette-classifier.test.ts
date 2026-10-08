@@ -165,6 +165,31 @@ describe('createClassifierCompleteFor — bounds', () => {
     }
   });
 
+  it('records the classification as a run against the system agent, with its spend', async () => {
+    const { stream } = cannedStream('{}');
+    const { deps } = makeDeps({ stream });
+    const started: Array<{ employeeId: string }> = [];
+    const recordRunSpend = vi.fn(async () => undefined);
+
+    await createClassifierCompleteFor({
+      ...deps,
+      accounting: {
+        runsRepo: {
+          start: (input) => {
+            started.push(input);
+            return 'run-1';
+          },
+          finish: () => undefined,
+        },
+        calcCost: () => '0.000100',
+        recordRunSpend,
+      },
+    })('co-1')({ system: 'S', user: 'U' });
+
+    expect(started).toEqual([expect.objectContaining({ employeeId: 'sys-co-1' })]);
+    expect(recordRunSpend).toHaveBeenCalledWith('run-1');
+  });
+
   it('does not call the model for a company over its budget cap', async () => {
     const { stream, calls } = cannedStream('{}');
     const { deps, resolveProvider } = makeDeps({ stream });

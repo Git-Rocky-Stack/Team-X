@@ -438,3 +438,50 @@ describe('enhanced-ai — shares the indexer’s RAG service', () => {
     expect(context.passages.map((p) => p.sourceId)).toEqual(['msg-9']);
   });
 });
+
+describe('enhanced-ai — model calls know their company', () => {
+  // llmComplete took only a prompt, so the composition root answered every
+  // Enhanced AI call with the FIRST live company's system agent: company B's
+  // Copilot exchanges were sent through company A's provider and billed to
+  // nobody. The wrapper now passes the company of the call that caused it.
+  it('passes the calling company to every model call it makes', async () => {
+    const seen: Array<string | null> = [];
+    const { service } = buildService({
+      llmComplete: async (prompt: string, ctx: { companyId: string | null }) => {
+        seen.push(ctx.companyId);
+        return prompt.includes('Extract key facts') ? FACTS_JSON : ANSWER;
+      },
+    });
+
+    await service.extractAndStoreFacts('Dana: the cert expires Friday.', {
+      companyId: 'co-b',
+      sourceId: 'thread-1',
+    });
+    await service.enhancedQuery('why is the release blocked?', {
+      companyId: 'co-a',
+      threshold: 0,
+    });
+
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen[0]).toBe('co-b');
+    expect(seen.slice(1).every((c) => c === 'co-a')).toBe(true);
+  });
+
+  it('keeps concurrent calls for different companies apart', async () => {
+    const seen: Array<string | null> = [];
+    const { service } = buildService({
+      llmComplete: async (prompt: string, ctx: { companyId: string | null }) => {
+        await new Promise((r) => setTimeout(r, ctx.companyId === 'co-a' ? 5 : 0));
+        seen.push(ctx.companyId);
+        return prompt.includes('Extract key facts') ? FACTS_JSON : ANSWER;
+      },
+    });
+
+    await Promise.all([
+      service.extractAndStoreFacts('a', { companyId: 'co-a', sourceId: 't-a' }),
+      service.extractAndStoreFacts('b', { companyId: 'co-b', sourceId: 't-b' }),
+    ]);
+
+    expect(seen.sort()).toEqual(['co-a', 'co-b']);
+  });
+});

@@ -9,6 +9,8 @@
  * Phase 5 — M32 (Desktop Integration).
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import {
   type KnowledgeGraphRepo,
   type LongTermMemoryRepo,
@@ -80,8 +82,12 @@ export interface EnhancedAiServiceOptions {
   /** RAG repository */
   ragRepo: RagRepo;
 
-  /** LLM completion function */
-  llmComplete?: (prompt: string) => Promise<string>;
+  /**
+   * LLM completion function. `companyId` is the company of the service call
+   * that caused the completion (null only for `createPlan`, which has none),
+   * so the caller can resolve that company's provider and charge its budget.
+   */
+  llmComplete?: (prompt: string, context: { companyId: string | null }) => Promise<string>;
 
   /**
    * Persistent storage for long-term memory and the knowledge graph. Omitted,
@@ -294,7 +300,16 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
   // Snapshot for the flags the pipeline bakes in at construction.
   const constructionFlags = features();
 
-  const llmComplete = options.llmComplete;
+  // The package's completion seam carries only a prompt. Each public method
+  // below runs inside `callCompany.run(companyId, …)`, so a completion it
+  // triggers — answer, fact extraction, HyDE expansion, summary — knows which
+  // company it is for, even across awaits and with calls interleaved.
+  const callCompany = new AsyncLocalStorage<string>();
+  const complete = options.llmComplete;
+  const llmComplete = complete
+    ? (prompt: string) => complete(prompt, { companyId: callCompany.getStore() ?? null })
+    : undefined;
+  const forCompany = <T>(companyId: string, fn: () => T): T => callCompany.run(companyId, fn);
 
   const ai = createAiService({
     embedding: { embedText: options.embedText, dimension: options.dimension },
@@ -374,14 +389,16 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       await ready();
       const flags = features();
 
-      const result = await ai.query(companyId, query, {
-        topK: queryOptions.topK ?? 10,
-        threshold: queryOptions.threshold ?? 0.7,
-        usePlan:
-          (queryOptions.usePlanning ?? flags.planningEnabled) &&
-          query.length >= flags.planningThreshold,
-        includeRelated: queryOptions.includeRelated ?? flags.knowledgeGraphEnabled,
-      });
+      const result = await forCompany(companyId, () =>
+        ai.query(companyId, query, {
+          topK: queryOptions.topK ?? 10,
+          threshold: queryOptions.threshold ?? 0.7,
+          usePlan:
+            (queryOptions.usePlanning ?? flags.planningEnabled) &&
+            query.length >= flags.planningThreshold,
+          includeRelated: queryOptions.includeRelated ?? flags.knowledgeGraphEnabled,
+        }),
+      );
 
       return {
         answer: result.answer,
@@ -402,12 +419,14 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       await ready();
       const flags = features();
 
-      const result = await ai.retrieve(companyId, query, {
-        topK: retrieveOptions.topK ?? 8,
-        threshold: retrieveOptions.threshold ?? 0.3,
-        includeFacts: flags.longTermMemoryEnabled,
-        includeRelated: flags.knowledgeGraphEnabled,
-      });
+      const result = await forCompany(companyId, () =>
+        ai.retrieve(companyId, query, {
+          topK: retrieveOptions.topK ?? 8,
+          threshold: retrieveOptions.threshold ?? 0.3,
+          includeFacts: flags.longTermMemoryEnabled,
+          includeRelated: flags.knowledgeGraphEnabled,
+        }),
+      );
 
       return {
         passages: result.context.map((hit) => ({
@@ -466,7 +485,9 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       if (!features().longTermMemoryEnabled || !llmComplete) return 0;
       await ready();
 
-      const facts = await ai.extractFacts(companyId, factOptions.sourceId, conversation);
+      const facts = await forCompany(companyId, () =>
+        ai.extractFacts(companyId, factOptions.sourceId, conversation),
+      );
       return facts.length;
     },
 
@@ -509,11 +530,13 @@ export function createEnhancedAiService(options: EnhancedAiServiceOptions): Enha
       await ready();
       const flags = features();
 
-      const { stream, result } = ai.queryStream(companyId, query, {
-        topK: streamOptions.topK ?? 10,
-        threshold: streamOptions.threshold ?? 0.7,
-        includeRelated: flags.knowledgeGraphEnabled,
-      });
+      const { stream, result } = forCompany(companyId, () =>
+        ai.queryStream(companyId, query, {
+          topK: streamOptions.topK ?? 10,
+          threshold: streamOptions.threshold ?? 0.7,
+          includeRelated: flags.knowledgeGraphEnabled,
+        }),
+      );
 
       if (!flags.streamingEnabled) {
         // Streaming off: run to completion and hand the caller the whole
