@@ -194,8 +194,8 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
 
 - **Installed Extensions panel.** MCP servers and skills could be added but
   never disabled or removed, so an added MCP server's subprocess could not
-  be stopped from the app. Settings → Extensions now enables, disables and
-  removes (with confirmation) each server and skill.
+  be stopped from the app. Settings → Extensions now enables and disables
+  each MCP server, and removes (with confirmation) each server and skill.
 
 - **Proactive Mode autonomy control.** `settings.setProactive` had no caller.
   The dashboard control offers conservative / balanced / autonomous and says
