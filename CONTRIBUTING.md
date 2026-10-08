@@ -141,7 +141,10 @@ pnpm lint                       # Biome check
 pnpm lint:fix                   # Biome auto-fix
 pnpm format                     # Biome format
 pnpm -F @team-x/desktop test:e2e  # Playwright E2E (builds first)
+pnpm audit:bundle               # Bundle size budgets (after a build)
 ```
+
+**Bundle budgets.** CI fails a build whose renderer entry, any lazily loaded view, the stylesheet, a font, the main process or the preload outgrows its raw or gzip cap ([`scripts/check-bundle-budget.mjs`](scripts/check-bundle-budget.mjs)). Every top-level view is loaded on first visit through `lazy()` in `App.tsx`; import a new view the same way, not statically. If a change legitimately needs more room, raise the cap in the same commit and say why. The vendored Iosevka font is a subset; regenerate it with `python3 scripts/subset-iosevka.py`.
 
 **Important:** Always run `pnpm typecheck` at the repo root. The workspace-scoped `pnpm -F @team-x/desktop typecheck` does not traverse project references and silently misses regressions in shared packages.
 

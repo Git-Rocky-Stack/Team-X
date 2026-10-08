@@ -188,6 +188,10 @@ jobs:
       # strict production CSP (no eval, no inline script, no network origin).
       - name: Packaged renderer CSP
         run: node scripts/check-packaged-csp.mjs
+      # Raw and gzip caps on the renderer entry, every lazy chunk, styles,
+      # fonts, main and preload (scripts/check-bundle-budget.mjs).
+      - name: Bundle budget
+        run: pnpm audit:bundle
       # `xvfb-run` wraps the Playwright invocation so Electron has a
       # virtual display. `--auto-servernum` picks a free :N so parallel
       # jobs on the same runner never collide on :99.

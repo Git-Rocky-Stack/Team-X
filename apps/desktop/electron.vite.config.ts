@@ -149,6 +149,12 @@ export default defineConfig({
     ],
     build: {
       outDir: 'out/renderer',
+      // electron-vite turns minification off for every target by default.
+      // The renderer is parsed on each window load, and unminified it
+      // shipped React and every view at full source size (audit 2026-10-07
+      // P2-2). The main process stays unminified so crash stacks in bug
+      // reports keep their names; scripts/check-bundle-budget.mjs caps both.
+      minify: 'esbuild',
       rollupOptions: {
         input: resolve(__dirname, 'src/renderer/index.html'),
       },

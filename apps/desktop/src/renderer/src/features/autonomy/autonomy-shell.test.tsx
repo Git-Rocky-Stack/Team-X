@@ -92,9 +92,7 @@ const memoryFormattersSrc = readFileSync(MEMORY_FORMATTERS_PATH, 'utf8');
 describe('Autonomy shell wiring', () => {
   it('adds autonomy as a top-level app destination', () => {
     expect(storeSrc).toContain("| 'autonomy'");
-    expect(appSrc).toContain(
-      "import { AutonomyView } from './features/autonomy/autonomy-view.js';",
-    );
+    expect(appSrc).toContain("import('./features/autonomy/autonomy-view.js')");
     expect(appSrc).toContain("case 'autonomy':");
     expect(appSrc).toContain('<AutonomyView company={activeCompany} companyId={companyId} />');
   });

@@ -125,9 +125,7 @@ describe('Org tab step-(e) integration', () => {
   });
 
   it('routes the org view to OrgChartView instead of the ComingSoon placeholder', () => {
-    expect(appSrc).toContain(
-      "import { OrgChartView } from './features/orgchart/org-chart-view.js'",
-    );
+    expect(appSrc).toContain("import('./features/orgchart/org-chart-view.js')");
     expect(appSrc).toMatch(/case 'org':\s*return <OrgChartView companyId=\{companyId\} \/>/);
     expect(appSrc).not.toMatch(/case 'org':\s*return <ComingSoon label="Org Chart" \/>/);
   });

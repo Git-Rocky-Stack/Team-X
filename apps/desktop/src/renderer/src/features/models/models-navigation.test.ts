@@ -48,8 +48,8 @@ describe('Models view is reachable', () => {
     expect(paletteSrc).toMatch(/SHOW_VIEW_LITERALS[\s\S]*?'models'/);
   });
 
-  it('is imported by App.tsx', () => {
-    expect(appSrc).toMatch(/import \{ ModelsView \} from '\.\/features\/models\/models-view\.js'/);
+  it('is loaded by App.tsx', () => {
+    expect(appSrc).toContain("import('./features/models/models-view.js')");
   });
 });
 

@@ -1,34 +1,78 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 
 import { AppLayout } from './app/layout.js';
 import { ErrorBoundary } from './components/error-boundary.js';
-import { AuditView } from './features/audit/audit-view.js';
-import { AutonomyView } from './features/autonomy/autonomy-view.js';
 import { ChatDrawer } from './features/chat/chat-drawer.js';
-import { ChatView } from './features/chat/chat-view.js';
 import { CommandPalette } from './features/command/command-palette.js';
 import { CopilotSidebar } from './features/copilot/copilot-sidebar.js';
-import { CommandsView } from './features/dashboard/commands-view.js';
 import { DashboardSubtabs } from './features/dashboard/dashboard-subtabs.js';
-import { FloorView } from './features/dashboard/floor-view.js';
 import { MissionControlDashboard } from './features/dashboard/mission-control-dashboard.js';
-import { StreamView } from './features/dashboard/stream-view.js';
-import { TimelineView } from './features/dashboard/timeline-view.js';
 import { HireDialog } from './features/hire/hire-dialog.js';
-import { MeetingsView } from './features/meetings/meetings-view.js';
-import { ModelsView } from './features/models/models-view.js';
-import { OrgChartView } from './features/orgchart/org-chart-view.js';
-import { ProjectsView } from './features/projects/projects-view.js';
-import { SettingsView } from './features/settings/settings-view.js';
-import { TelemetryView } from './features/telemetry/telemetry-view.js';
-import { TicketsView } from './features/tickets/tickets-view.js';
-import { UserGuideView } from './features/user-guide/user-guide-view.js';
-import { VaultView } from './features/vault/vault-view.js';
 
+import { SubviewState } from '@/components/console/index.js';
 import { useCompanies } from '@/hooks/use-companies.js';
 import { useDashboardEvents } from '@/hooks/use-dashboard-events.js';
 import { useEmployees } from '@/hooks/use-employees.js';
 import { useAppStore } from '@/store/app-store.js';
+
+/**
+ * Every destination except the default dashboard loads on first visit
+ * (audit 2026-10-07 P2-2): the renderer used to ship as one 3.5 MB entry
+ * that parsed every view before the first paint. Each view becomes its own
+ * chunk, fetched from the local app bundle the first time it is shown.
+ */
+const AuditView = lazy(() =>
+  import('./features/audit/audit-view.js').then((m) => ({ default: m.AuditView })),
+);
+const AutonomyView = lazy(() =>
+  import('./features/autonomy/autonomy-view.js').then((m) => ({ default: m.AutonomyView })),
+);
+const ChatView = lazy(() =>
+  import('./features/chat/chat-view.js').then((m) => ({ default: m.ChatView })),
+);
+const CommandsView = lazy(() =>
+  import('./features/dashboard/commands-view.js').then((m) => ({ default: m.CommandsView })),
+);
+const FloorView = lazy(() =>
+  import('./features/dashboard/floor-view.js').then((m) => ({ default: m.FloorView })),
+);
+const MeetingsView = lazy(() =>
+  import('./features/meetings/meetings-view.js').then((m) => ({ default: m.MeetingsView })),
+);
+const ModelsView = lazy(() =>
+  import('./features/models/models-view.js').then((m) => ({ default: m.ModelsView })),
+);
+const OrgChartView = lazy(() =>
+  import('./features/orgchart/org-chart-view.js').then((m) => ({ default: m.OrgChartView })),
+);
+const ProjectsView = lazy(() =>
+  import('./features/projects/projects-view.js').then((m) => ({ default: m.ProjectsView })),
+);
+const SettingsView = lazy(() =>
+  import('./features/settings/settings-view.js').then((m) => ({ default: m.SettingsView })),
+);
+const StreamView = lazy(() =>
+  import('./features/dashboard/stream-view.js').then((m) => ({ default: m.StreamView })),
+);
+const TelemetryView = lazy(() =>
+  import('./features/telemetry/telemetry-view.js').then((m) => ({ default: m.TelemetryView })),
+);
+const TicketsView = lazy(() =>
+  import('./features/tickets/tickets-view.js').then((m) => ({ default: m.TicketsView })),
+);
+const TimelineView = lazy(() =>
+  import('./features/dashboard/timeline-view.js').then((m) => ({ default: m.TimelineView })),
+);
+const UserGuideView = lazy(() =>
+  import('./features/user-guide/user-guide-view.js').then((m) => ({ default: m.UserGuideView })),
+);
+const VaultView = lazy(() =>
+  import('./features/vault/vault-view.js').then((m) => ({ default: m.VaultView })),
+);
+
+const viewLoading = (
+  <SubviewState lampLabel="STBY" lampTone="hold" title="Loading view…" testId="view-loading" />
+);
 
 /**
  * Root application component. Phase 3 expands routing to all top-level
@@ -165,7 +209,10 @@ export default function App() {
         return (
           <div className="flex h-full flex-col">
             <DashboardSubtabs />
-            <div className="flex-1 overflow-y-auto scrollbar-thin">{renderDashboard()}</div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              {/* Inner boundary keeps the subtabs mounted while a subview loads. */}
+              <Suspense fallback={viewLoading}>{renderDashboard()}</Suspense>
+            </div>
           </div>
         );
       case 'autonomy':
@@ -207,7 +254,11 @@ export default function App() {
 
   return (
     <AppLayout employees={employees} onHireClick={() => setHireOpen(true)}>
-      {renderContent()}
+      {/* Keyed by destination so a view that failed to load is retried on
+          the next visit instead of pinning the boundary's error state. */}
+      <ErrorBoundary key={`${activeView}:${dashboardSubview}`} componentName="ViewLoader">
+        <Suspense fallback={viewLoading}>{renderContent()}</Suspense>
+      </ErrorBoundary>
       <ChatDrawer employees={employees} />
       <HireDialog open={hireOpen} onOpenChange={setHireOpen} companyId={companyId} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} companyId={companyId} />

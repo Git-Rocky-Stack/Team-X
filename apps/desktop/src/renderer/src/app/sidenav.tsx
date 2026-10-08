@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator.js';
 import {
   guideCompletionSummary,
   userGuidePreferencesFromCompanySettings,
-} from '@/features/user-guide/guide-progress.js';
+} from '@/features/user-guide/guide-summary.js';
 import { useCompanies } from '@/hooks/use-companies.js';
 import {
   useAuthorityGrants,

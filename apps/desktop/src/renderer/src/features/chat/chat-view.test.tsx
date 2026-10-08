@@ -89,7 +89,7 @@ describe('Chat tab step-(d) integration', () => {
   });
 
   it('routes the chat view to ChatView instead of the ComingSoon placeholder', () => {
-    expect(appSrc).toContain("import { ChatView } from './features/chat/chat-view.js'");
+    expect(appSrc).toContain("import('./features/chat/chat-view.js')");
     expect(appSrc).toMatch(
       /case 'chat':\s*return <ChatView companyId=\{companyId\} employees=\{employees\} \/>/,
     );

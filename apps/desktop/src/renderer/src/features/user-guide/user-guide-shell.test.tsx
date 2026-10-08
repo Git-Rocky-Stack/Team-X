@@ -23,7 +23,11 @@ const appSrc = readFileSync(APP_PATH, 'utf8');
 const storeSrc = readFileSync(STORE_PATH, 'utf8');
 const sidenavSrc = readFileSync(SIDENAV_PATH, 'utf8');
 const settingsViewSrc = readFileSync(SETTINGS_VIEW_PATH, 'utf8');
-const guideContentSrc = readFileSync(GUIDE_CONTENT_PATH, 'utf8');
+// Checklist tasks live in guide-tasks.ts so the sidenav badge can load them
+// without the section copy; the pins read the guide's content as one.
+const guideContentSrc = [GUIDE_CONTENT_PATH, join(currentDirname, 'guide-tasks.ts')]
+  .map((path) => readFileSync(path, 'utf8'))
+  .join('\n');
 const guideHookSrc = readFileSync(GUIDE_HOOK_PATH, 'utf8');
 
 describe('User Guide shell wiring', () => {
@@ -40,9 +44,7 @@ describe('User Guide shell wiring', () => {
   });
 
   it('routes the new view through App and auto-opens it for undismissed workspaces', () => {
-    expect(appSrc).toContain(
-      "import { UserGuideView } from './features/user-guide/user-guide-view.js';",
-    );
+    expect(appSrc).toContain("import('./features/user-guide/user-guide-view.js')");
     expect(appSrc).toContain("setActiveView('user-guide');");
     expect(appSrc).toContain("case 'user-guide':");
     expect(appSrc).toContain('<UserGuideView company={activeCompany} employees={employees} />');
