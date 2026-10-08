@@ -1,24 +1,19 @@
 export const INTELLIGENCE_VERSION = '1.0.0';
 
+// The stable public surface. Its exported names are pinned by
+// src/public-api.test.ts; experimental subsystems (evaluation, prompt
+// versioning, metrics) live behind `@team-x/intelligence/experimental`.
+
 // RAG & Memory
 export * from './rag/index.js';
-
-// Evaluation
-export * from './eval/index.js';
 
 // NLU
 export * from './nlu/intent-classifier.js';
 export * from './nlu/entity-resolver.js';
 export * from './nlu/slot-filler.js';
 
-// Prompt Versioning — M29
-export * from './prompt/index.js';
-
 // Long-Term Memory — M29
 export * from './memory/index.js';
-
-// Metrics & Dashboard — M29
-export * from './metrics/index.js';
 
 // Knowledge Graph — M30 (Phase 3)
 export * from './knowledge/index.js';

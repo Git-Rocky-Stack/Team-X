@@ -197,6 +197,8 @@ NLU, RAG, and agentic loop capabilities:
 - `prompt.ts` — System prompt builder
 - `tool-registry.ts` — Tool discovery and invocation
 
+**Public surface:** `@team-x/intelligence` exports only the stable modules above. `src/public-api.test.ts` pins every exported name, types included, so a change to the surface is a reviewed decision. Retrieval evaluation, prompt versioning and the metrics dashboard live behind `@team-x/intelligence/experimental`. The app imports none of them, and they carry no compatibility promise.
+
 ### 7. Telemetry & Cost Tracking
 
 Token counting, latency measurement, and cost attribution:
