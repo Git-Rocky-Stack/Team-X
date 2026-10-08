@@ -1,3 +1,7 @@
+/**
+ * IPC handlers — Proactive execution state and the updater.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type { HandlerContext } from './context.js';
 import type { IpcHandlers } from './contract.js';
 

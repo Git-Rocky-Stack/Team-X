@@ -1,5 +1,7 @@
 /**
- * IPC handlers — Autonomy control plane: runtime profiles and operations, doctor, benchmarks, improvement, routines, budgets, approvals, artifacts, long-run memory.
+ * IPC handlers — Autonomy control plane: runtime profiles and operations,
+ * doctor, benchmarks, improvement, routines, budgets, approvals, artifacts,
+ * long-run memory.
  * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
  */
 

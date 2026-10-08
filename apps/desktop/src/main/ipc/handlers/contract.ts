@@ -1,3 +1,7 @@
+/**
+ * The IPC handler contract: one method per renderer-callable channel.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type {
   AcceptOperatorInviteRequest,
   AcceptOperatorInviteResponse,

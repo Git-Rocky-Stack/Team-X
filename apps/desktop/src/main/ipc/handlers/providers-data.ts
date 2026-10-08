@@ -1,3 +1,8 @@
+/**
+ * IPC handlers — Providers, the vault, backup and restore, the audit log, and
+ * Copilot export.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type { AuditEvent, BackupRestoreResponse } from '@team-x/shared-types';
 
 import {

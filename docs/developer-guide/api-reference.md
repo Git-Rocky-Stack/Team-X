@@ -284,7 +284,9 @@ Channel families — 236 distinct `ipcMain.handle` registrations in `apps/deskto
 
 If you are forking Team-X and need to add an IPC channel, see
 `apps/desktop/src/main/ipc/register.ts` for the registration pattern and
-`packages/shared-types/src/ipc.ts` for the type contracts.
+`packages/shared-types/src/ipc/` for the type contracts: request and response
+shapes in `shapes-*.ts`, the channel map in `contract-*.ts`, and the
+`window.teamx` surface in `bridge-*.ts`.
 
 ---
 

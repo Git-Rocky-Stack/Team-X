@@ -1,3 +1,7 @@
+/**
+ * IPC handlers — Tickets and ticket attachments.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type { ChatMessage, Employee, TicketAttachment } from '@team-x/shared-types';
 
 import type { HandlerContext } from './context.js';

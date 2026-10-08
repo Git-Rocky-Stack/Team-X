@@ -208,7 +208,7 @@ test.describe('Team-X Phase 4 vault-backup flow', () => {
 
     // --- 7. Create backup via IPC -------------------------------------------
     // Response shape: `{ backupPath, manifest }` — see
-    // `BackupCreateResponse` in `packages/shared-types/src/ipc.ts`.
+    // `BackupCreateResponse` in `packages/shared-types/src/ipc/shapes-platform.ts`.
     const backupResult = await window.evaluate(async () => {
       // biome-ignore lint/suspicious/noExplicitAny: Electron renderer window.teamx IPC bridge
       const w = window as any;

@@ -10,7 +10,7 @@ Team-X uses Electron's IPC (Inter-Process Communication) for all client-server m
 - **Request/Response**: `ipcRenderer.invoke(channel, args)` → `ipcMain.handle(channel, handler)`
 - **Event Streaming**: One-way push from main → renderer via `webContents.send('events.dashboard', event)`
 
-All channels are typed in `@team-x/shared-types/src/ipc.ts`.
+All channels are typed in `@team-x/shared-types` under `src/ipc/`: request and response shapes in `shapes-*.ts`, the channel map (`IpcContract`) in `contract-*.ts`, and the `window.teamx` surface (`TeamXApi`) in `bridge-*.ts`.
 
 ## Request Channels
 

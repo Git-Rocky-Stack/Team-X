@@ -1,5 +1,6 @@
 /**
- * IPC handlers — Employees and the org chart: hire, update, promote, set manager, fire.
+ * IPC handlers — Employees and the org chart: hire, update, promote, set
+ * manager, fire.
  * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
  */
 
