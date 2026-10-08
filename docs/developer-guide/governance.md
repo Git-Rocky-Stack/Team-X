@@ -12,8 +12,8 @@ The rulesets are checked in under [`.github/rulesets/`](../../.github/rulesets).
 - One approving review, from a code owner ([`.github/CODEOWNERS`](../../.github/CODEOWNERS)). A new push dismisses earlier approvals, the last push must itself be approved, and every review thread must be resolved.
 - Required checks, which must pass on a branch up to date with `main`:
   - Lint · Typecheck · Test on Ubuntu, macOS and Windows
-  - E2E smoke (Electron)
-  - Policy gates (dependency audit)
+  - E2E smoke (Electron), which also checks the packaged CSP and the bundle budget
+  - Policy gates (dependency audit, whitespace, documentation links, source file size, workflow lint)
   - Claim-evidence audit
 - Merge commits only. This matches the repository's history; rebase and squash are off.
 

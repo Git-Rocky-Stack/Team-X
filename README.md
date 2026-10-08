@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-4%2C463%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-4%2C677%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
 Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
@@ -128,6 +128,8 @@ Grab the latest release for your platform from [GitHub Releases](https://github.
 
 > **Linux AppImage note:** v3.5.0 and later embed AppImage's static runtime, so the AppImage starts on a stock Ubuntu 22.04 / 24.04 desktop with no extra packages (#16). **v3.4.0 and earlier** need **FUSE 2** (`libfuse2`; `libfuse2t64` on Ubuntu 24.04; `fuse-libs` on Fedora); if one of those won't start, install that package or run `./Team-X-x.x.x-x86_64.AppImage --appimage-extract-and-run`. The `.deb` never needs FUSE and resolves its own dependencies (`sudo apt install ./Team-X-x.x.x-amd64.deb`).
 
+> **Unsigned builds:** the installers are not code-signed yet, so Windows and macOS warn before the first run. Check a download against the release's `SHA256SUMS.txt`; from v3.5.0 you can also verify its build provenance with `gh attestation verify <file> --repo Git-Rocky-Stack/Team-X`.
+
 ### From Source
 
 ```bash
@@ -230,7 +232,7 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
-| Unit tests | Vitest (4,463 tests / 354 files) |
+| Unit tests | Vitest (4,677 tests / 371 files) |
 | E2E tests | Playwright (20 specs / 29 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
@@ -327,7 +329,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **4,463 unit tests** across 354 files and **20 Playwright E2E specs** (29 cases):
+Team-X ships with **4,677 unit tests** across 371 files and **20 Playwright E2E specs** (29 cases):
 
 | Spec | Coverage |
 |------|----------|
@@ -350,6 +352,7 @@ Team-X ships with **4,463 unit tests** across 354 files and **20 Playwright E2E 
 | `telemetry-kind-filter.spec.ts` | Per-kind telemetry totals for All, Copilot, and Work run buckets |
 | `local-gguf-loading.spec.ts` | Local GGUF runtime settings, GPU inventory, pool status round-trips |
 | `local-gguf-network-share-resilience.spec.ts` | Watch-folder disconnect/reconnect resilience over network shares |
+| `security-boundary.spec.ts` | Strict packaged CSP, blocked inline script, navigation and `window.open` refused, foreign-page IPC refused |
 
 All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
 

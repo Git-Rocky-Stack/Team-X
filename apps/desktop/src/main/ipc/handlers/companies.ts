@@ -1,5 +1,6 @@
 /**
- * IPC handlers — Workspace lifecycle: list, update, archive, delete, package export/import, templates.
+ * IPC handlers — Workspace lifecycle: list, update, archive, delete, package
+ * export/import, templates.
  * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
  */
 

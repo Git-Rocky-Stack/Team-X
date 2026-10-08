@@ -1,3 +1,8 @@
+/**
+ * Shared handler context: the injected dependencies plus the audit,
+ * ticket-thread and schedule-wakeup helpers several contexts use.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type {
   ActorKind,
   ApprovalItem,

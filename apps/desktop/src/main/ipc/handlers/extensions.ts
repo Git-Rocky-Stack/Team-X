@@ -1,3 +1,8 @@
+/**
+ * IPC handlers — MCP servers, installed extensions, and authority grants and
+ * requests.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type { HandlerContext } from './context.js';
 import type { IpcHandlers } from './contract.js';
 import {

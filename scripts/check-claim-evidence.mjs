@@ -352,7 +352,7 @@ function verifyIpcChannel(channel) {
     kind: 'ipc',
     claim: channel.channel,
     namespace: channel.namespace,
-    expectedLocation: 'apps/desktop/src/main/ipc/** OR packages/shared-types/src/ipc.ts',
+    expectedLocation: 'apps/desktop/src/main/ipc/** OR packages/shared-types/src/ipc/**',
     evidence: [...matches],
     status: matches.size > 0 ? 'pass' : 'fail',
   };

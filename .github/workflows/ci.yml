@@ -124,6 +124,10 @@ jobs:
       # Every relative link and #anchor in the maintained docs resolves.
       - name: Documentation links
         run: pnpm audit:links
+      # Production source stays within 800 lines unless a capped, justified
+      # exception names the file (scripts/file-size-exceptions.json).
+      - name: Source file size
+        run: pnpm audit:filesize
       # Workflows are release-critical code: lint them (with shellcheck).
       - name: Workflow lint (actionlint)
         shell: bash

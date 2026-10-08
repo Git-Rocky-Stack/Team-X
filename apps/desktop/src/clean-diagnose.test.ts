@@ -3,7 +3,7 @@
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -12,6 +12,9 @@ import { RESIDUE, plan } from '../../../scripts/clean-diagnose.mjs';
 
 let root: string;
 afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+/** Root-relative, `/`-separated, so the expectations read the same on Windows. */
+const rel = (p: string) => relative(root, p).split(sep).join('/');
 
 function seed(...paths: string[]) {
   root = mkdtempSync(join(tmpdir(), 'clean-diagnose-'));
@@ -24,7 +27,7 @@ function seed(...paths: string[]) {
 describe('clean-diagnose plan', () => {
   it('removes only the requested class, and only paths that exist', () => {
     seed('coverage', 'apps/desktop/out', 'release', '.llama-cache');
-    const targets = plan(root, ['build-output']).map((p: string) => p.slice(root.length + 1));
+    const targets = plan(root, ['build-output']).map(rel);
     expect(targets.sort()).toEqual(['apps/desktop/out', 'coverage']);
   });
 
@@ -33,9 +36,7 @@ describe('clean-diagnose plan', () => {
     expect(
       plan(root, ['build-output', 'downloads']).some((p: string) => p.endsWith('release')),
     ).toBe(false);
-    expect(plan(root, ['release']).map((p: string) => p.slice(root.length + 1))).toEqual([
-      'release',
-    ]);
+    expect(plan(root, ['release']).map(rel)).toEqual(['release']);
   });
 
   it('refuses an unknown class instead of guessing', () => {

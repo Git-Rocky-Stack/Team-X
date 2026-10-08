@@ -1,5 +1,6 @@
 /**
- * IPC handlers — Telemetry and settings: privacy, memory, Copilot, RAG, Enhanced AI, agentic loop, planner, proactive.
+ * IPC handlers — Telemetry and settings: privacy, memory, Copilot, RAG,
+ * Enhanced AI, agentic loop, planner, proactive.
  * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
  */
 

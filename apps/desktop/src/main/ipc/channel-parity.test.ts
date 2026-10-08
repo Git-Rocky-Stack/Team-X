@@ -50,6 +50,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const mainDir = join(here, '..');
 const registerSrc = readFileSync(join(here, 'register.ts'), 'utf8');
 const preloadSrc = readFileSync(join(here, '..', '..', 'preload', 'api.ts'), 'utf8');
+const contractDir = join(
+  here,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'packages',
+  'shared-types',
+  'src',
+  'ipc',
+);
 
 /**
  * Drop comments before matching quoted strings.
@@ -124,6 +136,16 @@ function preloadChannels(): string[] {
   expect(end, 'CHANNELS is not terminated by `} as const;`').toBeGreaterThan(start);
   const block = stripComments(preloadSrc.slice(start, end));
   return [...block.matchAll(/:\s*'([^']+)'/g)].map((m) => m[1]);
+}
+
+/** Channel keys of `IpcContract`, declared across `shared-types/src/ipc/contract-*.ts`. */
+function contractChannels(): string[] {
+  return readdirSync(contractDir)
+    .filter((name) => /^contract-.+\.ts$/.test(name))
+    .flatMap((name) => {
+      const src = stripComments(readFileSync(join(contractDir, name), 'utf8'));
+      return [...src.matchAll(/^ {2}'([^']+)': \{/gm)].map((m) => m[1] ?? '');
+    });
 }
 
 /** Channels passed to any `<x>.handle('channel', ...)` anywhere under src/main. */
@@ -231,5 +253,34 @@ describe('IPC channel parity', () => {
       expect(handled.has(channel), `${channel} has no registered handler`).toBe(true);
       expect(declared.has(channel), `${channel} missing from REQUEST_CHANNELS`).toBe(true);
     }
+  });
+
+  /**
+   * The fourth description of the bridge is the typed contract in
+   * `@team-x/shared-types` (audit 2026-10-07 P1-7). Every `IpcContract` channel
+   * must be callable through the preload, and every request channel the preload
+   * advertises must be typed there, except the namespaces typed by their own
+   * contracts: `localGguf.*` (`LocalGgufApi`) and the native `system.*` dialogs.
+   */
+  it('agrees with the shared-types IpcContract in both directions', () => {
+    const contract = contractChannels();
+    expect(contract.length).toBeGreaterThan(150);
+    expect(contract.every((c) => CHANNEL_SHAPE.test(c))).toBe(true);
+    expect(new Set(contract).size, 'a channel is declared in both contract halves').toBe(
+      contract.length,
+    );
+
+    const preload = new Set(preloadChannels());
+    expect(
+      contract.filter((c) => !preload.has(c)),
+      'typed in IpcContract but the renderer cannot call them',
+    ).toEqual([]);
+
+    const typed = new Set(contract);
+    const OWN_CONTRACT = /^(localGguf|system)\./;
+    expect(
+      [...preload].filter((c) => !PUSH_ONLY.has(c) && !OWN_CONTRACT.test(c) && !typed.has(c)),
+      'callable by the renderer but missing from IpcContract',
+    ).toEqual([]);
   });
 });

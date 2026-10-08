@@ -79,6 +79,10 @@ Team-X/
 
 ## Core Systems
 
+### 0. Composition Root (Main Process Boot)
+
+`apps/desktop/src/main/index.ts` is the boot sequence and nothing else. It installs the renderer trust boundary, opens and migrates the database, then calls each boot phase in `apps/desktop/src/main/boot/` in order: repositories, platform and governance services, provider routing, the orchestrator, RAG, Enhanced AI, the Copilot window, analyzer and trigger, the command palette, the agentic loop, proactive work, Local GGUF and the IPC registrations. Each phase takes a typed set of what earlier phases built and returns what later phases need. Process-lifetime handles that the shutdown path tears down (the orchestrator, MCP host, heartbeat, pools and so on) live on one `runtime` object (`boot/runtime-state.ts`), so a closure always reads the current handle, and `boot/shutdown.ts` releases them on quit.
+
 ### 1. Orchestrator (Main Process)
 
 The orchestrator is the heart of Team-X. It:

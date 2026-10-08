@@ -34,7 +34,7 @@ describe('copilot feedback weight contracts', () => {
     expect(src('events.ts')).toContain('export interface CopilotWeightsChangedPayload');
     expect(src('copilot.ts')).toContain('export interface CopilotFeedbackSuggestion');
     expect(src('copilot.ts')).toContain('feedbackSuggestion?: CopilotFeedbackSuggestion');
-    expect(src('ipc.ts')).toContain("'settings.getCopilotWeights'");
-    expect(src('ipc.ts')).toContain("'settings.setCopilotWeights'");
+    expect(src('ipc/contract-operations.ts')).toContain("'settings.getCopilotWeights'");
+    expect(src('ipc/contract-operations.ts')).toContain("'settings.setCopilotWeights'");
   });
 });

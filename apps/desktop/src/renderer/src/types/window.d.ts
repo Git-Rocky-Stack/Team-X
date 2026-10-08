@@ -22,7 +22,7 @@
 //     having to import anything.
 //
 // The TeamXApi type itself is defined in the shared-types package
-// at packages/shared-types/src/ipc.ts and is the single source of
+// under packages/shared-types/src/ipc/ (bridge*.ts) and is the single source of
 // truth for the bridge surface. Both the preload (preload/api.ts)
 // and this declaration reference it, so a change on either side of
 // the bridge is caught when the compiler runs.

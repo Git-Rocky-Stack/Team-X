@@ -7,11 +7,13 @@
 
 # Electron trust boundary: main process, preload, IPC, renderer CSP
 /apps/desktop/src/main/index.ts                     @Git-Rocky-Stack
+/apps/desktop/src/main/boot/                        @Git-Rocky-Stack
 /apps/desktop/src/main/security/                    @Git-Rocky-Stack
 /apps/desktop/src/main/ipc/                         @Git-Rocky-Stack
 /apps/desktop/src/preload/                          @Git-Rocky-Stack
 /apps/desktop/renderer-csp.ts                       @Git-Rocky-Stack
 /packages/shared-types/src/ipc.ts                   @Git-Rocky-Stack
+/packages/shared-types/src/ipc/                     @Git-Rocky-Stack
 
 # Privacy tier, providers, secrets, local-network policy
 /apps/desktop/src/main/services/provider-factory.ts @Git-Rocky-Stack

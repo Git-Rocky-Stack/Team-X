@@ -53,6 +53,7 @@ import { createProactiveUpdaterHandlers } from './handlers/proactive-updater.js'
 import { createProvidersDataHandlers } from './handlers/providers-data.js';
 import { createScheduleHandlers } from './handlers/schedule.js';
 import { createSettingsHandlers } from './handlers/settings.js';
+import { createTicketAttachmentsHandlers } from './handlers/ticket-attachments.js';
 import { createTicketsHandlers } from './handlers/tickets.js';
 
 export * from './handlers/deps.js';
@@ -81,6 +82,7 @@ export function createIpcHandlers(deps: IpcHandlerDeps): IpcHandlers {
     ...createSettingsHandlers(ctx),
     ...createProvidersDataHandlers(ctx),
     ...createTicketsHandlers(ctx),
+    ...createTicketAttachmentsHandlers(ctx),
     ...createProactiveUpdaterHandlers(ctx),
   };
   return impl;

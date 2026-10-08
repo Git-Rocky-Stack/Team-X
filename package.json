@@ -37,6 +37,7 @@
     "audit:deps": "node scripts/check-dependency-audit.mjs",
     "audit:links": "node scripts/check-doc-links.mjs",
     "audit:bundle": "node scripts/check-bundle-budget.mjs",
+    "audit:filesize": "node scripts/check-file-size.mjs",
     "autonomy:doctor": "node scripts/autonomy-doctor.mjs",
     "autonomy:benchmark": "pnpm -F @team-x/desktop autonomy:benchmark",
     "clean": "pnpm -r exec rimraf dist out .turbo && rimraf node_modules",

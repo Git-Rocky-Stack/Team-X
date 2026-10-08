@@ -1,3 +1,8 @@
+/**
+ * IPC handlers — Schedule items: list, create, update, delete, and the derived
+ * ticket/project/goal timeline.
+ * Split from handlers.ts by bounded context (audit 2026-10-07 P1-7).
+ */
 import type { UpdateCompanyInput } from '../../db/repos/companies.js';
 import type { UpdateScheduleItemInput } from '../../db/repos/schedule-items.js';
 
