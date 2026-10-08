@@ -209,6 +209,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Review of this branch (`/review`, Stage 2).** Ten findings. Each one was
+  reproduced or confirmed against the code and fixed with a test that fails
+  on the previous code:
+  - **Oversized chunks.** Both RAG chunkers could emit one chunk of any
+    length. This happened for text with no blank lines, minified JSON, code,
+    or one big fence, and the probe produced a single 138 KB chunk.
+    `maxChunkTokens` is now a hard ceiling. The fixed window splits at
+    whitespace, or cuts an unbroken run.
+  - **Local Only refused employees with no explicit provider.** The built-in
+    fallback tried Anthropic first, so those employees were refused even with
+    Ollama configured. Built-in defaults the tier forbids are now skipped. An
+    explicit choice (the employee's or the company default) is still refused,
+    never swapped.
+  - **Ending a meeting twice.** Two ends racing the minutes call both ran:
+    two model calls, duplicate tickets, two `meeting.ended` events. The
+    second end is now refused, and so are interjections while the meeting is
+    ending.
+  - **Enhanced AI used the wrong company.** Its model calls ran on the first
+    live company's provider, with no budget check and no run row. Each call
+    now carries the company that caused it (AsyncLocalStorage). Calls go
+    through `runGovernedCompletion`: a read-only hard-cap check, a run row,
+    and spend posted to the ledger. Command-palette classification is now
+    recorded the same way.
+  - **Model setting with an external runtime.** Setting an Enhanced AI model
+    while the system agent ran on an external runtime handed `runtime:<kind>`
+    to the provider factory, which failed every call. The runtime is now
+    used as-is.
+  - **Knowledge-graph lookups.** Ingesting N new entities rescanned the
+    company's whole graph N+1 times. Labels are now loaded once per company.
+  - **One copy of the privacy rule.** The Privacy panel kept its own copy of
+    the tier rule and labels. Both now live in `@team-x/shared-types`. The
+    `getProviderFactory()` singleton now enforces the tier as well.
+  - **Hire dialog and autonomy mode.** These choosers styled their selection
+    inline and focused with a ring, which is invisible on caps in Night Ops.
+    They now use the console chooser recipe (`.cap` + `.cap-select`, outline
+    focus).
+
 - **The command palette never used a model.** Production classified every
   command with a closure that ignored its input and answered
   `complex_request` at confidence 0, so no structured intent (hire, assign,
