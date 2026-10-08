@@ -1,0 +1,31 @@
+# Every change needs the maintainer's review (the `main` ruleset requires a
+# code-owner approval). The explicit entries mark the trust boundaries and
+# the release path: changes there must also clear the Codex gate (CR-7
+# Stage 3) before sign-off. See docs/developer-guide/governance.md.
+
+*                                                   @Git-Rocky-Stack
+
+# Electron trust boundary: main process, preload, IPC, renderer CSP
+/apps/desktop/src/main/index.ts                     @Git-Rocky-Stack
+/apps/desktop/src/main/security/                    @Git-Rocky-Stack
+/apps/desktop/src/main/ipc/                         @Git-Rocky-Stack
+/apps/desktop/src/preload/                          @Git-Rocky-Stack
+/apps/desktop/renderer-csp.ts                       @Git-Rocky-Stack
+/packages/shared-types/src/ipc.ts                   @Git-Rocky-Stack
+
+# Privacy tier, providers, secrets, local-network policy
+/apps/desktop/src/main/services/provider-factory.ts @Git-Rocky-Stack
+/apps/desktop/src/main/services/secrets.ts          @Git-Rocky-Stack
+/apps/desktop/src/main/services/local-gguf/         @Git-Rocky-Stack
+/packages/provider-router/                          @Git-Rocky-Stack
+
+# Signed role packs and their trust anchor
+/packages/role-schema/                              @Git-Rocky-Stack
+/role-packs/                                        @Git-Rocky-Stack
+
+# Build, release and supply chain
+/.github/                                           @Git-Rocky-Stack
+/apps/desktop/electron-builder.yml                  @Git-Rocky-Stack
+/package.json                                       @Git-Rocky-Stack
+/pnpm-lock.yaml                                     @Git-Rocky-Stack
+/scripts/                                           @Git-Rocky-Stack
