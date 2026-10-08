@@ -51,6 +51,9 @@ export default defineConfig({
   workers: 1,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
+  // A retry is there to collect a trace, not to turn red into green: a test
+  // that passes only on retry fails the run (audit 2026-10-07 P1-6).
+  failOnFlakyTests: isCI,
   reporter: isCI ? [['list'], ['github']] : [['list'], ['html', { open: 'never' }]],
   use: {
     // Capture a trace on first retry (CI) or on failure (local) so

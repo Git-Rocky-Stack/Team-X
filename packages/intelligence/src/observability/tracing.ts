@@ -533,21 +533,25 @@ export function createTracer(
     },
 
     injectTraceHeader(context) {
-      // W3C Trace Context format: traceparent: version-traceid-parentid-flags
+      // W3C Trace Context: `traceparent: 00-<trace-id>-<parent-id>-<flags>`.
       const flags = context.sampled ? '01' : '00';
-      return `${context.traceId}-${context.spanId}-${flags}`;
+      return `00-${context.traceId}-${context.spanId}-${flags}`;
     },
 
     extractTraceHeader(header) {
-      // Parse W3C Trace Context format
-      const match = /^([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})/.exec(header);
+      // W3C Trace Context. The version field is optional here so headers this
+      // tracer wrote before it emitted one still parse.
+      const match = /^(?:[0-9a-f]{2}-)?([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/.exec(
+        header.trim(),
+      );
       if (!match) return null;
 
       const [, traceId, spanId, flags] = match;
       return {
         traceId: traceId as TraceId,
         spanId: spanId as SpanId,
-        sampled: flags === '01',
+        // Bit 0 of trace-flags is "sampled"; other bits are reserved.
+        sampled: (Number.parseInt(flags ?? '0', 16) & 1) === 1,
       };
     },
 

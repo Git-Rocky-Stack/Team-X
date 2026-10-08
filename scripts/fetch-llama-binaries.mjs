@@ -31,11 +31,13 @@ import { execFile } from 'node:child_process';
 // ---------------------------------------------------------------------------
 import { createHash } from 'node:crypto';
 import { createWriteStream, existsSync } from 'node:fs';
-import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { basename, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+
+import { normalizeServerBinary } from './lib/llama-layout.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -198,49 +200,6 @@ async function extract(archivePath, archiveType, extractTo) {
 // ---------------------------------------------------------------------------
 // Recursively locate a file by name under `dir` (shallow — max 4 levels).
 // ---------------------------------------------------------------------------
-async function findFile(dir, name, depth = 0) {
-  if (depth > 4) return null;
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const e of entries) {
-    if (e.isFile() && e.name === name) return join(dir, e.name);
-  }
-  for (const e of entries) {
-    if (e.isDirectory()) {
-      const found = await findFile(join(dir, e.name), name, depth + 1);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-// ---------------------------------------------------------------------------
-// Normalize the upstream server binary name to the canonical `server[.exe]`
-// that BinaryResolver expects. llama.cpp ships it as `llama-server[.exe]`.
-// Handles both flat extraction and a nested `build/bin/` layout (the binary's
-// sibling libs are flattened up alongside it). Keyed on the COMBO's target
-// platform, not the host — so cross-platform `--all` fetches normalize too.
-// ---------------------------------------------------------------------------
-async function normalizeServerBinary(extractDir, targetPlatform) {
-  const isWin = targetPlatform === 'win32';
-  const upstream = isWin ? 'llama-server.exe' : 'llama-server';
-  const canonical = isWin ? 'server.exe' : 'server';
-  if (existsSync(join(extractDir, canonical))) return; // already normalized
-
-  const found = await findFile(extractDir, upstream);
-  if (!found) {
-    throw new Error(`Server binary '${upstream}' not found under ${extractDir}`);
-  }
-  const foundDir = dirname(found);
-  if (resolve(foundDir) !== resolve(extractDir)) {
-    // Nested layout (e.g. build/bin/): flatten files up to the backend dir so
-    // the server binary sits beside its runtime libs at the resolved path.
-    for (const e of await readdir(foundDir, { withFileTypes: true })) {
-      if (e.isFile()) await rename(join(foundDir, e.name), join(extractDir, e.name));
-    }
-  }
-  await rename(join(extractDir, upstream), join(extractDir, canonical));
-  log('INFO', `  Normalized ${upstream} → ${canonical}`);
-}
 
 // ---------------------------------------------------------------------------
 // Process a single asset (download + verify + extract).
@@ -315,8 +274,15 @@ try {
       key,
     );
 
-    // Normalize llama-server[.exe] → server[.exe] for the combo's target platform.
-    await normalizeServerBinary(resolve(REPO_ROOT, entry.extractTo), key.split('-')[0]);
+    // Normalize llama-server[.exe] → server[.exe] for the combo's target
+    // platform, flattening libraries AND their SONAME symlinks beside it.
+    // Runs on cache hits too, so folders left broken by older versions of
+    // this script are repaired in place.
+    const normalized = await normalizeServerBinary(
+      resolve(REPO_ROOT, entry.extractTo),
+      key.split('-')[0],
+    );
+    if (normalized) log('INFO', `  ${normalized}`);
 
     if (FLAG_UPDATE_MANIFEST) {
       manifestUpdates[key] = { sha256: primary.sha256, sizeBytes: primary.sizeBytes };

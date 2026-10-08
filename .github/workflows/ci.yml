@@ -75,7 +75,28 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
+        if: matrix.os != 'ubuntu-latest'
         run: pnpm test
+      # Ubuntu runs the same suite under coverage: production source only,
+      # with ratcheting thresholds that fail the job (vitest.config.ts).
+      - name: Test with coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm test:coverage
+      - name: Coverage summary
+        if: matrix.os == 'ubuntu-latest' && always()
+        shell: bash
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e 'const t=require("./coverage/coverage-summary.json").total;const r=(k)=>`${t[k].pct}% (${t[k].covered}/${t[k].total})`;console.log(["### Coverage (production source)","","| Metric | Covered |","| --- | --- |",...["lines","statements","functions","branches"].map(k=>`| ${k} | ${r(k)} |`)].join("\n"))' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-latest' && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+          if-no-files-found: ignore
 
   # Release-policy gates that are not lint/type/test (audit 2026-10-07 P2-5).
   # Each is its own step with its own script so a failure names the policy.

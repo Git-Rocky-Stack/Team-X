@@ -282,6 +282,9 @@ jobs:
           Start-Sleep -Seconds 25
           if ($p.HasExited) { throw "Installed Team-X exited during startup (code $($p.ExitCode))." }
           Write-Host 'Installed app stayed up 25s.'
+          $server = Join-Path $dir 'resources\llama-server\win32-x64\cpu\server.exe'
+          & $server --version
+          if ($LASTEXITCODE -ne 0) { throw "The bundled llama-server does not start ($server)." }
           Stop-Process -Id $p.Id -Force
           Get-Process -Name 'Team-X' -ErrorAction SilentlyContinue | Stop-Process -Force
           Start-Sleep -Seconds 3
@@ -314,6 +317,12 @@ jobs:
           fi
           echo "Installed app stayed up 25s."
           kill "${pid}"; wait "${pid}" 2>/dev/null || true
+          server="${app}/Contents/Resources/llama-server/darwin-$(uname -m | sed 's/x86_64/x64/')/metal/server"
+          if ! "${server}" --version; then
+            echo "::error::The bundled llama-server does not start (${server})."
+            otool -L "${server}" || true
+            exit 1
+          fi
           rm -rf "${app}"
           if [ -e "${app}" ]; then echo "::error::Uninstall (removing the bundle) failed."; exit 1; fi
           echo "Install, launch and uninstall all succeeded."
@@ -375,6 +384,23 @@ jobs:
           MNT="$(head -n1 /tmp/aimount.log 2>/dev/null || true)"
           echo "Self-mounted OK at: ${MNT:-<unknown>}"
           if [ -n "${MNT}" ] && [ -e "${MNT}/AppRun" ]; then echo "AppRun present in mount."; fi
+
+          # 1b) The bundled llama-server must start from inside the image. Its
+          #     libraries are found through SONAME symlinks; losing them in
+          #     packaging once left Local GGUF unable to start any model.
+          LLAMA="${MNT}/resources/llama-server/linux-x64"
+          if ! "${LLAMA}/cpu/server" --version; then
+            echo "::error::The bundled llama-server (cpu) does not start from the AppImage."
+            ldd "${LLAMA}/cpu/server" || true
+            exit 1
+          fi
+          for backend in "${LLAMA}"/*/; do
+            missing="$(ldd "${backend}server" 2>/dev/null | grep -E 'lib(llama|ggml|mtmd)[^ ]* => not found' || true)"
+            if [ -n "${missing}" ]; then
+              echo "::error::Bundled libraries do not resolve for ${backend}: ${missing}"
+              exit 1
+            fi
+          done
           kill "${MNT_PID}" 2>/dev/null || true
           wait "${MNT_PID}" 2>/dev/null || true
 

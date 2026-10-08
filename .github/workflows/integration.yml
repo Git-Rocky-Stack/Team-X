@@ -1,0 +1,88 @@
+name: Integration
+
+# Real-binary and real-provider lanes (audit 2026-10-07 P1-6). The PR lane
+# stays fast and deterministic (canned provider, no network); this one runs
+# the tests that need a real llama-server and a real Ollama, nightly and on
+# demand. A failure here is a real regression, never "flaky": it means the
+# shipped runtime or provider path no longer works.
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-runtime:
+    name: llama-server (real binary)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install keytar Linux runtime (libsecret)
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
+      # postinstall fetches and normalizes the host's llama.cpp binaries.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Fetch a tiny GGUF model (stories260K, pinned by SHA-256)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/models"
+          curl -fsSL -o "${RUNNER_TEMP}/models/stories260K.gguf" \
+            https://huggingface.co/ggml-org/models/resolve/main/tinyllamas/stories260K.gguf
+          echo "270cba1bd5109f42d03350f60406024560464db173c0e387d91f0426d3bd256d  ${RUNNER_TEMP}/models/stories260K.gguf" | sha256sum -c -
+      - name: Bundled server resolves every library
+        shell: bash
+        run: |
+          set -euo pipefail
+          server=apps/desktop/resources/llama-server/linux-x64/cpu/server
+          "${server}" --version
+          if ldd "${server}" | grep -E 'lib(llama|ggml|mtmd)[^ ]* => not found'; then exit 1; fi
+      - name: Server lifecycle against the real binary
+        env:
+          RUN_INTEGRATION_TESTS: 'true'
+          TEST_GGUF_PATH: ${{ runner.temp }}/models/stories260K.gguf
+        run: pnpm vitest run packages/local-gguf-runtime/src/runtime/server-lifecycle.integration.test.ts
+
+  ollama:
+    name: Ollama (real server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OLLAMA_TEST_MODEL: qwen2.5:0.5b
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Ollama and pull a small model
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y zstd
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve >/tmp/ollama.log 2>&1 &)
+          for _ in $(seq 1 30); do curl -fsS http://127.0.0.1:11434/api/version && break; sleep 1; done
+          ollama pull "${OLLAMA_TEST_MODEL}"
+      - name: Ollama adapter against the real server
+        env:
+          RUN_INTEGRATION_TESTS: 'true'
+        run: pnpm vitest run packages/provider-router/src/adapters/ollama.integration.test.ts
+      - name: Ollama log on failure
+        if: failure()
+        run: cat /tmp/ollama.log || true
