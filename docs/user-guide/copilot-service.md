@@ -7,7 +7,7 @@ You don't manage the Copilot. It runs in the background, on whatever provider yo
 ## Overview
 
 - **Periodic analyzer**: `CopilotAnalyzerService` ticks every 5 minutes by default (clamped 1 ≤ `copilot_interval_minutes` ≤ 60). Each tick reads a rolling event window, summarizes it into a deterministic prompt, calls the LLM, validates the JSON response, and persists the resulting insights via dedup-aware upsert
-- **Event-triggered supplements**: separately from the periodic schedule, a debounced trigger (30 s per company) re-runs analysis when significant events fire (`meeting.ended`, `ticket.closed`, `goal.progressChanged`, `agentic.failed { reason: 'budget_exhausted' }`). Latest signal wins; the timer resets on each new trigger
+- **Event-triggered supplements**: separately from the periodic schedule, a debounced trigger (30 s per company) re-runs analysis when significant events fire (`meeting.ended`, `ticket.closed`, `goal.progressChanged`, and `agentic.failed` with a budget reason: `budget_iterations`, `budget_steps`, `budget_tokens`, or `budget_timeout`; the budget signal fires from the release after v3.5.0, see below). Latest signal wins; the timer resets on each new trigger
 - **System-copilot pseudo-employee**: a second `is_system = 1` row per company, alongside M31's `system-agent`. Hidden from the org chart, hire dialog, delegation pickers, and meeting attendees. Owns the Copilot Conversations thread for `copilot.ask`
 - **Five insight categories**: `operational`, `cost`, `org`, `workflow`, `anomaly`. Filterable per-category in settings
 - **Three severity levels**: `info`, `warning`, `critical`. Severity drives surfacing prominence in the M34 sidebar; `info` is silent until viewed, `warning` is the default surface, `critical` rises to the top
@@ -62,7 +62,7 @@ Per-company `setInterval`-based loop. Cadence is global-scope (one `interval_min
 - `meeting.ended`: a meeting just generated minutes; analyzer re-evaluates the team's blocker list
 - `ticket.closed`: work landed; analyzer re-evaluates load + throughput
 - `goal.progressChanged`: milestone moved; analyzer re-evaluates whether the goal's projects are still on track
-- `agentic.failed { reason: 'budget_exhausted' }`: a complex_request hit a wall; analyzer re-evaluates whether the user needs a settings nudge
+- `agentic.failed` with a budget reason: a complex_request hit a wall; analyzer re-evaluates whether the user needs a settings nudge. The payload's `reason` names the cap that ended the run: `budget_iterations` (tool turns), `budget_steps` (step entries), `budget_tokens`, or `budget_timeout`. `budget_exhausted` is the run's status, not a `reason` value; any other failure (`provider_error`, `canceled`, a tool error) does not trigger analysis. In v3.5.0 and earlier the trigger compared `reason` against `budget_exhausted`, which no run reports, so this signal never fired; the comparison is corrected in the release after v3.5.0
 
 The debounce is **per-company, latest-reason-wins**. Three signals in 10 s reset the timer; the run fires 30 s after the last one. This avoids analyzer thrash during a busy meeting end + ticket close cascade.
 

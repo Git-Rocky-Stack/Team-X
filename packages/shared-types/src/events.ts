@@ -597,7 +597,11 @@ export interface ReviewCompletedPayload {
 // Emitted by the `CopilotAnalyzerService` on every tick — scheduled
 // (per-company interval) or event-triggered (30s-debounced on four
 // signal types: meeting.ended, ticket.closed, goal.progressChanged,
-// agentic.failed with reason='budget_exhausted').
+// agentic.failed whose `reason` is a budget cap). The payload carries
+// the loop's `LoopErrorReason`, so a budget cap reads `budget_iterations`,
+// `budget_steps`, `budget_tokens`, or `budget_timeout`; `budget_exhausted`
+// is the run status, not a reason a run reports. The accepted set lives
+// in `BUDGET_FAILURE_REASONS` (main/services/copilot-event-trigger.ts).
 //
 // Discipline mirrors the M31/M32 convention:
 //   - category-prefixed literals (`copilot.*`).
