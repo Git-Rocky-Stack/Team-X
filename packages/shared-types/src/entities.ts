@@ -37,19 +37,11 @@ export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 // before the rank check runs.
 //
 // `getLevelRank` accepts case-insensitive input and normalizes
-// whitespace and underscores → hyphen so every spelling of a level
-// ('Senior Management', 'senior-management', 'SENIOR MANAGEMENT', and
-// the role-pack frontmatter's 'senior_management') resolves to the same
+// whitespace and underscores → hyphen, so 'Senior Management' and the
+// role-pack frontmatter spelling 'senior_management' resolve to the same
 // rank. Unknown levels return `null`; callers fail OPEN with a dev-mode
 // warning rather than reject — keeps the guard non-fragile against
 // role-pack additions that introduce new level names.
-//
-// The role-pack format (`RoleLevel` in roles.ts) spells the level
-// `senior_management`, and a hire copies that string onto the employee
-// row unchanged. `EmployeeLevel` and every level table keyed on it use
-// the hyphen. `normalizeLevel` is the single place the two spellings
-// meet: any code that compares an employee's `level` against a level
-// table or literal MUST normalize it first.
 // ---------------------------------------------------------------------------
 
 export type EmployeeLevel =
@@ -74,16 +66,12 @@ export const LEVEL_RANK: Readonly<Record<EmployeeLevel, number>> = {
 };
 
 /**
- * Normalize a free-form level string (role-pack frontmatter, DB column,
- * UI input) to the canonical `EmployeeLevel` form. Lowercase + trim +
- * collapse runs of whitespace and underscores to single hyphens, so the
- * role-pack spelling `senior_management` becomes `senior-management`.
+ * Canonical `EmployeeLevel` form of a free-form level. Compare a stored level
+ * only through this: role packs spell it `senior_management`, tables hyphenate.
  */
 export function normalizeLevel(level: string): string {
-  return level
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, '-');
+  const lowered = level.toLowerCase().trim();
+  return lowered.replace(/[\s_]+/g, '-');
 }
 
 /**
