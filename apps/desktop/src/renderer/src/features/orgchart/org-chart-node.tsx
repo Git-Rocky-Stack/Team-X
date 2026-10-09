@@ -1,4 +1,4 @@
-import type { Employee } from '@team-x/shared-types';
+import { type Employee, normalizeLevel } from '@team-x/shared-types';
 import { ChevronRight, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
@@ -47,7 +47,7 @@ export function OrgChartNode({
   children,
 }: OrgChartNodeProps) {
   const [actionsOpen, setActionsOpen] = useState(false);
-  const normalizedLevel = employee.level.toLowerCase().trim().replace(/\s+/g, '-');
+  const normalizedLevel = normalizeLevel(employee.level);
   const levelClass = levelPalette[normalizedLevel] ?? levelPalette.ic;
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {

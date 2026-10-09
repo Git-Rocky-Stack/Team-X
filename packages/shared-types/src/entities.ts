@@ -37,11 +37,19 @@ export type EmployeeStatus = 'idle' | 'thinking' | 'blocked' | 'error';
 // before the rank check runs.
 //
 // `getLevelRank` accepts case-insensitive input and normalizes
-// whitespace → hyphen so role-pack frontmatter ('Senior Management',
-// 'senior-management', 'SENIOR MANAGEMENT') all resolve to the same
+// whitespace and underscores → hyphen so every spelling of a level
+// ('Senior Management', 'senior-management', 'SENIOR MANAGEMENT', and
+// the role-pack frontmatter's 'senior_management') resolves to the same
 // rank. Unknown levels return `null`; callers fail OPEN with a dev-mode
 // warning rather than reject — keeps the guard non-fragile against
 // role-pack additions that introduce new level names.
+//
+// The role-pack format (`RoleLevel` in roles.ts) spells the level
+// `senior_management`, and a hire copies that string onto the employee
+// row unchanged. `EmployeeLevel` and every level table keyed on it use
+// the hyphen. `normalizeLevel` is the single place the two spellings
+// meet: any code that compares an employee's `level` against a level
+// table or literal MUST normalize it first.
 // ---------------------------------------------------------------------------
 
 export type EmployeeLevel =
@@ -68,10 +76,14 @@ export const LEVEL_RANK: Readonly<Record<EmployeeLevel, number>> = {
 /**
  * Normalize a free-form level string (role-pack frontmatter, DB column,
  * UI input) to the canonical `EmployeeLevel` form. Lowercase + trim +
- * collapse whitespace runs to single hyphens.
+ * collapse runs of whitespace and underscores to single hyphens, so the
+ * role-pack spelling `senior_management` becomes `senior-management`.
  */
 export function normalizeLevel(level: string): string {
-  return level.toLowerCase().trim().replace(/\s+/g, '-');
+  return level
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-');
 }
 
 /**

@@ -28,7 +28,7 @@
  */
 
 import type { Tool, ToolContext } from '@team-x/intelligence';
-import { EVENT_TYPES, type EventType } from '@team-x/shared-types';
+import { EVENT_TYPES, type EventType, normalizeLevel } from '@team-x/shared-types';
 import { z } from 'zod';
 
 import type { createAuditRepo } from '../db/repos/audit.js';
@@ -323,7 +323,9 @@ export function buildQueryEmployeesTool(
       const all = deps.employeesRepo.listByCompany(deps.companyId);
       let rows = all.filter((r) => !r.isSystem);
       if (args.level !== undefined) {
-        rows = rows.filter((r) => r.level === args.level);
+        // Rows carry the role-pack spelling (`senior_management`); the
+        // filter enum is the canonical form.
+        rows = rows.filter((r) => normalizeLevel(r.level) === args.level);
       }
       if (args.searchName !== undefined) {
         const needle = args.searchName.toLowerCase();

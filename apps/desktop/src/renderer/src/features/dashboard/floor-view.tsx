@@ -1,4 +1,4 @@
-import type { Employee } from '@team-x/shared-types';
+import { type Employee, normalizeLevel } from '@team-x/shared-types';
 
 import { countIdle, countThinking } from './live-state-counts.js';
 
@@ -18,7 +18,9 @@ function levelColor(level: string): string {
   // chrome (polished-bits) edge — never armed-red, which is reserved for LIVE.
   // Values are rgba tokens, so they go straight into the arbitrary value with
   // no hsl() wrapper (hsl(rgba(...)) is invalid CSS and silently renders nothing).
-  switch (level.toLowerCase()) {
+  // `normalizeLevel` folds the role-pack spelling (`senior_management`) an
+  // employee row carries into the canonical form these cases are keyed on.
+  switch (normalizeLevel(level)) {
     case 'officer':
       return 'border-[var(--chrome-edge)]';
     case 'senior-management':
@@ -35,7 +37,7 @@ function levelColor(level: string): string {
 }
 
 function levelLabel(level: string): string {
-  switch (level.toLowerCase()) {
+  switch (normalizeLevel(level)) {
     case 'officer':
       return 'C-Suite';
     case 'senior-management':
@@ -151,12 +153,12 @@ export function FloorView({ employees }: FloorViewProps) {
   const levels = ['officer', 'senior-management', 'management', 'supervisor', 'lead', 'ic'];
   const grouped = new Map<string, Employee[]>();
   for (const level of levels) {
-    const group = employees.filter((e) => e.level.toLowerCase() === level);
+    const group = employees.filter((e) => normalizeLevel(e.level) === level);
     if (group.length > 0) grouped.set(level, group);
   }
   // Catch any employees with unrecognized levels
   const knownLevels = new Set(levels);
-  const other = employees.filter((e) => !knownLevels.has(e.level.toLowerCase()));
+  const other = employees.filter((e) => !knownLevels.has(normalizeLevel(e.level)));
   if (other.length > 0) grouped.set('other', other);
 
   return (

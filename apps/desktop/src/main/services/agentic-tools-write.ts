@@ -5,6 +5,7 @@ import {
   type EventType,
   type RoleSpec,
   isCapability,
+  normalizeLevel,
 } from '@team-x/shared-types';
 import { z } from 'zod';
 
@@ -141,6 +142,10 @@ export const PLANNER_DEFAULTS = Object.freeze({
 /**
  * Canonical employee-level union. Mirrors role-pack frontmatter levels
  * plus the `system` pseudo-level reserved for the M31 system-agent.
+ *
+ * These are the canonical (hyphenated) spellings. An employee row carries
+ * the role-pack spelling (`senior_management`), so every lookup against
+ * these levels below goes through `normalizeLevel` first.
  */
 export const EMPLOYEE_LEVELS = [
   'officer',
@@ -371,11 +376,11 @@ function computeKeywordRoleFit(employee: ScorerEmployee, subtask: SubtaskHint): 
   for (const kw of keywords) {
     if (titleLower.includes(kw)) hits += 1;
   }
+  const baseline = LEVEL_BASELINE_FIT[normalizeLevel(employee.level)] ?? 0.4;
   if (hits === 0) {
-    return LEVEL_BASELINE_FIT[employee.level] ?? 0.4;
+    return baseline;
   }
   // First hit yields baseline + 0.35; each additional hit adds 0.1, capped at 1.0.
-  const baseline = LEVEL_BASELINE_FIT[employee.level] ?? 0.4;
   const bonus = Math.min(0.35 + 0.1 * (hits - 1), 1.0 - baseline);
   return clamp01(baseline + bonus);
 }
@@ -765,7 +770,7 @@ function isApprovedLevel(level: string, planner: PlannerSettings): boolean {
   };
   const MGMT_RANK = 3;
   const required = rank[planner.approvalLevel] ?? MGMT_RANK;
-  const actual = rank[level] ?? -1;
+  const actual = rank[normalizeLevel(level)] ?? -1;
   return actual >= required;
 }
 
@@ -1388,7 +1393,7 @@ export function buildWriteSideTools(
   employee: { readonly level: string },
   deps: AgenticToolsWriteDeps,
 ): readonly Tool[] {
-  const level = employee.level as EmployeeLevel;
+  const level = normalizeLevel(employee.level) as EmployeeLevel;
   const tools: Tool[] = [];
   if (DECOMPOSE_LEVELS.includes(level)) {
     tools.push(buildDecomposeProjectTool(deps));

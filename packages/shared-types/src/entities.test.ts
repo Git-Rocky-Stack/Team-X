@@ -1,3 +1,7 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -134,6 +138,48 @@ describe('getLevelRank', () => {
     );
     // Same level fails the strict guard (>=).
     expect(getLevelRank('ic')).toBe(getLevelRank('IC'));
+  });
+});
+
+/**
+ * The role-pack format spells the Senior Management level with an
+ * underscore (`level: senior_management`), and a hire copies that string
+ * onto the employee row verbatim. `EmployeeLevel` spells it with a hyphen.
+ * `normalizeLevel` is the one place the two meet, so these cases read the
+ * levels out of the shipped role files rather than retyping them.
+ */
+describe('role-pack level spellings', () => {
+  const ROLE_PACKS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../role-packs');
+
+  /** Every distinct `level:` a shipped role file declares in its frontmatter. */
+  function shippedRoleLevels(): string[] {
+    const levels = new Set<string>();
+    for (const entry of readdirSync(ROLE_PACKS_ROOT, { recursive: true, encoding: 'utf8' })) {
+      if (!entry.endsWith('.md')) continue;
+      const frontmatter = readFileSync(join(ROLE_PACKS_ROOT, entry), 'utf8').split(/^---$/m)[1];
+      const level = frontmatter?.match(/^level:\s*(\S+)\s*$/m)?.[1];
+      if (level) levels.add(level);
+    }
+    return [...levels].sort();
+  }
+
+  it('normalizes the role-pack underscore spelling to the canonical hyphen form', () => {
+    expect(normalizeLevel('senior_management')).toBe('senior-management');
+    expect(normalizeLevel('Senior_Management')).toBe('senior-management');
+    expect(normalizeLevel('senior _ management')).toBe('senior-management');
+  });
+
+  it('ranks every non-system level a shipped role file declares', () => {
+    const levels = shippedRoleLevels().filter((level) => level !== 'system');
+    // Guard against a vacuous loop: the underscore spelling must really ship.
+    expect(levels).toContain('senior_management');
+    for (const level of levels) {
+      expect(getLevelRank(level), `level=${level}`).not.toBeNull();
+    }
+  });
+
+  it('ranks the role-pack spelling exactly where the canonical spelling sits', () => {
+    expect(getLevelRank('senior_management')).toBe(LEVEL_RANK['senior-management']);
   });
 });
 
