@@ -164,12 +164,13 @@ await invoke('mcp.addServer', {
   transport: 'sse',
   configJson: JSON.stringify({
     url: 'https://mcp.example.com/sse',
-    headers: { Authorization: 'Bearer ${env:REMOTE_MCP_TOKEN}' },
   }),
 });
 ```
 
 The remote endpoint must speak MCP-over-SSE. There is no Team-X-specific protocol on top.
+
+`url` is the only field the SSE transport reads. `createSseTransport` in `apps/desktop/src/main/services/mcp-host.ts` parses `configJson`, takes `url`, and opens the connection with no other options, so the transport ignores every other key in the object. There is no `headers` option: Team-X sends no custom request headers on an SSE connection, so it cannot authenticate to an endpoint that requires one (a bearer token in `Authorization`, for example). `mcp.testConnection` builds its SSE transport through the same function and has the same limit. Placeholders such as `${env:NAME}` are not expanded in an SSE config.
 
 ### Enable, test, remove
 
