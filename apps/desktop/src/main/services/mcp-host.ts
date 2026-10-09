@@ -37,6 +37,13 @@ import {
 
 export type McpTransportType = 'stdio' | 'sse';
 
+/**
+ * Stand-in server id for `testConnection`. A test connection has no
+ * `mcp_servers` row, but the C5 cwd pin derives the child's cwd from an
+ * id, so every test connection shares `<userData>/mcp-runtimes/test-connection/`.
+ */
+const TEST_CONNECTION_SERVER_ID = 'test-connection';
+
 export interface McpServerConfig {
   id: string;
   companyId: string | null;
@@ -258,8 +265,15 @@ export function createMcpHost(deps: McpHostDeps) {
    *
    * All three gates throw with a structured `reason` string so
    * `connectToServer` can surface a meaningful audit event.
+   *
+   * This is the ONLY place a stdio transport is constructed. Pooled
+   * connections and `testConnection` both come through here; only
+   * `command`, `args`, and `env` are read from the config, so any other
+   * key in the JSON (a caller-supplied `cwd`, say) never reaches the spawn.
    */
-  function createStdioTransport(config: McpServerConfig): StdioClientTransport {
+  function createStdioTransport(
+    config: Pick<McpServerConfig, 'id' | 'configJson'>,
+  ): StdioClientTransport {
     const parsed = JSON.parse(config.configJson) as {
       command: string;
       args?: string[];
@@ -306,6 +320,58 @@ export function createMcpHost(deps: McpHostDeps) {
   function createSseTransport(configJson: string): SSEClientTransport {
     const config = JSON.parse(configJson) as { url: string };
     return new SSEClientTransport(new URL(config.url));
+  }
+
+  /**
+   * Open a throwaway connection to a server config that is not in the
+   * pool, count its tools, and close it. Backs the `mcp.testConnection`
+   * IPC, whose config JSON comes straight from the renderer.
+   *
+   * The transport is built by the same `createStdioTransport` /
+   * `createSseTransport` the pool uses, so a stdio test connection clears
+   * the C5 gates (allowlist, env scrub, cwd pin) before any process is
+   * spawned, and fails closed when `executableAllowlist` or `userDataDir`
+   * is unwired. Throws on any refusal or connection failure.
+   *
+   * Nothing is pooled and no `mcp_servers` row is touched, so gate
+   * refusals here surface to the caller only; unlike `connectToServer`
+   * they do not write a health state or emit `authority.violation`.
+   */
+  async function testConnection(args: {
+    transport: McpTransportType;
+    configJson: string;
+  }): Promise<{ toolCount: number }> {
+    const transport =
+      args.transport === 'stdio'
+        ? createStdioTransport({ id: TEST_CONNECTION_SERVER_ID, configJson: args.configJson })
+        : createSseTransport(args.configJson);
+
+    const client = new Client({
+      name: 'team-x-test-connection',
+      version: '0.0.1',
+    });
+    let failed = true;
+    try {
+      await client.connect(transport);
+      const tools = await client.listTools();
+      failed = false;
+      return { toolCount: tools.tools?.length ?? 0 };
+    } finally {
+      // Always close, whichever step threw. A stdio transport spawns its
+      // child inside `connect`, and `close` is what terminates it; the SDK
+      // does not await a close of its own on any `connect` failure.
+      //
+      // A rejection out of `finally` replaces the error already in flight,
+      // so when the work above failed the close failure is logged instead:
+      // the caller must see why the test failed, not why cleanup did. With
+      // nothing in flight a close failure still surfaces, as it always has.
+      const closed = client.close();
+      await (failed
+        ? closed.catch((closeErr: unknown) => {
+            console.error('[mcp] test connection: close failed after an earlier error:', closeErr);
+          })
+        : closed);
+    }
   }
 
   /**
@@ -484,6 +550,7 @@ export function createMcpHost(deps: McpHostDeps) {
   return {
     initialize,
     connectToServer,
+    testConnection,
     disconnectServer,
     listTools,
     callTool,
