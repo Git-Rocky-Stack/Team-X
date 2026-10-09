@@ -597,7 +597,7 @@ export interface ReviewCompletedPayload {
 // Emitted by the `CopilotAnalyzerService` on every tick — scheduled
 // (per-company interval) or event-triggered (30s-debounced on four
 // signal types: meeting.ended, ticket.closed, goal.progressChanged,
-// agentic.failed with reason='budget_exhausted').
+// agentic.failed with a budget `reason`: see BUDGET_FAILURE_REASONS).
 //
 // Discipline mirrors the M31/M32 convention:
 //   - category-prefixed literals (`copilot.*`).

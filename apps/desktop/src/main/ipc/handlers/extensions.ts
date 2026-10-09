@@ -293,27 +293,14 @@ export function createExtensionsHandlers(ctx: HandlerContext): ExtensionsHandler
 
     async mcpTestConnection({ transport, configJson }) {
       try {
-        const client = new (await import('@modelcontextprotocol/sdk/client/index.js')).Client({
-          name: 'team-x-test-connection',
-          version: '0.0.1',
-        });
-
-        const clientTransport =
-          transport === 'stdio'
-            ? new (await import('@modelcontextprotocol/sdk/client/stdio.js')).StdioClientTransport(
-                JSON.parse(configJson),
-              )
-            : new (await import('@modelcontextprotocol/sdk/client/sse.js')).SSEClientTransport(
-                new URL(JSON.parse(configJson).url),
-              );
-
-        await client.connect(clientTransport);
-        const tools = await client.listTools();
-        await client.close();
+        // `configJson` is renderer-supplied. The host builds the transport
+        // through the same C5-gated path as a pooled connection (allowlist,
+        // env scrub, cwd pin); never construct a transport from it here.
+        const { toolCount } = await mcpHost.testConnection({ transport, configJson });
 
         return {
           ok: true,
-          toolCount: tools.tools?.length ?? 0,
+          toolCount,
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

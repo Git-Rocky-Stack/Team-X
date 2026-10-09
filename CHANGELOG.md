@@ -9,7 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+
+- **Senior Management employees are treated as Senior Management.** Role
+  files spell the level `senior_management` and a hire copies that onto the
+  employee, but every level table on the employee side is keyed on
+  `senior-management`, and nothing reconciled the two. An employee hired
+  from one of the seven Senior Management roles was not offered
+  `hire_employee` in chat, got none of the planner tools, was missed by the
+  `query_employees` level filter, skipped the level check in
+  `employees.setManager`, and sat under "other" in the floor view.
+  `normalizeLevel` in `packages/shared-types/src/entities.ts` now folds
+  underscores as well as whitespace into hyphens, and every level comparison
+  goes through it (`chat-action-tools.ts`, `agentic-tools-write.ts`,
+  `agentic-tools.ts`, `test-agentic-tools.ts`, `floor-view.tsx`,
+  `org-chart-node.tsx`). Role files and stored rows are unchanged.
+- **Testing an MCP connection passes the same gates as running one.**
+  `mcp.testConnection` built a stdio transport straight from the JSON the
+  renderer sent: no executable allowlist, and a working directory taken from
+  that JSON. It now asks the MCP host, which builds every stdio transport in
+  one place (`createStdioTransport` in
+  `apps/desktop/src/main/services/mcp-host.ts`). A command that is not
+  allowlisted is refused before anything is spawned, the child gets the
+  scrubbed environment and a working directory pinned under user data, and an
+  unwired or empty allowlist fails closed. A failed test now closes the
+  client it opened; before, only a successful test did. The handler is in
+  `apps/desktop/src/main/ipc/handlers/extensions.ts`.
+- **The Copilot re-analyzes after a run hits a budget cap.** The event
+  trigger waited for `agentic.failed` with `reason: 'budget_exhausted'`,
+  which is the run's status. The reason a run reports is the cap it hit:
+  `budget_iterations`, `budget_steps`, `budget_tokens` or `budget_timeout`,
+  so the trigger never fired for a real run. `reasonForEvent` in
+  `apps/desktop/src/main/services/copilot-event-trigger.ts` now accepts all
+  four, and still ignores provider errors, tool errors and cancellations.
+
+### Documentation — corrections
+
+- **The integration guide showed an SSE `headers` option that does not
+  exist.** `docs/developer-guide/integration-guide.md` registered a remote
+  MCP server with an `Authorization` header built from an `${env:...}`
+  placeholder. The SSE transport reads `url` and nothing else, and nothing
+  expands placeholders in an SSE config. The example now shows `url` alone,
+  and the guide says what the transport accepts.
+- **The Copilot guide named a trigger reason no run reports.**
+  `docs/user-guide/copilot-service.md` and the comment above the Copilot
+  payloads in `packages/shared-types/src/events.ts` described the budget
+  trigger as `agentic.failed { reason: 'budget_exhausted' }`. Both now list
+  the four budget reasons (see Fixed).
 
 ## [3.5.0] - 2026-10-08
 

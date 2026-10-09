@@ -114,11 +114,14 @@ describe('copilot-event-trigger — debounce', () => {
       push(makeEvent({ type: 'meeting.ended' }));
       await vi.advanceTimersByTimeAsync(20_000);
 
-      // Second signal 20s in — agentic.failed/budget_exhausted. Timer resets.
+      // Second signal 20s in — agentic.failed on a budget cap. Timer resets.
+      // `budget_steps` is what a real run reports (a `LoopErrorReason`); this
+      // used to push `budget_exhausted`, the run STATUS, which no run puts on
+      // the payload. `copilot-budget-trigger.test.ts` drives the real ones.
       push(
         makeEvent({
           type: 'agentic.failed',
-          payload: { reason: 'budget_exhausted' },
+          payload: { reason: 'budget_steps' },
         }),
       );
       await vi.advanceTimersByTimeAsync(20_000);
@@ -141,7 +144,7 @@ describe('copilot-event-trigger — debounce', () => {
       await vi.advanceTimersByTimeAsync(30_000);
       expect(calls).toHaveLength(1);
 
-      // And `agentic.failed` WITHOUT `budget_exhausted` reason must NOT fire.
+      // And `agentic.failed` WITHOUT a budget reason must NOT fire.
       push(makeEvent({ type: 'agentic.failed', payload: { reason: 'provider_error' } }));
       await vi.advanceTimersByTimeAsync(30_000);
       expect(calls).toHaveLength(1);
@@ -149,10 +152,20 @@ describe('copilot-event-trigger — debounce', () => {
       // Sanity: the pure helper agrees with the trigger.
       expect(reasonForEvent(makeEvent({ type: 'meeting.ended' }))).toBe('meeting.ended');
       expect(
+        reasonForEvent(makeEvent({ type: 'agentic.failed', payload: { reason: 'budget_steps' } })),
+      ).toBe('agentic.budget_exhausted');
+      // The run status is still accepted: it is the emitter's fallback
+      // (`state.errorReason ?? state.status`), though no run reaches it today.
+      expect(
         reasonForEvent(
           makeEvent({ type: 'agentic.failed', payload: { reason: 'budget_exhausted' } }),
         ),
       ).toBe('agentic.budget_exhausted');
+      // A reason-less or malformed payload is not a budget signal.
+      expect(reasonForEvent(makeEvent({ type: 'agentic.failed', payload: {} }))).toBeNull();
+      expect(
+        reasonForEvent(makeEvent({ type: 'agentic.failed', payload: { reason: 'toString' } })),
+      ).toBeNull();
       expect(reasonForEvent(makeEvent({ type: 'token.delta' }))).toBeNull();
 
       trigger.stop();

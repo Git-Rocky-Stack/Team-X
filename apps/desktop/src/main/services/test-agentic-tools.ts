@@ -45,6 +45,7 @@
  */
 
 import type { Tool, ToolContext } from '@team-x/intelligence';
+import { normalizeLevel } from '@team-x/shared-types';
 import { z } from 'zod';
 
 import type {
@@ -599,7 +600,9 @@ export interface TestToolsForEmployeeArgs {
  */
 export function createTestToolsForEmployee(args: TestToolsForEmployeeArgs): readonly Tool[] {
   const readSide = createTestAgenticTools({ companyId: args.companyId });
-  const level = args.employee.level;
+  // Same normalization as production's `buildWriteSideTools`: the row
+  // carries the role-pack spelling (`senior_management`).
+  const level = normalizeLevel(args.employee.level);
 
   // M33 T6 — copilot branch. The copilot NEVER receives the M32
   // write-side tools; it only gets the read-side set + query_copilot_insights.
@@ -624,11 +627,12 @@ export function createTestToolsForEmployee(args: TestToolsForEmployeeArgs): read
  * array for ICs and any level not on the decompose/delegate/review rosters.
  */
 export function createTestWriteSideTools(employee: TestEmployeeContext): readonly Tool[] {
+  const level = normalizeLevel(employee.level);
   const out: Tool[] = [];
-  if (TEST_DECOMPOSE_LEVELS.includes(employee.level)) {
+  if (TEST_DECOMPOSE_LEVELS.includes(level)) {
     out.push(createTestDecomposeProjectTool());
   }
-  if (TEST_DELEGATE_REVIEW_LEVELS.includes(employee.level)) {
+  if (TEST_DELEGATE_REVIEW_LEVELS.includes(level)) {
     out.push(createTestDelegateSubtaskTool());
     out.push(createTestReviewDeliverableTool());
   }

@@ -1,11 +1,12 @@
 import { basename } from 'node:path';
 
 import type { ToolSpec } from '@team-x/provider-router';
-import type { RoleSpec } from '@team-x/shared-types';
+import { type RoleSpec, normalizeLevel } from '@team-x/shared-types';
 import { nanoid } from 'nanoid';
 
 import type { CreateEmployeeInput, EmployeeRow } from '../db/repos/employees.js';
 
+/** Canonical (hyphenated) levels allowed to hire. Compare via `normalizeLevel`. */
 const HIRE_LEVELS = new Set(['officer', 'senior-management', 'management', 'system']);
 
 export interface ChatActionEmployeesRepo {
@@ -187,7 +188,9 @@ function buildCheckRoleStaffingTool(args: BuildChatActionToolsArgs): ToolSpec {
 }
 
 function buildHireEmployeeTool(args: BuildChatActionToolsArgs): ToolSpec | null {
-  if (!HIRE_LEVELS.has(args.actorLevel)) {
+  // `actorLevel` is the employee row's level, which carries the role-pack
+  // spelling (`senior_management`); the roster is keyed on the canonical form.
+  if (!HIRE_LEVELS.has(normalizeLevel(args.actorLevel))) {
     return null;
   }
 

@@ -9,12 +9,19 @@
  *        - meeting.ended
  *        - ticket.closed        (future-ready — not in today's EventType union)
  *        - goal.progressChanged (future-ready — not in today's EventType union)
- *        - agentic.failed + payload.reason === 'budget_exhausted'
+ *        - agentic.failed + payload.reason is a budget reason
  *
  *      The two "future-ready" signals have no producer in the codebase
  *      today; the trigger listens anyway so the wiring is ready the day
  *      the upstream events are added. Harmless — a subscription that
  *      never receives an event is zero-cost.
+ *
+ *      "Budget reason" is NOT the string 'budget_exhausted'. That is the
+ *      run STATUS (`LoopStatus`). `finishRun` in `agentic-loop-service.ts`
+ *      puts `state.errorReason ?? state.status` on the payload, and for a
+ *      budget-exhausted run `errorReason` is the loop's terminal
+ *      `LoopErrorReason`: `budget_iterations`, `budget_steps`,
+ *      `budget_tokens`, or `budget_timeout`. See `BUDGET_FAILURE_REASONS`.
  *
  *   2. Debounce (per-company, not throttle):
  *      Each signal resets a 30s timer keyed by companyId. If a second
@@ -38,6 +45,7 @@
  *      and the trigger can be tested without the window's buffer state.
  */
 
+import type { LoopErrorReason, LoopStatus } from '@team-x/intelligence';
 import type { CopilotAnalyzedReason, DashboardEvent } from '@team-x/shared-types';
 
 import type { CopilotAnalyzerTickResult } from './copilot-analyzer-service.js';
@@ -84,8 +92,8 @@ export const DEFAULT_DEBOUNCE_MS = 30_000;
 
 /**
  * Signal-type → analyzer reason mapping. The `agentic.failed` signal
- * ALSO requires a payload predicate (reason === 'budget_exhausted'),
- * which is applied inside `reasonForEvent` below.
+ * ALSO requires a payload predicate (the reason is a budget reason, see
+ * `BUDGET_FAILURE_REASONS`), which is applied inside `reasonForEvent` below.
  */
 const SIGNAL_TYPES = new Set<string>([
   'meeting.ended',
@@ -98,6 +106,36 @@ interface AgenticFailedPayloadShape {
   reason?: string;
 }
 
+/** The budget caps among the loop's terminal error reasons. */
+type BudgetLoopErrorReason = Extract<LoopErrorReason, `budget_${string}`>;
+
+/**
+ * Every `agentic.failed` payload `reason` that means "the run hit a budget
+ * cap". Typed as a record over the budget members of `LoopErrorReason`, so
+ * a budget reason added to the loop fails to compile here until it is
+ * listed.
+ *
+ * The four `budget_*` reasons are what a real run reports: every
+ * `'budget_exhausted'` exit in `packages/intelligence/src/loop/loop.ts`
+ * goes through `emitErrorAndFinish`, which appends the error step that
+ * `agentic-loop-service.ts` copies into `state.errorReason`.
+ *
+ * `budget_exhausted` is the run status, kept because it is the declared
+ * fallback of the emitter's own expression (`state.errorReason ??
+ * state.status`). No current loop path reaches that fallback for a budget
+ * exit; listing it means a future one that finalizes without an error step
+ * still wakes the analyzer.
+ */
+const BUDGET_FAILURE_REASONS: Readonly<
+  Record<BudgetLoopErrorReason | Extract<LoopStatus, 'budget_exhausted'>, true>
+> = {
+  budget_iterations: true,
+  budget_steps: true,
+  budget_tokens: true,
+  budget_timeout: true,
+  budget_exhausted: true,
+};
+
 /**
  * Map a bus event onto an analyzer `reason`. Returns `null` when the
  * event is not a signal (i.e. should NOT trigger analysis). Exported
@@ -108,7 +146,8 @@ export function reasonForEvent(event: DashboardEvent): CopilotAnalyzedReason | n
   if (!SIGNAL_TYPES.has(type)) return null;
   if (type === 'agentic.failed') {
     const payload = event.payload as AgenticFailedPayloadShape | null;
-    if (!payload || payload.reason !== 'budget_exhausted') return null;
+    const reason = payload?.reason;
+    if (typeof reason !== 'string' || !Object.hasOwn(BUDGET_FAILURE_REASONS, reason)) return null;
     return 'agentic.budget_exhausted';
   }
   if (type === 'meeting.ended') return 'meeting.ended';
