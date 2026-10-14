@@ -43,7 +43,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `apps/desktop/src/main/services/copilot-event-trigger.ts` now accepts all
   four, and still ignores provider errors, tool errors and cancellations.
 
-### Documentation — corrections
+### Removed
+
+- **The unpublished project site and its Pages workflow.** `docs/site/` was
+  a second landing page, styled before the Command Console design system and
+  duplicating team-x.app. `.github/workflows/pages.yml` existed to publish it,
+  but GitHub Pages was never enabled on the repository, so every run failed
+  at `configure-pages` with "Get Pages site failed". team-x.app is the
+  project's one public site.
+
+### Documentation corrections
+
+- **The README dropped its em dashes and three stale claims.** It now gives
+  4,718 unit tests across 376 files (it said 4,682 across 372), links the
+  Command Palette Reference as the palette reference it is (it promised CLI
+  tool documentation; v3.5.0 removed that tool), and says the first launch
+  adds an Ollama (Local) provider at `localhost:11434` (it said Team-X
+  auto-detects Ollama, which nothing does; the row is seeded in
+  `apps/desktop/src/main/services/providers.ts`). The repository's About
+  text and the v3.4.0 release notes lost their em dashes as well.
 
 - **The integration guide showed an SSE `headers` option that does not
   exist.** `docs/developer-guide/integration-guide.md` registered a remote
