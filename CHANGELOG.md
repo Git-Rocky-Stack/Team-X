@@ -259,7 +259,9 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
 - **Installed Extensions panel.** MCP servers and skills could be added but
   never disabled or removed, so an added MCP server's subprocess could not
   be stopped from the app. Settings → Extensions now enables and disables
-  each MCP server, and removes (with confirmation) each server and skill.
+  each MCP server, and removes (with confirmation) each server and skill
+  (`apps/desktop/src/renderer/src/features/settings/extensions-section.tsx:523`,
+  `:535` and `:614`).
 
 - **Proactive Mode autonomy control.** `settings.setProactive` had no caller.
   The dashboard control offers conservative / balanced / autonomous and says
@@ -437,7 +439,7 @@ This release also addresses every finding of the [2026-10-07 engineering audit](
     fallback tried Anthropic first, so those employees were refused even with
     Ollama configured. Built-in defaults the tier forbids are now skipped. An
     explicit choice (the employee's or the company default) is still refused,
-    never swapped.
+    never swapped (`apps/desktop/src/main/services/provider-factory.ts:482`).
   - **Ending a meeting twice.** Two ends racing the minutes call both ran:
     two model calls, duplicate tickets, two `meeting.ended` events. The
     second end is now refused, and so are interjections while the meeting is
