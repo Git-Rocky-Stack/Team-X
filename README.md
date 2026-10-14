@@ -6,16 +6,16 @@
 
 [![CI](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml/badge.svg)](https://github.com/Git-Rocky-Stack/Team-X/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-4%2C682%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-4%2C718%20passing-brightgreen.svg)](#testing)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#installation)
 
-Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines — you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
+Open-source, privacy-first, local-first desktop app for running AI-agent organizations. You don't manage prompts or pipelines; you run a **company**: hire employees from a curated role library, build an org chart with real hierarchy, set goals, break them into projects, file tickets, schedule future work, watch the team work in real-time, chat with anyone on demand, and pull everyone into an all-hands meeting with one click.
 
 [Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [What's New](docs/user-guide/whats-new.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
-![Team-X Mission Control — Night Ops](docs/media/hero-night-ops.png)
+![Team-X Mission Control in Night Ops](docs/media/hero-night-ops.png)
 
-*Mission Control in **Night Ops**. The whole app is built on the Command Console design system — brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
+*Mission Control in **Night Ops**. The whole app is built on the Command Console design system: brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
 
 </div>
 
@@ -39,78 +39,78 @@ Full release notes: **[What's New](docs/user-guide/whats-new.md)** · installers
 
 ### The Org
 
-- **57 curated F10 roles** — 55 user roles across 6 hierarchy levels (Officer, Senior Management, Management, Supervisor, Lead, IC) plus 2 hidden system roles, hand-written role specifications, not generic templates
-- **Multi-company workspace** — run multiple AI organizations side-by-side, each with its own employees, goals, and settings
-- **Org chart editor** — drag-to-rearrange reporting lines, promote, fire, set managers, edit employee profiles, visualize the full hierarchy with color-coded levels
-- **Hire dialog** — searchable role catalog with level filter chips, one-click hiring from the curated pack
+- **57 curated F10 roles**: 55 user roles across 6 hierarchy levels (Officer, Senior Management, Management, Supervisor, Lead, IC) plus 2 hidden system roles, hand-written role specifications, not generic templates
+- **Multi-company workspace**: run multiple AI organizations side-by-side, each with its own employees, goals, and settings
+- **Org chart editor**: drag-to-rearrange reporting lines, promote, fire, set managers, edit employee profiles, visualize the full hierarchy with color-coded levels
+- **Hire dialog**: searchable role catalog with level filter chips, one-click hiring from the curated pack
 
 ### The Live Cockpit
 
-- **Mission Control dashboard** — five subviews: Mission Control (live ops stats, queues, runs, runtime heartbeats), Timeline (event feed), Stream (raw LLM output), Floor (employee activity grid), Commands (palette history with intent labels)
-- **Annunciator rail** — five real signal lamps (QUE / GGUF / BUDG / APPR / MTG) with a master-caution acknowledge ritual: blinking means unacknowledged, click to ack, click again to teleport to the source view
-- **Goals and projects** — set company-level goals with auto-derived progress meters, create projects with lead / priority / target date, track everything on a status kanban
-- **Schedule and calendar** — a team week view plus agenda: manual tasks and reminders alongside automatic ticket due dates, project targets, goal targets, overdue counters, and assigned agent wakeups
-- **Ticket kanban** — 4-column board (Open, In Progress, Blocked, Done) with drag-to-move, a detail rail for participants / attachments / discussion / ticket memory, and automatic agent assignment
-- **One-click meetings** — call an all-hands with selected attendees, interject mid-meeting, auto-generated minutes with action item extraction
-- **Real-time telemetry** — company stats, daily usage charts, per-employee breakdown, cost analysis by provider and model with date range filtering plus Work / Agentic / Copilot run-kind filters
+- **Mission Control dashboard**: five subviews: Mission Control (live ops stats, queues, runs, runtime heartbeats), Timeline (event feed), Stream (raw LLM output), Floor (employee activity grid), Commands (palette history with intent labels)
+- **Annunciator rail**: five real signal lamps (QUE / GGUF / BUDG / APPR / MTG) with a master-caution acknowledge ritual: blinking means unacknowledged, click to ack, click again to teleport to the source view
+- **Goals and projects**: set company-level goals with auto-derived progress meters, create projects with lead / priority / target date, track everything on a status kanban
+- **Schedule and calendar**: a team week view plus agenda: manual tasks and reminders alongside automatic ticket due dates, project targets, goal targets, overdue counters, and assigned agent wakeups
+- **Ticket kanban**: 4-column board (Open, In Progress, Blocked, Done) with drag-to-move, a detail rail for participants / attachments / discussion / ticket memory, and automatic agent assignment
+- **One-click meetings**: call an all-hands with selected attendees, interject mid-meeting, auto-generated minutes with action item extraction
+- **Real-time telemetry**: company stats, daily usage charts, per-employee breakdown, cost analysis by provider and model with date range filtering plus Work / Agentic / Copilot run-kind filters
 
 ### The Command Console design system
 
-Team-X's interface is a purpose-built hardware design language — **Command Console / Carbon Pro** — modeled on professional broadcast and DJ gear rather than generic SaaS chrome:
+Team-X's interface is a purpose-built hardware design language, **Command Console / Carbon Pro**, modeled on professional broadcast and DJ gear rather than generic SaaS chrome:
 
-- **Dual-shift theming** — **Night Ops** (brushed black aluminum, default) and **Day Shift** (silver anodized), switchable from the top bar. Displays stay void-black in both shifts, exactly like real silver hardware keeps black LCDs
-- **Stencil word-lamps** — status is a word in a lamp tile (`GO / HOLD / NO-GO / STBY / EXEC`), never an ambiguous icon or colored dot
-- **Functional instrumentation** — LCD readouts and VU meters are data-bound only (queue pressure, goal progress, workforce utilization); nothing blinks or glows for decoration
-- **The dual-form red rule** — steady red means LIVE / armed / command authority; blinking red is a question that demands an answer
+- **Dual-shift theming**: **Night Ops** (brushed black aluminum, default) and **Day Shift** (silver anodized), switchable from the top bar. Displays stay void-black in both shifts, exactly like real silver hardware keeps black LCDs
+- **Stencil word-lamps**: status is a word in a lamp tile (`GO / HOLD / NO-GO / STBY / EXEC`), never an ambiguous icon or colored dot
+- **Functional instrumentation**: LCD readouts and VU meters are data-bound only (queue pressure, goal progress, workforce utilization); nothing blinks or glows for decoration
+- **The dual-form red rule**: steady red means LIVE / armed / command authority; blinking red is a question that demands an answer
 
-![Team-X Mission Control — Day Shift](docs/media/hero-day-shift.png)
+![Team-X Mission Control in Day Shift](docs/media/hero-day-shift.png)
 
-*The same dashboard in **Day Shift** — silver chassis, displays stay dark.*
+*The same dashboard in **Day Shift**: silver chassis, displays stay dark.*
 
 ### Autonomy control plane
 
 A full operator console for governed autonomous work (the **Autonomy** tab, 10 subviews):
 
-- **Doctor** — pre-flight health workflow: DB integrity, recovery readiness, runtime posture, secrets, provider/MCP health, budget blockers
-- **Benchmarks** — replay deterministic autonomy scenarios and inspect pass rates, recovery timing, duplicate-work prevention, and spend
-- **Runtime profiles & operations** — bind execution profiles (internal / local / external agents) to employees; watch live heartbeats and ticket checkouts
-- **Routines** — recurring operating loops that materialize into explicit, auditable ticket runs
-- **Budgets** — spend governance with warnings, hard caps, escalation thresholds, and a full ledger across company / employee / runtime / routine scopes
-- **Approvals** — one unified decision inbox for authority, planner, budget, and routine decisions
-- **Artifacts, Memory, Access, Improve** — runtime evidence, thread digests + resumable checkpoints, operator/sharing posture, and a self-improvement loop that opens deduped correction tickets from recent failure signals
+- **Doctor**: pre-flight health workflow: DB integrity, recovery readiness, runtime posture, secrets, provider/MCP health, budget blockers
+- **Benchmarks**: replay deterministic autonomy scenarios and inspect pass rates, recovery timing, duplicate-work prevention, and spend
+- **Runtime profiles & operations**: bind execution profiles (internal / local / external agents) to employees; watch live heartbeats and ticket checkouts
+- **Routines**: recurring operating loops that materialize into explicit, auditable ticket runs
+- **Budgets**: spend governance with warnings, hard caps, escalation thresholds, and a full ledger across company / employee / runtime / routine scopes
+- **Approvals**: one unified decision inbox for authority, planner, budget, and routine decisions
+- **Artifacts, Memory, Access, Improve**: runtime evidence, thread digests + resumable checkpoints, operator/sharing posture, and a self-improvement loop that opens deduped correction tickets from recent failure signals
 
 ### AI Runtime
 
-- **9 LLM providers** — Ollama (local), Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, Together AI, Fireworks AI, plus any OpenAI-compatible endpoint
-- **Privacy tiers** — Local, Open-Source Cloud, Proprietary Cloud — filter which providers your agents can use
-- **Adaptive runtime strategy** — Auto, Hybrid, Always-On, or Lean mode based on a live hardware profile (CPU cores, RAM, GPU, VRAM shown in Settings). GPU detection is native on all three platforms: `wmic` on Windows, `system_profiler` on macOS (Apple Silicon reports its unified-memory GPU budget), and `nvidia-smi` with an `lspci` fallback on Linux
-- **MCP tool calling** — agents use Model Context Protocol tools via a singleton host with connection pooling and `tools_allowed`/`tools_denied` enforcement
-- **Skills & authority** — install skills from a local folder or GitHub URL, import MCP servers from templates or manual config, and govern everything through authority grants and per-employee permissions
-- **Employee-to-employee messaging** — agents communicate with colleagues via built-in tools, forming collaborative workflows
-- **Local GGUF models** — a **Models** tab with four panels: **Library** (add a `.gguf` file or watch a folder, rescan or stop watching it, per-model system prompt / chat template / advanced tuning, load and unload), **Discover** (search Hugging Face, browse a repo's files, queue resumable downloads that survive a pause or a quit), **Endpoints** (LM Studio / Ollama / llama-server / KoboldCPP / vLLM on your LAN, validated as local-network only and probed for reachability), and **Runtime** (GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU, active backend, LRU pool capacity, bundled llama.cpp build). Per-model benchmarks record prompt-eval and generation throughput measured from llama-server's own timings — never an estimate. A GGUF model is not yet an agent provider — Ollama remains the local path for employees
+- **9 LLM providers**: Ollama (local), Anthropic, OpenAI, Google Gemini, Groq, OpenRouter, Together AI, Fireworks AI, plus any OpenAI-compatible endpoint
+- **Privacy tiers**: Local, Open-Source Cloud, Proprietary Cloud; filter which providers your agents can use
+- **Adaptive runtime strategy**: Auto, Hybrid, Always-On, or Lean mode based on a live hardware profile (CPU cores, RAM, GPU, VRAM shown in Settings). GPU detection is native on all three platforms: `wmic` on Windows, `system_profiler` on macOS (Apple Silicon reports its unified-memory GPU budget), and `nvidia-smi` with an `lspci` fallback on Linux
+- **MCP tool calling**: agents use Model Context Protocol tools via a singleton host with connection pooling and `tools_allowed`/`tools_denied` enforcement
+- **Skills & authority**: install skills from a local folder or GitHub URL, import MCP servers from templates or manual config, and govern everything through authority grants and per-employee permissions
+- **Employee-to-employee messaging**: agents communicate with colleagues via built-in tools, forming collaborative workflows
+- **Local GGUF models**: a **Models** tab with four panels: **Library** (add a `.gguf` file or watch a folder, rescan or stop watching it, per-model system prompt / chat template / advanced tuning, load and unload), **Discover** (search Hugging Face, browse a repo's files, queue resumable downloads that survive a pause or a quit), **Endpoints** (LM Studio / Ollama / llama-server / KoboldCPP / vLLM on your LAN, validated as local-network only and probed for reachability), and **Runtime** (GPU inventory across CUDA / ROCm / Vulkan / Metal / CPU, active backend, LRU pool capacity, bundled llama.cpp build). Per-model benchmarks record prompt-eval and generation throughput measured from llama-server's own timings, never an estimate. A GGUF model is not yet an agent provider; Ollama remains the local path for employees
 
 ### Intelligence Layer
 
-- **RAG-grounded agent turns** — every agent prompt is augmented with retrieved context from messages and vault files via the `@team-x/intelligence` package (embeddings stored as BLOBs in SQLite and ranked in-process by cosine similarity: an exact per-company scan, or an IVF approximate index once a company holds 4,096 or more vectors; token-aware chunking with overlap, cosine-threshold gating, SHA256-dedup attribution blocks)
-- **Enhanced AI subsystem** — semantic chunking for the RAG index (splits on headings, paragraphs and code fences instead of a blind character window), query expansion, long-term memory with LLM fact extraction, a cross-thread knowledge graph (both persisted in SQLite), and sampled span tracing. It is active whenever RAG is enabled with an embedding provider, grounds Copilot answers through the `search_company_knowledge` tool, and remembers completed Copilot exchanges. Each is a toggle in Settings → Enhanced AI; the Copilot's own model writes the answer from that grounding and cites its sources
-- **Natural-language command palette** (`Cmd+K`) — 14 structured intents (hire / fire / promote / assign / create / close / reopen / project / goal / meeting / status / navigation / vault search) plus a `complex_request` fallback that hands off to the agentic loop. LLM-backed classifier with JSON-output retry, fuzzy entity resolution, FTS5 ticket lookup, destructive-action confirmation gate, last-20 command history
-- **Agentic loop for complex questions** — ask free-form questions like *"why is the frontend team behind schedule?"* and get a grounded multi-paragraph answer citing specific tickets, employees, and events. Runs a ReAct-style loop on a hidden `system-agent` pseudo-employee, dispatches six read-only query tools, and terminates under hard step / token / wall-clock budgets (defaults 8 / 8000 / 120s — configurable in Settings → Agentic Loop)
-- **Live step log + persisted thread** — the palette streams each loop step as a labeled card (plan → tool call → tool result → answer) with provider and token footer; full transcripts persist for later reference, and every run can be canceled mid-flight
-- **Task Planner (write-side)** — Management-and-above agents can decompose projects into tickets, delegate subtasks with deterministic workload scoring, and review deliverables. Level-gated tool injection, an amber confirmation gate before any ticket is created, and four clamped guardrail settings in Settings → Task Planner
-- **Copilot (proactive analyst)** — a hidden `system-copilot` employee analyzes the company on a 5-minute cadence (plus event triggers) and surfaces insights across five categories (`operational` / `cost` / `org` / `workflow` / `anomaly`) with three severities. Deterministic dedup, dismissal-feedback weight tuning (advisory by default, self-tuning opt-in), and zero phone-home — analysis runs on whatever provider you've configured
-- **Copilot UI** — right-side sidebar (`Cmd+Shift+K`, Sparkles toolbar button, or dashboard widget) with severity-sorted insight feed, category/severity filters, CSV/JSON export, action-suggestion buttons through the gated command pipeline, and an Ask-Copilot box that routes free-form questions through the agentic harness
+- **RAG-grounded agent turns**: every agent prompt is augmented with retrieved context from messages and vault files via the `@team-x/intelligence` package (embeddings stored as BLOBs in SQLite and ranked in-process by cosine similarity: an exact per-company scan, or an IVF approximate index once a company holds 4,096 or more vectors; token-aware chunking with overlap, cosine-threshold gating, SHA256-dedup attribution blocks)
+- **Enhanced AI subsystem**: semantic chunking for the RAG index (splits on headings, paragraphs and code fences instead of a blind character window), query expansion, long-term memory with LLM fact extraction, a cross-thread knowledge graph (both persisted in SQLite), and sampled span tracing. It is active whenever RAG is enabled with an embedding provider, grounds Copilot answers through the `search_company_knowledge` tool, and remembers completed Copilot exchanges. Each is a toggle in Settings → Enhanced AI; the Copilot's own model writes the answer from that grounding and cites its sources
+- **Natural-language command palette** (`Cmd+K`): 14 structured intents (hire / fire / promote / assign / create / close / reopen / project / goal / meeting / status / navigation / vault search) plus a `complex_request` fallback that hands off to the agentic loop. LLM-backed classifier with JSON-output retry, fuzzy entity resolution, FTS5 ticket lookup, destructive-action confirmation gate, last-20 command history
+- **Agentic loop for complex questions**: ask free-form questions like *"why is the frontend team behind schedule?"* and get a grounded multi-paragraph answer citing specific tickets, employees, and events. Runs a ReAct-style loop on a hidden `system-agent` pseudo-employee, dispatches six read-only query tools, and terminates under hard step / token / wall-clock budgets (defaults 8 / 8000 / 120s, configurable in Settings → Agentic Loop)
+- **Live step log + persisted thread**: the palette streams each loop step as a labeled card (plan → tool call → tool result → answer) with provider and token footer; full transcripts persist for later reference, and every run can be canceled mid-flight
+- **Task Planner (write-side)**: Management-and-above agents can decompose projects into tickets, delegate subtasks with deterministic workload scoring, and review deliverables. Level-gated tool injection, an amber confirmation gate before any ticket is created, and four clamped guardrail settings in Settings → Task Planner
+- **Copilot (proactive analyst)**: a hidden `system-copilot` employee analyzes the company on a 5-minute cadence (plus event triggers) and surfaces insights across five categories (`operational` / `cost` / `org` / `workflow` / `anomaly`) with three severities. Deterministic dedup, dismissal-feedback weight tuning (advisory by default, self-tuning opt-in), and zero phone-home: analysis runs on whatever provider you've configured
+- **Copilot UI**: right-side sidebar (`Cmd+Shift+K`, Sparkles toolbar button, or dashboard widget) with severity-sorted insight feed, category/severity filters, CSV/JSON export, action-suggestion buttons through the gated command pipeline, and an Ask-Copilot box that routes free-form questions through the agentic harness
 
 ### Ship-Ready
 
-- **File vault + agent-created deliverables** — filesystem-backed blob storage with SHA256 integrity verification, FTS5 full-text search, ticket attachments, and employee-generated `txt` / `md` / `csv` / `json` / `html` / `docx` / `xlsx` / `pptx` outputs
-- **One-click backup/restore** — full SQLite + vault archive with manifest validation
-- **Append-only audit log** — filterable event timeline with summary cards, actor search, date range picker, and CSV/JSON export
-- **Workspace portability** — export a company as a template package, preview and import packages, share with a reviewed posture
-- **Paperclip Import** — preview a Paperclip export folder (agents, runtimes, tickets, skills, unsupported adapters, missing secrets), save it as a `.teamx-package.json`, and review & import it through Portability — nothing is created until Portability commits it
-- **Private Operator Access** — a read-only decision record of what a non-workstation device would be allowed to do in a workspace (Localhost / Tailscale / Hosted bridge), with every refusal and its reason; nothing opens a listener
-- **In-app User Guide** — role-based onboarding (owner / operator / builder) with 25 sections, progress tracking, and deep links that jump straight into the referenced view or settings section
-- **Cross-platform installers** — Windows (NSIS), macOS (DMG), Linux (AppImage + .deb) via electron-builder
-- **User-triggered updates** — check for new versions from GitHub Releases on demand (zero phone-home)
+- **File vault + agent-created deliverables**: filesystem-backed blob storage with SHA256 integrity verification, FTS5 full-text search, ticket attachments, and employee-generated `txt` / `md` / `csv` / `json` / `html` / `docx` / `xlsx` / `pptx` outputs
+- **One-click backup/restore**: full SQLite + vault archive with manifest validation
+- **Append-only audit log**: filterable event timeline with summary cards, actor search, date range picker, and CSV/JSON export
+- **Workspace portability**: export a company as a template package, preview and import packages, share with a reviewed posture
+- **Paperclip Import**: preview a Paperclip export folder (agents, runtimes, tickets, skills, unsupported adapters, missing secrets), save it as a `.teamx-package.json`, and review & import it through Portability; nothing is created until Portability commits it
+- **Private Operator Access**: a read-only decision record of what a non-workstation device would be allowed to do in a workspace (Localhost / Tailscale / Hosted bridge), with every refusal and its reason; nothing opens a listener
+- **In-app User Guide**: role-based onboarding (owner / operator / builder) with 25 sections, progress tracking, and deep links that jump straight into the referenced view or settings section
+- **Cross-platform installers**: Windows (NSIS), macOS (DMG), Linux (AppImage + .deb) via electron-builder
+- **User-triggered updates**: check for new versions from GitHub Releases on demand (zero phone-home)
 
 ---
 
@@ -149,7 +149,7 @@ ollama serve
 ollama pull llama3.1:8b
 ```
 
-Launch Team-X — it auto-detects the local Ollama instance.
+Launch Team-X. Its first launch adds an enabled **Ollama (Local)** provider at `http://localhost:11434`, so a running Ollama needs no further setup.
 
 ### Cloud Providers
 
@@ -203,7 +203,7 @@ Team-X/
 
 - **Renderer is a pure view.** No direct LLM or MCP calls. Every interaction crosses the typed IPC bridge.
 - **Orchestrator is the only scheduler.** Pause semantics (e.g., during meetings) are race-free because nothing dispatches without the orchestrator's consent.
-- **MCP Host is a singleton.** One pool of connections shared across all agents — no N-client sprawl.
+- **MCP Host is a singleton.** One pool of connections shared across all agents, with no N-client sprawl.
 - **Storage is SQLite + filesystem.** Metadata in SQLite, blobs on disk, SHA256 integrity. File blobs never go in the database.
 - **Provider resolution is the single LLM gateway.** The provider factory and runtime-profile resolver enforce the privacy tier on every run; the provider router carries concurrency caps and cost tracking.
 - **Events table is append-only.** Source of truth for the real-time dashboard and audit log.
@@ -221,7 +221,7 @@ Team-X/
 | Build | electron-vite + electron-builder |
 | Main process | Node.js 22 + TypeScript (strict) |
 | Renderer | React 19 + TypeScript + Tailwind CSS + shadcn/ui + Radix |
-| Design system | Command Console / Carbon Pro (`DESIGN.md`) — Archivo, Public Sans, Departure Mono, Iosevka |
+| Design system | Command Console / Carbon Pro (`DESIGN.md`): Archivo, Public Sans, Departure Mono, Iosevka |
 | State management | Zustand + React Query |
 | LLM integration | Vercel AI SDK + provider packages |
 | Agent framework | Custom orchestrator (not LangChain/CrewAI) |
@@ -232,7 +232,7 @@ Team-X/
 | Secrets | keytar (OS keychain) |
 | Package manager | pnpm workspaces |
 | Lint / format | Biome + ESLint |
-| Unit tests | Vitest (4,682 tests / 372 files) |
+| Unit tests | Vitest (4,718 tests / 376 files) |
 | E2E tests | Playwright (20 specs / 29 cases) |
 | CI | GitHub Actions (Ubuntu + macOS + Windows + Electron E2E smoke) |
 
@@ -243,45 +243,45 @@ Team-X/
 Team-X includes comprehensive documentation across 142 files:
 
 ### Getting Started
-- **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)** — 15-minute setup walkthrough for new users
-- **[Getting Started](docs/user-guide/getting-started.md)** — first company, first hire, first ticket
-- **[Comprehensive User Guide](docs/user-guide/comprehensive-user-guide.md)** — complete product documentation
-- **In-app User Guide** — role-based onboarding with progress tracking, built into the app (left rail → User Guide)
+- **[Quick Start Guide](docs/user-guide/getting-started/quick-start.md)**: 15-minute setup walkthrough for new users
+- **[Getting Started](docs/user-guide/getting-started.md)**: first company, first hire, first ticket
+- **[Comprehensive User Guide](docs/user-guide/comprehensive-user-guide.md)**: complete product documentation
+- **In-app User Guide**: role-based onboarding with progress tracking, built into the app (left rail → User Guide)
 
 ### Reference
-- **[FAQ](docs/user-guide/faq.md)** — frequently asked questions
-- **[Troubleshooting](docs/user-guide/troubleshooting.md)** — common issues and solutions
-- **[Glossary](docs/user-guide/glossary.md)** — term reference
-- **[Keyboard Shortcuts](docs/user-guide/keyboard-shortcuts.md)** — the real shortcut surface
-- **[CLI Reference](docs/user-guide/cli-reference.md)** — command palette and CLI tool documentation
+- **[FAQ](docs/user-guide/faq.md)**: frequently asked questions
+- **[Troubleshooting](docs/user-guide/troubleshooting.md)**: common issues and solutions
+- **[Glossary](docs/user-guide/glossary.md)**: term reference
+- **[Keyboard Shortcuts](docs/user-guide/keyboard-shortcuts.md)**: the real shortcut surface
+- **[Command Palette Reference](docs/user-guide/cli-reference.md)**: every palette command (Team-X has no command-line tool)
 
 ### Real-World Scenarios
-- **[Product Development Lifecycle](docs/user-guide/scenarios/01-product-development-lifecycle.md)** — complete product workflow
-- **[Cost Optimization Playbook](docs/user-guide/scenarios/02-cost-optimization-playbook.md)** — budget management
-- **[Failure Recovery Workflows](docs/user-guide/scenarios/03-failure-recovery-workflows.md)** — Copilot-guided recovery
-- **[Cross-Functional Collaboration](docs/user-guide/scenarios/04-cross-functional-collaboration.md)** — team coordination
-- **[Autonomous Routine Governance](docs/user-guide/scenarios/05-autonomous-routine-governance.md)** — routine automation
-- **[Multi-Workspace Operations](docs/user-guide/scenarios/06-multi-workspace-operations.md)** — multi-client workflows
-- **[Shift Handoff Playbook](docs/user-guide/scenarios/07-shift-handoff-playbook.md)** — operator transitions
+- **[Product Development Lifecycle](docs/user-guide/scenarios/01-product-development-lifecycle.md)**: complete product workflow
+- **[Cost Optimization Playbook](docs/user-guide/scenarios/02-cost-optimization-playbook.md)**: budget management
+- **[Failure Recovery Workflows](docs/user-guide/scenarios/03-failure-recovery-workflows.md)**: Copilot-guided recovery
+- **[Cross-Functional Collaboration](docs/user-guide/scenarios/04-cross-functional-collaboration.md)**: team coordination
+- **[Autonomous Routine Governance](docs/user-guide/scenarios/05-autonomous-routine-governance.md)**: routine automation
+- **[Multi-Workspace Operations](docs/user-guide/scenarios/06-multi-workspace-operations.md)**: multi-client workflows
+- **[Shift Handoff Playbook](docs/user-guide/scenarios/07-shift-handoff-playbook.md)**: operator transitions
 
 ### Templates
-- **[Templates](docs/user-guide/templates/README.md)** — handoff documents, meeting agendas, ticket templates, routine templates
+- **[Templates](docs/user-guide/templates/README.md)**: handoff documents, meeting agendas, ticket templates, routine templates
 
 ### Developer
-- **[Developer Reference](docs/developer-guide/api-reference.md)** — architecture, MCP server development, role pack format, internal IPC surface
-- **[Integration Guide](docs/developer-guide/integration-guide.md)** — providers, MCP servers, and extension points
-- **[Dependency Upgrade Program](docs/developer-guide/dependency-upgrade-program.md)** — the audit gate, accepted exceptions, and the order of the remaining major upgrades
-- **[Release Signing](docs/developer-guide/release-signing.md)** — signing credentials, the signature gate, install smoke tests, provenance, and dry runs
-- **[Branch Governance](docs/developer-guide/governance.md)** — the `main` and release-tag rulesets, the review wall, break-glass, and signed tags
+- **[Developer Reference](docs/developer-guide/api-reference.md)**: architecture, MCP server development, role pack format, internal IPC surface
+- **[Integration Guide](docs/developer-guide/integration-guide.md)**: providers, MCP servers, and extension points
+- **[Dependency Upgrade Program](docs/developer-guide/dependency-upgrade-program.md)**: the audit gate, accepted exceptions, and the order of the remaining major upgrades
+- **[Release Signing](docs/developer-guide/release-signing.md)**: signing credentials, the signature gate, install smoke tests, provenance, and dry runs
+- **[Branch Governance](docs/developer-guide/governance.md)**: the `main` and release-tag rulesets, the review wall, break-glass, and signed tags
 - **[Architecture](ARCHITECTURE.md)** · **[API Endpoints](API_ENDPOINTS.md)** · **[Database Schema](DATABASE_SCHEMA.md)** · **[Design System](DESIGN.md)**
 
 ### Advanced
-- **[Migration Guide](docs/user-guide/migration-guide.md)** — switching from other tools
-- **[Accessibility Guide](docs/user-guide/accessibility-guide.md)** — WCAG 2.1 compliance documentation
+- **[Migration Guide](docs/user-guide/migration-guide.md)**: switching from other tools
+- **[Accessibility Guide](docs/user-guide/accessibility-guide.md)**: WCAG 2.1 compliance documentation
 
 ### AI Discovery
-- **[llms.txt](docs/llms.txt)** — AI-optimized documentation index for LLM consumption
-- **[long-llms.txt](docs/long-llms.txt)** — extended AI reference with comprehensive details
+- **[llms.txt](docs/llms.txt)**: AI-optimized documentation index for LLM consumption
+- **[long-llms.txt](docs/long-llms.txt)**: extended AI reference with comprehensive details
 
 ---
 
@@ -329,7 +329,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ## Testing
 
-Team-X ships with **4,682 unit tests** across 372 files and **20 Playwright E2E specs** (29 cases):
+Team-X ships with **4,718 unit tests** across 376 files and **20 Playwright E2E specs** (29 cases):
 
 | Spec | Coverage |
 |------|----------|
@@ -345,7 +345,7 @@ Team-X ships with **4,682 unit tests** across 372 files and **20 Playwright E2E 
 | `copilot-ui.spec.ts` | Sparkles toolbar toggle, sidebar + insight card, dismiss optimistic update, `Cmd+Shift+K` shortcut |
 | `copilot-feedback.spec.ts` | Dismissal feedback, advisory weight suggestion, audit event, Settings weight display |
 | `copilot-insight-export.spec.ts` | Sidebar category filter, company-scope JSON export, all-company CSV export |
-| `phase-5-integration.spec.ts` | Cross-milestone stitch — RAG indexing, palette round-trip, write-side gate, copilot tick |
+| `phase-5-integration.spec.ts` | Cross-milestone stitch: RAG indexing, palette round-trip, write-side gate, copilot tick |
 | `phase-6-integration.spec.ts` | Planner role-fit outcome, feedback apply, run-kind telemetry filters, local JSON export |
 | `workspace-switcher.spec.ts` | Multi-company switcher, create/settings/archive/delete lifecycle, hire flow |
 | `org-chart.spec.ts` | Org chart read-side, drag reporting-line reassignment, cycle rejection, promote/fire |
@@ -354,7 +354,7 @@ Team-X ships with **4,682 unit tests** across 372 files and **20 Playwright E2E 
 | `local-gguf-network-share-resilience.spec.ts` | Watch-folder disconnect/reconnect resilience over network shares |
 | `security-boundary.spec.ts` | Strict packaged CSP, blocked inline script, navigation and `window.open` refused, foreign-page IPC refused |
 
-All E2E specs run against a canned test-mode provider — no Ollama, no API keys, no network.
+All E2E specs run against a canned test-mode provider: no Ollama, no API keys, no network.
 
 ```bash
 pnpm test              # Unit tests
