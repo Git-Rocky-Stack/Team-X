@@ -15,7 +15,7 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 ![Team-X Mission Control in Night Ops](docs/media/hero-night-ops.png)
 
-*Mission Control in **Night Ops**. The whole app is built on the Command Console design system: brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
+*A real session on the shipped v3.5.0 build in **Night Ops**: hire a VP of Engineering, check the org chart, open Tickets from the Ctrl+K command palette, file tickets with owners, and watch Mission Control. The whole app is built on the Command Console design system: brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
 
 </div>
 
