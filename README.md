@@ -13,9 +13,9 @@ Open-source, privacy-first, local-first desktop app for running AI-agent organiz
 
 [Download](#installation) | [Quick Start](docs/user-guide/getting-started/quick-start.md) | [User Guide](docs/user-guide/README.md) | [What's New](docs/user-guide/whats-new.md) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
-![Team-X Mission Control in Night Ops](docs/media/hero-night-ops.png)
+https://github.com/user-attachments/assets/bda8d55f-831b-465d-b361-ffe18bc54418
 
-*Mission Control in **Night Ops**. The whole app is built on the Command Console design system: brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
+*A real session on the shipped v3.5.0 build in **Night Ops**: hire a VP of Engineering, check the org chart, open Tickets from the Ctrl+K command palette, file tickets with owners, and watch Mission Control. The whole app is built on the Command Console design system: brushed-aluminum faceplates, phosphor LCD readouts, stencil word-lamps, and data-bound VU meters.*
 
 </div>
 
